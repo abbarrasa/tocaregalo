@@ -1,0 +1,43 @@
+name: Auto Create Pull Request
+
+on:
+  push:
+    branches-ignore:
+      - main
+      - dev
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  create-pull-request:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create Pull Request to Dev
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUSH_ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+
+          # A rerun or later push must not create a second PR for the branch.
+          PR_EXISTS=$(gh pr list --head "$GITHUB_REF_NAME" --base dev --state all --json number --jq '.[0].number // empty')
+          if [ -n "$PR_EXISTS" ]; then
+            echo "A Pull Request already exists (#$PR_EXISTS) for this branch."
+            exit 0
+          fi
+
+          if [ "$(gh label list --limit 1000 --json name --jq 'any(.[]; .name == "review-pending")')" != "true" ]; then
+            gh label create review-pending --color D4C5F9 --description "Awaiting review"
+          fi
+
+          gh pr create \
+            --base dev \
+            --head "$GITHUB_REF_NAME" \
+            --title "Merge $GITHUB_REF_NAME into dev" \
+            --body "Automatically created on the first eligible push. Ready for review." \
+            --assignee "$PUSH_ACTOR"

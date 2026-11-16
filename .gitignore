@@ -50,3 +50,27 @@
 
 # Embedded web-server pid file
 /.web-server-pid
+
+# Toca Regalo local credentials and runtime secrets
+/.env
+/.env.*
+!/.env.example
+/.secrets/
+/backend/.env
+/backend/.env.*
+!/backend/.env.example
+/frontend/.env
+/frontend/.env.*
+!/frontend/.env.example
+
+# Nested application dependencies and generated runtime/build/test files
+/backend/vendor/
+/backend/var/
+/backend/.phpunit.cache/
+/backend/.phpunit.result.cache
+/frontend/node_modules/
+/frontend/dist/
+/frontend/coverage/
+/playwright-report/
+/test-results/
+/coverage/
