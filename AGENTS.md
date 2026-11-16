@@ -1,0 +1,52 @@
+# Toca Regalo Agent Instructions
+
+## Project and sources
+
+Toca Regalo is a web application for drawing gift recipients among participants in a group event. The detailed requirements and ER model must be read before specifying product behavior or selecting implementation technologies.
+
+Read this file, [MEMORY.md](./MEMORY.md), and the [constitution](./docs/constitution.md) before work. Read relevant specifications, plans, and tasks when they exist. The constitution is approved. The supplied [requirements](./TocaRegalo_Requeriments.md), as amended by user clarification, mandate Symfony, API Platform, MySQL, Vue.js, Bootstrap, and Docker with Nginx. Twig must not be used. Technology families and architecture are approved in plan v0.1; exact resolved patches/image digests await authorized bootstrap. The backend must not return views. Consult the [ER model](./ER-TocaRegalo.pdf) alongside the prose, ignoring its entity attributes as directed by the user. Follow explicit clarification decisions rather than conflicting source details.
+
+Current clarified constraints: each group has exactly one owner, its creator, who also participates as a member; each event belongs to one group. Multiple owners are future scope only. Global accounts can be deleted only by themselves or SUPER ADMIN; deletion cascades through owned groups, events, and draws without deleting other group members' accounts. Passwords require at least six characters, permitting letters, digits, and symbols. Phone prefixes require `+`; backend cleanup determines uniqueness. System-user searches ignore case and accents.
+
+The consolidated [application specification v1.0](./specs/001-toca-regalo/spec.md), [technical plan v0.1](./specs/001-toca-regalo/plan.md), [six-block decomposition v0.1](./specs/001-toca-regalo/decomposition-proposal.md), and derived specifications/plans/task lists for 002–007 at v0.1 are explicitly approved; see the [application task index](./specs/001-toca-regalo/tasks.md). The user authorized only 002:T1, now complete with [static-check evidence](./specs/002-development-foundation/verification.md); 53 tasks remain pending. No installation or subsequent task is authorized. Keep Spec 001 as the parent contract and preserve all FR/NFR/AC identifiers. The [clarification review](./specs/001-toca-regalo/clarification-review.md) records historical closure evidence.
+
+The first task, [002:T1](./specs/002-development-foundation/tasks.md), prepared reviewable environment configuration and static checks without installation, image pulls/builds, browser downloads or key generation. [002:T2](./specs/002-development-foundation/tasks.md) requires explicit task-start and separate concrete installation-scope authorization. Current image family references and public review-only environment values are not resolved locks or usable runtime secrets. Cross-block references use 002:T1-style IDs; each local task list has at most ten tasks. Stop after each authorized task and record actual checks.
+
+Owners cannot modify other members' data, but can remove membership without deleting accounts. Account deletion (self or SUPER ADMIN), owner-driven removal, addition after a draw, and recovery to three members automatically replace affected surviving unfinished-event draws when at least three members are available and email new assignments. Each participant gives to exactly one other member and receives from exactly one other member. Finished draws never repeat. With fewer than three members, retain affected prior assignments as invalid, inform members by email, and show “Participantes insuficientes” without previous-assignment reveal. Every removal requires confirmation, with a special warning if fewer than three members would remain. Search uses partial AND-combined matches and shows first name plus optional surnames. Use Symfony password hasher classes; the creating owner sets initial passwords. Backend phone processing removes whitespace/signs except the prefix `+`; a Vue plugin prevents unwanted frontend input. Selecting a plugin does not authorize installation. Support mobile and desktop.
+
+## Spec-Driven Development
+
+Login accepts email or phone plus password; no public registration or account verification. Authenticated users may edit their own data/password. Bootstrap SUPER ADMIN through the supplied Symfony command reference and [approved adaptation requirements](./specs/001-toca-regalo/bootstrap-command-review.md): required first name/phone, optional surnames, general password policy, and role creation if missing. No user, including SUPER ADMIN, can view another user's assignment; reveal activation restarts the 20-second timer.
+
+Further clarified behavior: logout ends the active session; new recovery links invalidate earlier links. Duplicate membership displays “El usuario ya pertenece al grupo” without changes; empty search displays “No se encontraron usuarios”. Group name/description and event name/date/notes remain editable after a draw without redrawing. Group membership changes proceed when events close but must not redraw closed-event draws. Assignment emails include event name and recipient first name/optional surnames. Exhausted email retries are visible to owner and SUPER ADMIN without exposing assignments; authorized resend remains available under current valid unfinished-event restrictions.
+
+Final clarification decisions: all current group members participate without extra exclusions, with equal probability for every complete valid assignment. Trim surrounding whitespace from names/email, validate email with Symfony, and compare email uniqueness case-insensitively. No role-management screen; ordinary user flows create USER accounts and the command creates SUPER ADMIN. Provide Spanish loading/empty/error states, keyboard navigation, and associated labels/errors. At the closure boundary, block draws immediately; allow at most one minute for background closure processing. Technical choices and verification profiles belong to the user-approved plan.
+
+- Apply the local [SDD skill](./.agents/skills/sdd/SKILL.md) throughout the project: Constitution → Specification → Clarification → Plan → Tasks → Implementation → Validation, with Change when needed.
+- Follow its explicit phase approvals and task authorization rules. Preserve approval evidence and revision identifiers; do not infer approval from silence or invent approval history.
+- Store each feature under `specs/NNN-feature-name/` with `spec.md`, `plan.md`, and `tasks.md` as its phases are authorized.
+- Implement only approved specified behavior. Ask the user before deciding anything not covered by the requirements. Record approved technical decisions in the plan before implementation.
+- Process requirement changes through specification, clarification where needed, approval, and affected plans and tasks before code changes.
+- Follow the approved verification strategy. Record actual commands, results, limitations, and requirement coverage. Never claim an unexecuted check passed.
+- Update [MEMORY.md](./MEMORY.md) at phase boundaries and completed tasks with revisions, approval evidence, decisions, blockers, verification, and the next authorized step. Link to authoritative documents instead of duplicating them.
+
+## Dependencies and development environment
+
+Use one optional completion field: scheduled closure is end-of-day in system time, explained in the form; past closure dates fail validation; manual closure sets current date/time; no reopening. Closure takes precedence, and a second concurrent draw request receives an already-performed notice. SUPER ADMIN may delete a finished draw without allowing another draw. Recovery links are emailed, single-use, and valid for a configurable default of one hour. Owners may request resend for members, SUPER ADMIN for anyone, and users for themselves through their draw card, without seeing others' assignments. Failed delivery preserves the draw and permits five retries after the initial send: delay(n) = base × 2^(n−1), n=1…5. Discard pending assignment emails after replacement or closure. Group deletion requires confirmation and cascades through events/draws, retaining member accounts; account deletion clears surviving assignment references to null. Encrypt recipients before database storage using the approved plan's versioned Sodium envelope/scoped HMAC index and key policy. Nurschool/nursing references are source errors, not scope. Configure SMTP externally per environment and use the plan's Mailpit capture in development. Real SMTP connection/sender values are supplied for deployment; secrets stay outside the repository.
+
+- Obtain explicit user authorization before installing packages. Selecting a stack or approving a plan alone does not authorize installation.
+- Prepare development configuration according to approved requirements and plans. Do not choose an unspecified stack, service, or deployment target without consulting the user.
+
+## Branches for feature implementation
+
+- Run `git status --short --branch` before changing branches and preserve all pre-existing local changes.
+- Start a feature task from the current commit of local `dev` on a new branch named `feature/NNN_TNN_<brief-kebab-case-description>`.
+- If uncommitted changes make the branch switch unsafe, stop and explain the exact conflict. Do not discard or temporarily shelve the changes.
+- Do not run `reset`, `restore`, `clean`, `stash`, `commit`, `amend`, `rebase`, `merge`, `force-push`, or `push` unless the user explicitly requests it.
+- Do not create commits or push during this feature-task workflow. Report the branch name and final `git status` instead.
+
+## Engineering and language
+
+- Follow all six principles in the [constitution](./docs/constitution.md), including independent domain rules and explicit responsibility boundaries.
+- Use English for code identifiers, comments, technical documentation, specifications, plans, tasks, and governance documents.
+- Use Spanish for user-facing documentation, such as `README.md`, and application text. Additional localization requires an approved specification.
