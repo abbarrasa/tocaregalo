@@ -1,0 +1,89 @@
+# Plan 004 — Groups and events
+
+Status: approved; individual task execution remains separately gated
+Revision: v0.1
+Approval: The user stated “Apruebo y autorizo iniciar la T1 de spec 002”, approving the derived-document/task package and authorizing only 002:T1 on 2026-11-16. No installation is authorized.
+Derived specification: [004 v0.1](./spec.md), approved
+Approved parent specification: [001 v1.0](../001-toca-regalo/spec.md)
+Approved architecture: [001 v0.1](../001-toca-regalo/plan.md)
+Approval state: scoped parent-plan extraction approved; only 002:T1 has task-start authorization, and no installation is authorized.
+
+## Approach and approved design
+
+Provide owner-scoped group/event management, member search/association/removal and completion scheduling with responsive navigation.
+
+Inherit parent plan sections 2–11 for exact toolchain families, architecture, data/privacy/transaction contracts, pure function signatures/pseudocode, API routes, UI states and verification profiles. Do not create conflicting local versions of those designs. The user approved the parent specification v1.0, parent plan v0.1, and six-block decomposition v0.1 (“Apruebo los bloques. Continúa”). The user subsequently approved these derived documents and task lists, authorizing only 002:T1. No installation or other task execution is authorized.
+
+## Components, interfaces and flows
+
+Group/Event domain and repositories, owner policies, membership/search providers, metadata/confirmation processors, pure completion clock rules, due-event worker, Users/Groups/Events Vue views.
+
+gift_groups with one owner FK, unique memberships, events with one group and one nullable completion timestamp; preserve account uniqueness/role rules.
+
+Owner/admin management screens, name-only search, duplicate/empty notices, create-or-search association, confirmation/cascade previews, end-of-day form explanation, Spanish state/errors.
+
+Dependencies: [003-identity-access](../003-identity-access/tasks.md). The parent application remains incomplete until all cross-slice cases are covered. Post-draw mutation, assignment cleanup and delivery consequences are integrated in 005–007. Never expose a destructive operation against a dependent state whose complete transaction has not yet been implemented.
+
+## Planned files and bounded responsibilities
+
+| Task | Planned paths | Responsibility |
+| --- | --- | --- |
+| T1 | `backend/src/Domain/Group/`, `backend/config/doctrine/`, `backend/migrations/`, `backend/src/Application/` | Implement group ownership and creator membership atomically |
+| T2 | `backend/src/Api/`, `backend/src/Application/`, `backend/tests/Integration/` | Implement scoped group metadata and confirmed cascade deletion |
+| T3 | `backend/src/Domain/Event/`, `backend/config/doctrine/`, `backend/src/Api/` | Implement event attributes and owner-scoped CRUD |
+| T4 | `backend/src/Api/State/`, `backend/src/Infrastructure/Doctrine/`, `backend/tests/Functional/` | Implement partial AND user search and duplicate association |
+| T5 | `backend/src/Application/`, `backend/src/Api/`, `backend/tests/Integration/` | Connect owner-created ordinary users to their group |
+| T6 | `backend/src/Application/`, `backend/src/Api/`, `backend/tests/Functional/` | Implement member-removal preview and confirmation boundary |
+| T7 | `backend/src/Domain/Event/`, `backend/src/Application/`, `backend/tests/Unit/` | Implement completion-date rules and manual closure |
+| T8 | `backend/src/Command/`, `docker/scheduler/`, `backend/tests/Integration/` | Implement bounded due-event processing |
+| T9 | `frontend/src/views/`, `frontend/src/components/`, `frontend/src/api/`, `tests/e2e/` | Implement Groups and Users responsive management screens |
+| T10 | `frontend/src/views/EventsView.vue`, `frontend/src/api/`, `specs/004-groups-events/verification.md` | Implement Events screens and record management evidence |
+
+Paths are planned implementation targets; only the documentation in this slice is being created now. Do not create code/configuration before task approval and explicit start authorization.
+
+## Design decisions and alternatives
+
+Adopt the approved parent decisions without adding dependencies: pure domain and external ORM mappings; same-origin sessions/CSRF; scoped resource DTOs; real MySQL tests; uniform shuffle/rejection; versioned Sodium/scoped-HMAC recipient references; one authoritative notification retry loop; independent logical closure guard. Use only the decisions relevant to the task.
+
+Parent rejected alternatives remain rejected for their recorded tradeoffs: Twig/distribution templates, plaintext recipient FK, biased single-cycle/bounded-fallback draws, unnecessary Redis/RabbitMQ/JWT/state libraries, and SQLite substitutions. The approved local capture and key policy do not authorize downloads, secrets generation, or real email delivery now.
+
+## Test strategy and evidence
+
+Follow parent test strategy with each task: behavioral tests first for application behavior, relevant real-MySQL/API/component/browser regressions, controlled time for deadlines/retries/reveal, and reproducible manual checks where appropriate. For static configuration or docs, inspect/lint the actual deliverable rather than invent tests mirroring its content. For enabling work, record supported requirements without claiming their product acceptance is fulfilled.
+
+Use Chromium desktop 1440×900 and mobile 390×844 with essential Firefox/WebKit flows as specified by the approved parent. No arbitrary code-coverage percentage. Do not mark a task complete on unavailable tooling or an unexecuted check. External production SMTP remains a deployment dependency, not a prerequisite to local captured-email evidence.
+
+## Traceability
+
+| Parent requirement | Proposed tasks | Verification authority |
+| --- | --- | --- |
+| FR-1 | T1, T9 | Use the corresponding parent AC or NFR condition; distinguish direct scope from downstream/regression evidence. |
+| FR-2 | T2, T9 | Use the corresponding parent AC or NFR condition; distinguish direct scope from downstream/regression evidence. |
+| FR-5 | T4, T5, T9 | Use the corresponding parent AC or NFR condition; distinguish direct scope from downstream/regression evidence. |
+| FR-6 | T4, T9 | Use the corresponding parent AC or NFR condition; distinguish direct scope from downstream/regression evidence. |
+| FR-7 | T2, T3, T10 | Use the corresponding parent AC or NFR condition; distinguish direct scope from downstream/regression evidence. |
+| FR-8 | T3, T10 | Use the corresponding parent AC or NFR condition; distinguish direct scope from downstream/regression evidence. |
+| FR-9 | T7, T8, T10 | Use the corresponding parent AC or NFR condition; distinguish direct scope from downstream/regression evidence. |
+| FR-19 | T4, T5, T9 | Use the corresponding parent AC or NFR condition; distinguish direct scope from downstream/regression evidence. |
+| FR-20 | T4, T5, T9 | Use the corresponding parent AC or NFR condition; distinguish direct scope from downstream/regression evidence. |
+| FR-21 | T3, T10 | Use the corresponding parent AC or NFR condition; distinguish direct scope from downstream/regression evidence. |
+| FR-22 | T1, T2, T3, T5, T10 | Use the corresponding parent AC or NFR condition; distinguish direct scope from downstream/regression evidence. |
+| FR-24 | T6, T9 | Use the corresponding parent AC or NFR condition; distinguish direct scope from downstream/regression evidence. |
+| FR-27 | T6, T9 | Use the corresponding parent AC or NFR condition; distinguish direct scope from downstream/regression evidence. |
+| FR-31 | T7, T8, T10 | Use the corresponding parent AC or NFR condition; distinguish direct scope from downstream/regression evidence. |
+| FR-32 | T6, T7, T8, T10 | Use the corresponding parent AC or NFR condition; distinguish direct scope from downstream/regression evidence. |
+| NFR-1 | T1, T10 | Use the corresponding parent AC or NFR condition; distinguish direct scope from downstream/regression evidence. |
+| NFR-4 | T10 | Use the corresponding parent AC or NFR condition; distinguish direct scope from downstream/regression evidence. |
+| NFR-5 | T9, T10 | Use the corresponding parent AC or NFR condition; distinguish direct scope from downstream/regression evidence. |
+| NFR-6 | T9, T10 | Use the corresponding parent AC or NFR condition; distinguish direct scope from downstream/regression evidence. |
+| NFR-8 | T9, T10 | Use the corresponding parent AC or NFR condition; distinguish direct scope from downstream/regression evidence. |
+| NFR-9 | T7, T8, T10 | Use the corresponding parent AC or NFR condition; distinguish direct scope from downstream/regression evidence. |
+
+The [task list](./tasks.md) supplies concrete work and done conditions. Parent AC numbers are unchanged; no replacement child acceptance identifiers are invented.
+
+## Approval and next action
+
+10 proposed tasks, ordered by dependency. Approximately 20–30 minutes per task is a decomposition target, not a promise; expose required scope changes rather than silently enlarging a task. This slice stays at ten tasks or fewer.
+
+The derived-document/task package is approved. Execute only the specifically authorized task (currently 002:T1); request separate task-start and package/image/browser installation authorization when required. Stop after each authorized task under the SDD workflow.
+

@@ -1,0 +1,142 @@
+name: ${COMPOSE_PROJECT_NAME:-tocaregalo}
+
+x-application-environment: &application-environment
+  APP_ENV: ${APP_ENV:-dev}
+  APP_SECRET: ${APP_SECRET:?Set APP_SECRET in an ignored local environment file}
+  APP_TIMEZONE: ${APP_TIMEZONE:?Set the installation system timezone}
+  TZ: ${APP_TIMEZONE}
+  APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:8080}
+  DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL for the selected database}
+  MAILER_DSN: ${MAILER_DSN:-smtp://mailpit:1025}
+  MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-no-reply@tocaregalo.test}
+  MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Toca Regalo}
+  PASSWORD_RESET_TTL_SECONDS: ${PASSWORD_RESET_TTL_SECONDS:-3600}
+  NOTIFICATION_RETRY_BASE_MS: ${NOTIFICATION_RETRY_BASE_MS:-30000}
+  MESSENGER_TRANSPORT_DSN: ${MESSENGER_TRANSPORT_DSN:-doctrine://default?queue_name=notifications&auto_setup=false}
+  ASSIGNMENT_KEY_FILE: /run/secrets/assignment_keys
+  COMPOSER_HOME: /tmp/composer
+
+x-php-service: &php-service
+  image: ${PHP_LOCAL_IMAGE:-tocaregalo-php:dev}
+  pull_policy: never
+  build:
+    context: .
+    dockerfile: docker/php/Dockerfile
+    args:
+      PHP_BASE_IMAGE: ${PHP_BASE_IMAGE:?Set an approved PHP image reference}
+      COMPOSER_IMAGE: ${COMPOSER_IMAGE:?Set an approved Composer image reference}
+  user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+  working_dir: /workspace/backend
+  init: true
+  environment: *application-environment
+  volumes:
+    - type: bind
+      source: ./backend
+      target: /workspace/backend
+      bind:
+        create_host_path: false
+  secrets:
+    - assignment_keys
+  depends_on:
+    mysql:
+      condition: service_healthy
+
+services:
+  mysql:
+    image: ${MYSQL_IMAGE:?Set an approved MySQL image reference}
+    pull_policy: never
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-tocaregalo}
+      MYSQL_USER: ${MYSQL_USER:-tocaregalo}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD locally}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD locally}
+      TZ: ${APP_TIMEZONE}
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci", "--default-time-zone=+00:00"]
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'MYSQL_PWD="$${MYSQL_PASSWORD}" mysql --host=127.0.0.1 --user="$${MYSQL_USER}" --database="$${MYSQL_DATABASE}" --execute="SELECT 1" >/dev/null'
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  php:
+    <<: *php-service
+    command: ["php-fpm", "-F", "-d", "date.timezone=${APP_TIMEZONE}"]
+
+  frontend:
+    image: ${NODE_LOCAL_IMAGE:-tocaregalo-node:dev}
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: docker/node/Dockerfile
+      args:
+        NODE_BASE_IMAGE: ${NODE_BASE_IMAGE:?Set an approved Node image reference}
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    working_dir: /workspace/frontend
+    init: true
+    environment:
+      TZ: ${APP_TIMEZONE}
+      VITE_PUBLIC_PORT: ${HTTP_PORT:-8080}
+      npm_config_cache: /tmp/npm-cache
+    volumes:
+      - type: bind
+        source: ./frontend
+        target: /workspace/frontend
+        bind:
+          create_host_path: false
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173", "--strictPort"]
+
+  nginx:
+    image: ${NGINX_IMAGE:?Set an approved Nginx image reference}
+    pull_policy: never
+    ports:
+      - "127.0.0.1:${HTTP_PORT:-8080}:80"
+    volumes:
+      - type: bind
+        source: ./docker/nginx/default.conf
+        target: /etc/nginx/conf.d/default.conf
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      php:
+        condition: service_started
+      frontend:
+        condition: service_started
+
+  mailpit:
+    image: ${MAILPIT_IMAGE:?Set an approved Mailpit image reference}
+    pull_policy: never
+    environment:
+      TZ: ${APP_TIMEZONE}
+      MP_DISABLE_VERSION_CHECK: "true"
+    ports:
+      - "127.0.0.1:${MAILPIT_PORT:-8025}:8025"
+
+  notification-worker:
+    <<: *php-service
+    profiles: [workers]
+    restart: unless-stopped
+    command: ["php", "-d", "date.timezone=${APP_TIMEZONE}", "bin/console", "messenger:consume", "notifications", "--time-limit=3600", "--memory-limit=128M", "--no-interaction"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+
+  closure-worker:
+    <<: *php-service
+    profiles: [workers]
+    restart: unless-stopped
+    command: ["php", "-d", "date.timezone=${APP_TIMEZONE}", "bin/console", "app:events:close-due", "--interval=15", "--no-interaction"]
+
+volumes:
+  mysql_data:
+
+secrets:
+  assignment_keys:
+    file: ${ASSIGNMENT_KEY_PATH:-./.secrets/assignment-keys.json}
