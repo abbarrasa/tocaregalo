@@ -1,0 +1,41 @@
+# T3 only: always invoke with --project-name tocaregalo-t3 and the root .env.
+name: tocaregalo-t3
+
+services:
+  tocaregalo-mysql:
+    image: ${MYSQL_IMAGE:?Set the pinned MYSQL_IMAGE in .env}
+    pull_policy: never
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?Set MYSQL_DATABASE in .env}
+      MYSQL_USER: ${MYSQL_USER:?Set MYSQL_USER in .env}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+    command: ['--character-set-server=utf8mb4', '--collation-server=utf8mb4_0900_ai_ci', '--default-time-zone=+00:00']
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ['CMD-SHELL', 'MYSQL_PWD="$${MYSQL_PASSWORD}" mysql --host=127.0.0.1 --user="$${MYSQL_USER}" --database="$${MYSQL_DATABASE}" --execute="SELECT 1" >/dev/null']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  tocaregalo-php-smoke:
+    image: ${PHP_LOCAL_IMAGE:-tocaregalo-php:dev}
+    pull_policy: never
+    user: '${LOCAL_UID:-1000}:${LOCAL_GID:-1000}'
+    init: true
+    working_dir: /workspace/backend
+    environment:
+      APP_ENV: test
+      APP_DEBUG: '0'
+    volumes:
+      - type: bind
+        source: .
+        target: /workspace
+        bind:
+          create_host_path: false
+    command: ['php', 'tests/Smoke/backend-runtime.php']
+    depends_on:
+      tocaregalo-mysql:
+        condition: service_healthy

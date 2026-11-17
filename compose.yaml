@@ -7,7 +7,7 @@ x-application-environment: &application-environment
   TZ: ${APP_TIMEZONE}
   APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:8080}
   DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL for the selected database}
-  MAILER_DSN: ${MAILER_DSN:-smtp://mailpit:1025}
+  MAILER_DSN: ${MAILER_DSN:-smtp://tocaregalo-mailpit:1025}
   MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-no-reply@tocaregalo.test}
   MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Toca Regalo}
   PASSWORD_RESET_TTL_SECONDS: ${PASSWORD_RESET_TTL_SECONDS:-3600}
@@ -38,11 +38,11 @@ x-php-service: &php-service
   secrets:
     - assignment_keys
   depends_on:
-    mysql:
+    tocaregalo-mysql:
       condition: service_healthy
 
 services:
-  mysql:
+  tocaregalo-mysql:
     image: ${MYSQL_IMAGE:?Set an approved MySQL image reference}
     pull_policy: never
     environment:
@@ -63,11 +63,11 @@ services:
       retries: 20
       start_period: 30s
 
-  php:
+  tocaregalo-php:
     <<: *php-service
     command: ["php-fpm", "-F", "-d", "date.timezone=${APP_TIMEZONE}"]
 
-  frontend:
+  tocaregalo-frontend:
     image: ${NODE_LOCAL_IMAGE:-tocaregalo-node:dev}
     pull_policy: never
     build:
@@ -90,7 +90,7 @@ services:
           create_host_path: false
     command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173", "--strictPort"]
 
-  nginx:
+  tocaregalo-nginx:
     image: ${NGINX_IMAGE:?Set an approved Nginx image reference}
     pull_policy: never
     ports:
@@ -103,12 +103,12 @@ services:
         bind:
           create_host_path: false
     depends_on:
-      php:
+      tocaregalo-php:
         condition: service_started
-      frontend:
+      tocaregalo-frontend:
         condition: service_started
 
-  mailpit:
+  tocaregalo-mailpit:
     image: ${MAILPIT_IMAGE:?Set an approved Mailpit image reference}
     pull_policy: never
     environment:
@@ -117,18 +117,18 @@ services:
     ports:
       - "127.0.0.1:${MAILPIT_PORT:-8025}:8025"
 
-  notification-worker:
+  tocaregalo-notification-worker:
     <<: *php-service
     profiles: [workers]
     restart: unless-stopped
     command: ["php", "-d", "date.timezone=${APP_TIMEZONE}", "bin/console", "messenger:consume", "notifications", "--time-limit=3600", "--memory-limit=128M", "--no-interaction"]
     depends_on:
-      mysql:
+      tocaregalo-mysql:
         condition: service_healthy
-      mailpit:
+      tocaregalo-mailpit:
         condition: service_started
 
-  closure-worker:
+  tocaregalo-closure-worker:
     <<: *php-service
     profiles: [workers]
     restart: unless-stopped

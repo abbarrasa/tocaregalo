@@ -44,3 +44,24 @@ This task supports NFR-1/2/3/4/5/7 through reviewable environment/build/API-rout
 ## Outcome and next step
 
 002:T1 is complete: its configuration is reviewable, available static checks pass, and runtime limitations are explicit. Stop before 002:T2. Request task-start authorization and separate concrete installation/download permission before resolving/pulling/building dependencies or images.
+
+## T3 progress
+
+Date: 2026-11-17. Status: implementation in progress, not complete. Earlier sections record T1's historical scope; T2 results are in [dependency evidence](./dependency-resolution.md).
+
+The user approved [T3 execution plan v0.1](./t3-execution-plan.md) with the condition to read the database connection from the same root .env used by Symfony and ask for its parameters. The database question is pending. No root/backend .env existed at initial inspection; no credentials have been selected or database container started. Branch: feature/002_T03-backend-api-runtime, from local dev, preserving pre-existing planning edits. No commit/push.
+
+Implemented so far: minimal kernel and Runtime HTTP/console entrypoints; explicit FrameworkBundle/API Platform/Doctrine configuration; JSON-only request/error handling with Spanish generic error titles; smoke assertions and an isolated Compose definition with MySQL tmpfs and no published ports. Runtime entrypoints load `../.env` relative to Symfony's backend project directory; the smoke check loads that same root file through Symfony Dotenv. Doctrine reads DATABASE_URL, without a default production connection.
+
+Actual checks:
+
+- Initial `php tests/Smoke/backend-runtime.php --http-only` failed with exit 1 before the kernel existed. Installed Composer autoload/dependencies were present. No environment/database failure was presented as the intended initial missing-runtime result.
+- Final `docker run --rm --pull=never --network none --user 1000:1000 --mount type=bind,src=/home/albertusko/Proyectos/tocaregalo,dst=/workspace --workdir /workspace/backend tocaregalo-php:dev php tests/Smoke/backend-runtime.php --http-only` exited 0, printing `HTTP JSON smoke checks passed.` It checks `/api` (200), an unknown API path (404), and `/api/docs` (404), each with JSON and HTML Accept. Bodies decode as JSON with no HTML, trace field or test secret. CLI-only diagnostics used while fixing the runtime were removed before the final run.
+- HTTP-only mode uses an ephemeral process-only APP_SECRET and, only when DATABASE_URL is absent, a non-routable MySQL DSN fixture with a declared server version. Docker network is disabled. This is not a real connection, a user-selected parameter, or MySQL acceptance evidence. Full mode has no DATABASE_URL fallback and awaits the user's .env.
+- PHP `-l` ran in the existing PHP tool container against all PHP files under src/config/public/tests/Smoke and bin/console: six files, all exit 0. No new image/package was installed.
+- `docker compose --env-file .env.example --project-name tocaregalo-t3 -f compose.smoke.yaml config --quiet` exited 0. Public template markers were used only for parsing; no services were started with them.
+- `git diff --check` passed at the progress boundary.
+
+Pending: real MySQL SELECT 1/version/UTC checks, negative connection test, full dotenv-backed CLI/container/config verification, real smoke isolation inspection and cleanup. Existing T2 audit warnings remain open. T3 is unchecked and no full NFR/product acceptance is claimed. Wait for database parameters; do not start T4.
+
+Subsequent user-requested service naming: all development/test/smoke service keys now start with `tocaregalo-`; depends_on references, Nginx PHP/frontend upstreams and example database/SMTP hosts were updated. All three Compose models were parsed with `config --format json`; service-prefix and dependency-target inspections passed (7/7/2 services respectively), as did `git diff --check`. An initial parse exposed one unchanged anchor dependency; it was corrected before the passing final checks. No service was started. User-supplied DB name/user are tocaregalo, port 3306; internal host is now tocaregalo-mysql. Runtime/database checks remain pending.

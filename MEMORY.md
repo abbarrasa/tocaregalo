@@ -4,13 +4,17 @@ Last updated: 2026-11-17
 
 ## Current state
 
-- Phase: Implementation, 002:T1 and T2 complete. Stop before unauthorized T3.
+- Phase: T3 implementation in progress, incomplete. [T3 execution plan v0.1](./specs/002-development-foundation/t3-execution-plan.md) approved with the shared .env/user-supplied database parameter condition. T1/T2 remain complete; no later task is authorized.
 - [Application specification 001 v1.0](./specs/001-toca-regalo/spec.md), [technical plan 001 v0.1](./specs/001-toca-regalo/plan.md), and [six-block decomposition v0.1](./specs/001-toca-regalo/decomposition-proposal.md) are approved.
 - All six derived blocks' spec/plan/tasks documents at v0.1 are explicitly approved. The [application task index v0.1](./specs/001-toca-regalo/tasks.md) maps 54 tasks: two complete, 52 pending.
 - Six image downloads, two tool builds and Composer/npm installations occurred under T2's explicit authorization. Application runtime/behavior remain unimplemented; no application services, browser downloads, key generation or database initialization occurred.
 - 002:T2 completed on `feature/002_T02-lock-dependencies`, created from clean local `dev`. Manifests, lockfiles and immutable image digests are present; [dependency evidence](./specs/002-development-foundation/dependency-resolution.md) records checks and audit warnings. No task after T2 is authorized. Public review-only secret values remain unusable at runtime. No commit/push performed.
 
 ## Approval evidence
+
+T3 approval on 2026-11-17: “Para la configuración de la conexión a la base de datos, usa los parámetros del fichero .env que también usa Symfony. Cuando necesites que te diga los parámetros, pregúntamelos. Apruebo el plan.” T3 branch is feature/002_T03-backend-api-runtime from local dev; pre-existing planning/governance edits were preserved. The asynchronous question requests DB name/user/port and whether to use approved temporary MySQL or an existing server; passwords must be supplied only in ignored local .env, not chat. No .env existed at initial inspection. Database-dependent work waits for the answer.
+
+On 2026-11-17 the user required a task-specific execution plan to be presented and explicitly approved before implementing each task from T3 onward, even under approved feature plans/task lists. Their latest request authorizes T3 planning only. This is an explicit additional project rule, not a claim that the original SDD skill independently required repeated feature-plan approval for every task.
 
 The original approvals below are explicit user statements from 2026-11-16; the T2 authorization is dated separately:
 
@@ -79,6 +83,8 @@ All requirements/acceptance criteria are inherited without changes from the pare
 
 ## Next authorized step
 
-Request authorization for 002:T3: minimal Symfony/API Platform JSON runtime and real MySQL boundary. Stop after T2; do not start T3 or merge/commit/push automatically. Browser binaries, secrets and later tasks are not authorized by T2's installation approval. Record open dependency audit warnings in subsequent verification rather than claiming a clean audit.
+User supplied database name tocaregalo, user tocaregalo, port 3306, then explicitly requested Docker service names prefixed with tocaregalo. Service keys and references now use tocaregalo-mysql, tocaregalo-php, tocaregalo-frontend, tocaregalo-nginx, tocaregalo-mailpit, tocaregalo-notification-worker, tocaregalo-closure-worker; smoke PHP uses tocaregalo-php-smoke. Example DSNs and Nginx upstreams follow these names. Database parameters/password file and runtime checks remain pending; naming work did not start any service. Historical evidence commands with old service names remain historical and must be adapted for future runs.
+
+Resume T3 when the user supplies/confirms database parameters and the ignored project-root .env is configured. HTTP JSON smoke and PHP syntax/Compose static checks passed; actual MySQL, UTC session, negative connection and remaining regression evidence are pending. No database service has started. Do not mark T3 complete or start T4. Keep T2 audit warnings visible; no merge/commit/push. See [T3 progress](./specs/002-development-foundation/verification.md#t3-progress).
 
 Preserve existing approvals. Requirement or material plan changes follow SDD Change; do not restart Clarification or select new product behavior silently. Final read-only Validation and user acceptance remain separate future phases.
