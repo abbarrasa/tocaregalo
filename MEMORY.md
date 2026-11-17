@@ -4,13 +4,15 @@ Last updated: 2026-11-17
 
 ## Current state
 
-- Phase: T3 implementation in progress, incomplete. [T3 execution plan v0.1](./specs/002-development-foundation/t3-execution-plan.md) approved with the shared .env/user-supplied database parameter condition. T1/T2 remain complete; no later task is authorized.
+- Phase: T3 complete after approved shared .env setup and real MySQL verification. [Evidence](./specs/002-development-foundation/verification.md#t3-completion). T1/T2/T3 complete; no later implementation is authorized.
 - [Application specification 001 v1.0](./specs/001-toca-regalo/spec.md), [technical plan 001 v0.1](./specs/001-toca-regalo/plan.md), and [six-block decomposition v0.1](./specs/001-toca-regalo/decomposition-proposal.md) are approved.
-- All six derived blocks' spec/plan/tasks documents at v0.1 are explicitly approved. The [application task index v0.1](./specs/001-toca-regalo/tasks.md) maps 54 tasks: two complete, 52 pending.
-- Six image downloads, two tool builds and Composer/npm installations occurred under T2's explicit authorization. Application runtime/behavior remain unimplemented; no application services, browser downloads, key generation or database initialization occurred.
+- All six derived blocks' spec/plan/tasks documents at v0.1 are explicitly approved. The [application task index v0.1](./specs/001-toca-regalo/tasks.md) maps 54 tasks: three complete, 51 pending.
+- T2 downloaded/built tools and dependencies; T3 wired the JSON runtime and verified an isolated real MySQL database in tmpfs. The temporary containers/network were removed without volume deletion. Local .env has generated secrets, mode 600, ignored and untracked; no secret was printed. No recipient encryption keys, browser downloads, business schema or product flow was implemented.
 - 002:T2 completed on `feature/002_T02-lock-dependencies`, created from clean local `dev`. Manifests, lockfiles and immutable image digests are present; [dependency evidence](./specs/002-development-foundation/dependency-resolution.md) records checks and audit warnings. No task after T2 is authorized. Public review-only secret values remain unusable at runtime. No commit/push performed.
 
 ## Approval evidence
+
+T3 continuation: the user supplied database/user tocaregalo and port 3306, requested prefixed service names, and then stated “Sí. Prepara el .env. Asegúrate de que no se sube al repositorio (.gitignore)”, approving the proposed local password/APP_SECRET generation and completion of T3 verification. Work continued from clean current dev on feature/002_T03-backend-runtime-verification; no commit/push. This resolves earlier pending-parameter/secret statements below, which remain historical.
 
 T3 approval on 2026-11-17: “Para la configuración de la conexión a la base de datos, usa los parámetros del fichero .env que también usa Symfony. Cuando necesites que te diga los parámetros, pregúntamelos. Apruebo el plan.” T3 branch is feature/002_T03-backend-api-runtime from local dev; pre-existing planning/governance edits were preserved. The asynchronous question requests DB name/user/port and whether to use approved temporary MySQL or an existing server; passwords must be supplied only in ignored local .env, not chat. No .env existed at initial inspection. Database-dependent work waits for the answer.
 
@@ -37,7 +39,7 @@ The approved child scope/task definitions remain unchanged; T2 and its authorize
 
 | Block | Documents | Tasks | Prerequisite |
 | --- | --- | --- | --- |
-| 002 — Development foundation | [spec](./specs/002-development-foundation/spec.md), [plan](./specs/002-development-foundation/plan.md), [tasks](./specs/002-development-foundation/tasks.md) | 2 complete, 6 pending | None |
+| 002 — Development foundation | [spec](./specs/002-development-foundation/spec.md), [plan](./specs/002-development-foundation/plan.md), [tasks](./specs/002-development-foundation/tasks.md) | 3 complete, 5 pending | None |
 | 003 — Identity and account access | [spec](./specs/003-identity-access/spec.md), [plan](./specs/003-identity-access/plan.md), [tasks](./specs/003-identity-access/tasks.md) | 9 pending | 002:T8 |
 | 004 — Groups and events | [spec](./specs/004-groups-events/spec.md), [plan](./specs/004-groups-events/plan.md), [tasks](./specs/004-groups-events/tasks.md) | 10 pending | 003:T9 |
 | 005 — Confidential draw lifecycle | [spec](./specs/005-confidential-draws/spec.md), [plan](./specs/005-confidential-draws/plan.md), [tasks](./specs/005-confidential-draws/tasks.md) | 10 pending | 004:T10 |
@@ -69,6 +71,7 @@ All requirements/acceptance criteria are inherited without changes from the pare
 
 ## Verification state
 
+- T3 complete: real HTTP-kernel JSON and MySQL 8.4 SELECT 1/UTC checks passed; invalid connection failed at its intended stage without secret disclosure; Symfony container/YAML/platform checks passed; dependency locks unchanged. .env ignore/tracking/600 checks passed. Dedicated project used tmpfs/no ports and was removed afterward. No external Nginx/frontend/product acceptance is claimed; see [T3 completion](./specs/002-development-foundation/verification.md#t3-completion).
 - 002:T2 completed with [dependency evidence](./specs/002-development-foundation/dependency-resolution.md): six images pinned; two tool builds; 117 locked PHP packages; final npm ci installed 145 packages. Composer manifest/platform/lock checks, executable versions, npm tree checks, JSON and Compose validations passed. All API Platform components use 4.2 and Symfony framework components use 7.4; no Twig. npm audit retains four moderate development entries (glob/minimatch via js-beautify/editorconfig); Composer audit reports abandoned doctrine/common, zero security advisories. npm production audit reports zero advisories. These audit warnings remain open; no application suite has run. Historical source/environment observations below describe their earlier dates, not a claim that T2 downloads never occurred.
 - 002:T1 completed: [verification record](./specs/002-development-foundation/verification.md) contains exact static-check commands/results and runtime exclusions. Files: [development Compose](./compose.yaml), [test override](./compose.test.yaml), [environment template](./.env.example), [PHP Dockerfile](./docker/php/Dockerfile), [PHP settings](./docker/php/development.ini), [Node Dockerfile](./docker/node/Dockerfile), [Nginx config](./docker/nginx/default.conf), [Docker ignores](./.dockerignore), updated [Git ignores](./.gitignore), and [Spanish README](./README.md).
 - Both Compose config validations exited 0. Parsed JSON model inspection passed for seven services, loopback-only Nginx/Mailpit publications, pull_policy never, no installation/download startup commands, proper API/worker environments, and distinct development/test project/database volume/URL/key file.
@@ -85,6 +88,6 @@ All requirements/acceptance criteria are inherited without changes from the pare
 
 User supplied database name tocaregalo, user tocaregalo, port 3306, then explicitly requested Docker service names prefixed with tocaregalo. Service keys and references now use tocaregalo-mysql, tocaregalo-php, tocaregalo-frontend, tocaregalo-nginx, tocaregalo-mailpit, tocaregalo-notification-worker, tocaregalo-closure-worker; smoke PHP uses tocaregalo-php-smoke. Example DSNs and Nginx upstreams follow these names. Database parameters/password file and runtime checks remain pending; naming work did not start any service. Historical evidence commands with old service names remain historical and must be adapted for future runs.
 
-Resume T3 when the user supplies/confirms database parameters and the ignored project-root .env is configured. HTTP JSON smoke and PHP syntax/Compose static checks passed; actual MySQL, UTC session, negative connection and remaining regression evidence are pending. No database service has started. Do not mark T3 complete or start T4. Keep T2 audit warnings visible; no merge/commit/push. See [T3 progress](./specs/002-development-foundation/verification.md#t3-progress).
+T3 is complete. Present T4's task-specific execution plan and await explicit approval before implementing it. Existing .env is private and must never be printed or overwritten without authorization. T2 audit warnings remain visible. No automatic merge/commit/push or subsequent installation.
 
 Preserve existing approvals. Requirement or material plan changes follow SDD Change; do not restart Clarification or select new product behavior silently. Final read-only Validation and user acceptance remain separate future phases.

@@ -4,13 +4,13 @@ Aplicación web para organizar grupos y eventos de intercambio de regalos. El de
 
 ## Estado actual
 
-Se han completado **002:T1 y 002:T2**: configuración de desarrollo, imágenes de herramientas PHP/Node y dependencias Composer/npm con archivos de bloqueo. La aplicación todavía no está implementada: faltan el arranque de la API y Vue, las migraciones y los comandos de los trabajadores. Esta entrega no permite arrancar una aplicación funcional.
+Se han completado **002:T1, 002:T2 y 002:T3**: configuración de desarrollo, herramientas y dependencias bloqueadas, arranque mínimo de API JSON y conexión verificada con MySQL 8.4 temporal. La aplicación todavía no está implementada: faltan Vue, las funciones de negocio, las migraciones y los trabajadores. Esta entrega no es una aplicación funcional de sorteos.
 
 Con autorización previa se han descargado las seis imágenes previstas, construido las dos herramientas e instalado las dependencias dentro de contenedores. [.env.example](./.env.example) fija las imágenes por digest y mantiene los marcadores públicos de secretos. No se han generado claves ni iniciado los servicios de la aplicación. El [registro técnico de dependencias](./specs/002-development-foundation/dependency-resolution.md) recoge versiones, comandos y límites: quedan cuatro avisos moderados en dependencias de pruebas npm y una dependencia PHP abandonada; las auditorías no detectan vulnerabilidades PHP ni avisos npm de producción.
 
 ## Configuración prevista
 
-T3 está en curso. Symfony (HTTP y consola) y la comprobación temporal utilizan el mismo `.env` local situado en la raíz del repositorio. `DATABASE_URL` contiene la conexión de Doctrine; para el MySQL temporal, sus credenciales deben corresponderse con `MYSQL_DATABASE`, `MYSQL_USER` y `MYSQL_PASSWORD`. No se han elegido parámetros reales ni iniciado MySQL: están pendientes de confirmación. No envíes contraseñas por el chat ni las guardes en archivos versionados. La prueba HTTP aislada puede ejecutarse sin conectar una BBDD; eso no verifica MySQL.
+Symfony (HTTP y consola) y la comprobación temporal utilizan el mismo `.env` local de la raíz. Ya está preparado con secretos aleatorios locales, permisos `600` y excluido de Git. `DATABASE_URL` corresponde a los parámetros MySQL suministrados; las contraseñas no se muestran ni se guardan en documentación. T3 verificó la conexión real en memoria y retiró el entorno temporal; no hay MySQL de T3 ejecutándose. No envíes contraseñas por el chat ni fuerces la inclusión del `.env` en Git.
 
 - Symfony/API Platform con PHP 8.5, MySQL 8.4 y Nginx.
 - Vue 3 y Bootstrap 5.3, con Node 24 y Vite 8.
@@ -33,7 +33,7 @@ La sobreescritura de puertos de pruebas usa `!override`, que requiere Docker Com
 
 ## Preparación posterior, pendiente de autorización
 
-1. Autorizar **002:T3** antes de preparar y ejecutar la API JSON y la conexión real a MySQL. T2 no autoriza las tareas posteriores.
+1. Revisar y aprobar el plan de ejecución de **002:T4** antes de implementar Vue y su entrada por Nginx. Cada tarea requiere su propio plan y autorización.
 2. Conservar los digests y archivos de bloqueo revisados. Las instalaciones de dependencias nunca deben ejecutarse implícitamente al arrancar; futuras descargas fuera del alcance autorizado requieren aprobación.
 3. Preparar los proyectos Symfony y Vue en sus tareas correspondientes. El arranque nunca instalará sus dependencias automáticamente.
 4. Crear un archivo local ignorado a partir de [.env.example](./.env.example). Los valores `REVIEW_ONLY_*` son marcadores públicos para validar archivos: deben sustituirse antes de cualquier ejecución. No representan secretos de desarrollo utilizables.

@@ -65,3 +65,35 @@ Actual checks:
 Pending: real MySQL SELECT 1/version/UTC checks, negative connection test, full dotenv-backed CLI/container/config verification, real smoke isolation inspection and cleanup. Existing T2 audit warnings remain open. T3 is unchecked and no full NFR/product acceptance is claimed. Wait for database parameters; do not start T4.
 
 Subsequent user-requested service naming: all development/test/smoke service keys now start with `tocaregalo-`; depends_on references, Nginx PHP/frontend upstreams and example database/SMTP hosts were updated. All three Compose models were parsed with `config --format json`; service-prefix and dependency-target inspections passed (7/7/2 services respectively), as did `git diff --check`. An initial parse exposed one unchanged anchor dependency; it was corrected before the passing final checks. No service was started. User-supplied DB name/user are tocaregalo, port 3306; internal host is now tocaregalo-mysql. Runtime/database checks remain pending.
+
+## T3 completion
+
+Date: 2026-11-17. Status: task complete; earlier progress entries remain historical. Execution continued from clean current dev on `feature/002_T03-backend-runtime-verification` after the user stated “Sí. Prepara el .env. Asegúrate de que no se sube al repositorio (.gitignore)”, answering the request to generate local passwords/APP_SECRET and complete T3 verification.
+
+The root .env was created exclusively (existing files would be preserved) from .env.example, replacing all review-only password/secret markers with independent PHP random_bytes(32) hex values and setting APP_DEBUG=0. No secret value was printed. Its database name/user are the user-supplied tocaregalo, host tocaregalo-mysql, port 3306. No recipient encryption key was generated. Native PHP generation used the existing tool image with network disabled; no package/image installation occurred.
+
+Secret tracking checks:
+
+- `git check-ignore -v .env`: exit 0, matched `.gitignore:55:/.env` (before and after creation).
+- `stat --format='%a %n' .env`: `600 .env`.
+- `git status --ignored --short .env`: `!! .env`.
+- `git ls-files -- .env`: exit 0, no output; file is not tracked. The existing ignore rule already sufficed, so no redundant rule was added. Ignore rules do not prohibit an explicit future force-add.
+
+All Compose commands below used `docker compose --env-file .env --project-name tocaregalo-t3 -f compose.smoke.yaml` as prefix, preserving the same root .env consumed by Symfony Dotenv. Commands never printed the resolved environment or container environment metadata.
+
+| Command suffix/check | Actual result |
+| --- | --- |
+| `config --quiet` | Exit 0 with actual local environment. |
+| Prior project-container inspection | No existing T3 containers; no unrelated stack adopted or modified. |
+| `up --detach --no-build --pull never --wait --wait-timeout 120 tocaregalo-mysql` | Exit 0; dedicated MySQL healthy. |
+| Targeted Docker inspect of Mounts/PortBindings/Tmpfs/health | Mounts empty, PortBindings empty, tmpfs `/var/lib/mysql`, healthy. No host/named data volume or published port. |
+| `run --rm --no-deps --pull never tocaregalo-php-smoke` | Exit 0: HTTP JSON checks and actual MySQL 8.4 SELECT 1/version/UTC session checks passed. |
+| `run --rm --no-deps --pull never --env DATABASE_URL=mysql://unused:unused@no-database.invalid:3306/unused?serverVersion=8.4.0 tocaregalo-php-smoke` | Expected exit 1: HTTP checks passed, then Doctrine DBAL ConnectionException at the MySQL stage. Diagnostic contained no DSN/password. Existing MySQL remained running/healthy until cleanup. |
+| `run --rm --no-deps --pull never --env APP_CACHE_DIR=/tmp/tocaregalo-console-check tocaregalo-php-smoke php bin/console lint:container --resolve-env-vars` | Exit 0; Symfony Runtime console loaded the shared .env and checked service types/env resolution. |
+| Same run prefix, `php bin/console lint:yaml config` | Exit 0; all five YAML files valid. |
+| Same run prefix, `composer check-platform-reqs` | Exit 0; PHP/extensions/Composer platform satisfied. |
+| `git diff --exit-code -- backend/composer.json backend/composer.lock frontend/package.json frontend/package-lock.json` | Exit 0; no dependency or lock changes. |
+| `down` (without volume flags) | Exit 0; only dedicated MySQL container and project network removed. One-shot checks had already removed their own containers. |
+| Final project-filtered container inspection | No remaining T3 containers. |
+
+Combined with the earlier missing-runtime failure, final HTTP/PHP syntax/Compose checks and diff review, these results satisfy T3's bounded done condition for NFR-1/3/4 support. They do not verify external Nginx HTTP transport, frontend screens, business persistence/migrations, SMTP or browser flows. T2 audit warnings remain open. Root .env remains private/local; temporary MySQL data is gone with tmpfs cleanup. No commit or push was performed. Stop before T4 implementation; its execution plan must be presented and approved first.
