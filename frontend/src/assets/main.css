@@ -1,0 +1,17 @@
+body {
+  background: #f4f6f8;
+  color: #24313b;
+}
+
+.shell-panel {
+  max-width: 48rem;
+  background: #fff;
+  border: 1px solid #dce2e8;
+  border-radius: 1rem;
+  overflow-wrap: anywhere;
+}
+
+:focus-visible {
+  outline: 3px solid #24313b;
+  outline-offset: 4px;
+}

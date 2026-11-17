@@ -170,3 +170,82 @@ docker compose --env-file .env --project-name tocaregalo-t3 -f compose.smoke.yam
 ### Limits and next task
 
 T9 establishes NFR-10 tooling and verifies the current six owned PHP files. Repeat analysis after every future implementation; zero errors required before task completion. Framework/container/query types are contracts at dynamic boundaries, not a substitute for runtime tests. Existing audit/license recommendations are recorded, not silently repaired. No browser, frontend/Nginx or product acceptance is claimed. T4/Playwright approvals remain valid; stop at T9 and wait for the user to resume T4.
+
+## T4 completion
+
+Date: 2026-11-17. Branch: `feature/002_T04-vue-nginx-entrypoint`, created from clean current local `dev`. Authority: [execution plan v0.2](./t4-execution-plan.md), prior explicit v0.1 runtime and exact Playwright download approval, v0.2 gate approval, completed prerequisite T9, then “Continúa con la siguiente tarea” after T9 completion. No T5 implementation, commit or push.
+
+### Scope and dependency evidence
+
+Implemented Spanish Vue/Router/Bootstrap preparation shell and generic not-found view; native-fetch relative API client with same-origin credentials, JSON handling and Spanish sanitized errors; Vite configuration and standalone API/browser checks. Existing development Nginx FastCGI/Vite/HMR configuration was reused; added [compiled-static configuration](../../docker/nginx/static.conf) preserving API routing/private-path protections. Added [dedicated Compose](../../compose.frontend-smoke.yaml): PHP/FPM, Vite, Nginx and check-profile browser only. No MySQL, workers, keys, domain screens or schema.
+
+Only the previously authorized image `mcr.microsoft.com/playwright:v1.65.1-noble` was downloaded. Resolved immutable digest `sha256:1507cbfc550a63a6b7396791ca4f00df17beb56342d2447b3f106c306f525579`, pinned in the dedicated Compose file. Locked npm Playwright is 1.65.1; actual Chromium **159.0.8154.6**. Browser verification image runs Node **26.13.1**; application build/tests continue to use the approved Node 24 tool image. No npm/Composer/host package install, browser install command, lock change, image build or unrelated runtime operation.
+
+### Tests first and findings
+
+Wrote API-client and browser assertions before application implementation. Initial API-client suite exited 1 because `frontend/src/api/client.js` did not exist; Vitest loaded successfully, confirming missing implementation rather than missing tooling. Browser execution waited for the authorized image and application runtime; no pre-implementation browser-red result is claimed.
+
+Initial live browser test failed to mount Vue: Nginx correctly denied `/node_modules/.vite/...`. Changed Vite cacheDir to `node_modules/vite-cache`, keeping dot-path protection intact rather than exempting private paths. The next run passed both viewports but the rapid truncate/write HMR restoration was coalesced by the watcher, leaving stale browser content even though disk source was restored. A subsequent run confirmed stale cached content. Changed only the smoke test to atomic editor-style save/rename and explicit same-origin WebSocket connected-frame detection; restarted only dedicated Vite to clear that stale test state. Final development checks proved both update and restoration without document reload. Original source contents remain intact; no Git restore/reset/stash used.
+
+### Commands and results
+
+All commands ran from the repository root, using existing installed tools and local UID/GID 1000:1000.
+
+```bash
+git status --short --branch
+git switch -c feature/002_T04-vue-nginx-entrypoint dev
+docker pull mcr.microsoft.com/playwright:v1.65.1-noble
+
+docker run --rm --pull never --user 1000:1000 \
+  -v /home/albertusko/Proyectos/tocaregalo/frontend:/workspace/frontend \
+  -w /workspace/frontend tocaregalo-node:dev \
+  npm test -- tests/api-client.test.js
+```
+
+Initial test exit 1 as above. Following implementation and again after the Vite/HMR corrections, the same container ran `sh -c 'npm test -- tests/api-client.test.js && npm run build'`: exit 0, **11 tests pass**, Vite 8.3.8 build succeeds, 31 modules. Final artifacts: index.html 0.47 kB, CSS 230.51 kB, JS 88.82 kB. Tests cover relative URLs, credentials/header policy, unsafe/external/traversal paths, HTTP failure sanitization, non-JSON/malformed JSON and network failures. npm printed an available-major-upgrade notice; no upgrade performed.
+
+```bash
+ss -ltn 'sport = :8082'
+docker compose --env-file .env --project-name tocaregalo-t4 -f compose.frontend-smoke.yaml config --quiet
+docker compose --env-file .env --project-name tocaregalo-t4 -f compose.frontend-smoke.yaml \
+  up --detach --no-build --pull never tocaregalo-php tocaregalo-frontend tocaregalo-nginx
+docker compose --env-file .env --project-name tocaregalo-t4 -f compose.frontend-smoke.yaml \
+  exec -T tocaregalo-nginx nginx -t
+docker compose --env-file .env --project-name tocaregalo-t4 -f compose.frontend-smoke.yaml \
+  run --rm --no-deps --pull never tocaregalo-browser
+```
+
+Port 8082 was free (sandbox socket query required repeating on the host). Compose config/start exit 0; Nginx syntax exit 0. Final development browser run exit 0, desktop **1440×900** and mobile **390×844**: Spanish title/lang/content, actual computed Bootstrap gutter style, no horizontal overflow, SPA not-found refresh, keyboard link activation, JSON `/api` 200 and unknown API/docs 404, protected `.env`/`.git` and direct PHP URLs 403/404, no page errors. HMR additionally confirms connected frame through Nginx's origin, temporary source update and restoration while preserving a document-local sentinel. Mobile screenshot visually inspected; captures are ignored under dist, not deliverable artifacts.
+
+```bash
+docker compose --env-file .env --project-name tocaregalo-t4 -f compose.frontend-smoke.yaml stop tocaregalo-frontend
+SMOKE_NGINX_MODE=static docker compose --env-file .env --project-name tocaregalo-t4 \
+  -f compose.frontend-smoke.yaml up --detach --no-build --pull never tocaregalo-nginx
+SMOKE_NGINX_MODE=static docker compose --env-file .env --project-name tocaregalo-t4 \
+  -f compose.frontend-smoke.yaml exec -T tocaregalo-nginx nginx -t
+SMOKE_NGINX_MODE=static SMOKE_MODE=static docker compose --env-file .env \
+  --project-name tocaregalo-t4 -f compose.frontend-smoke.yaml \
+  run --rm --no-deps --pull never tocaregalo-browser
+```
+
+Final static browser run exit 0 with the same viewport/routing/API/privacy checks. No Vite client script; hashed compiled script is loaded. Runtime inspection confirms Vite stopped while Nginx served static assets; Nginx syntax exit 0. Browser API calls originate from the Nginx page with relative URLs and same-origin credentials; no CORS bypass. The native-fetch client itself has the focused unit checks above; no interactive product API flow is claimed from the placeholder shell.
+
+```bash
+docker run --rm --pull never --user 1000:1000 \
+  -v /home/albertusko/Proyectos/tocaregalo/backend:/workspace/backend \
+  -w /workspace/backend tocaregalo-php:dev composer analyse
+docker inspect --format '{{.Name}} {{json .HostConfig.PortBindings}} {{range .Mounts}}{{.Destination}}:{{.RW}} {{end}}' \
+  tocaregalo-t4-tocaregalo-php-1 tocaregalo-t4-tocaregalo-frontend-1 tocaregalo-t4-tocaregalo-nginx-1
+docker compose --env-file .env --project-name tocaregalo-t4 \
+  -f compose.frontend-smoke.yaml --profile checks down
+```
+
+Final PHPStan **2.3.6**, fixed level **10**, all owned PHP including tests: exit 0, **zero errors**, no baseline/exclusions. PHP runtime code unchanged; actual FPM/JSON regressions pass in both Nginx modes. T3/T9 real-MySQL evidence remains separate; no DB query or MySQL rerun needed for T4.
+
+Inspection: only HTTP publication `127.0.0.1:8082`; PHP/Node have none. PHP alone mounts root .env read-only; Node/browser mount frontend only, Nginx read-only dist/config. The final .env bind additionally rejects missing source paths (`create_host_path: false`); final Compose parsing confirms it. Full model check with `--profile checks` verifies four prefixed services, pull_policy never, bind-only mounts, no backend credential environment on frontend/browser, and private env only in PHP. Initial model assertion omitted that profile and correctly saw only three active services; corrected the inspection, no service added. Resolved environment values were parsed without printing secrets.
+
+Dedicated down exit 0; final project container/network filters empty, no volume deletion. Root .env remains ignored/untracked/mode 600; package manifests and locks unchanged. Editor diagnostics, final Compose validations, task counts and git diff --check pass. No Twig source or dependency introduced. Existing T2 npm development warnings and T9 abandoned doctrine/common/license recommendation remain historical open items, not silently repaired or re-audited.
+
+### Traceability and limits
+
+NFR-2: real Vue/Bootstrap and build. NFR-3: actual Nginx development/static runtime. NFR-4: unit-tested fetch boundary and real same-origin JSON/FPM routing. NFR-5: Spanish shell/error/missing route/README and English technical artifacts. NFR-6: both approved shell viewports and keyboard checks; no complete product-flow acceptance. NFR-10: successful post-implementation level-10 analysis. No full application requirement is declared fulfilled by this scaffold; Firefox/WebKit, complete fixtures/harness and business acceptance remain future tasks. Stop after T4; T5 needs a presented and approved execution plan before implementation.

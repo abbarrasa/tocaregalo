@@ -1,9 +1,10 @@
 # 002:T4 — Execution plan
 
 Revision: v0.2
-Status: v0.2 approved; prior v0.1 scope and Playwright approval preserved; prerequisite T9 pending
+Status: approved v0.2; T4 implementation complete
 Historical approval: “Apruebo los alcances” approved v0.1 implementation/runtime and the separate matching Playwright image download on 2026-11-17. Do not request those unchanged approvals again.
 Approval (v0.2): “Apruebo estas revisiones y autorizo actualizar las tareas”, 2026-11-17, approves the PHPStan gate/prerequisite and authorizes task-list preparation. No PHPStan package installation or T9 execution is authorized by this statement.
+Execution continuation: “Continúa con la siguiente tarea”, 2026-11-17, resumes T4 after T9 completion under the existing execution and Playwright download approvals. Branch feature/002_T04-vue-nginx-entrypoint created from clean current local dev.
 Date: 2026-11-17
 Planning authorization: “Continúa con la siguiente tarea”, following T3 completion. Under the user's per-task rule, this authorizes planning, not implementation.
 Authority: [Spec 002 v0.1](./spec.md), [Plan 002 v0.1](./plan.md), [parent architecture v0.1](../001-toca-regalo/plan.md), [T4](./tasks.md). T3 is complete with [runtime evidence](./verification.md#t3-completion).
@@ -81,3 +82,7 @@ Do not mark a failed/unexecuted mandatory check passed. Preserve T2's four moder
 The original v0.1 execution/runtime and exact Playwright image download are already approved. Approve only the v0.2 PHPStan gate/prerequisite addition alongside the affected plan revisions. The separate PHPStan setup/task/installation scope still needs its own approvals; no duplicate Playwright authorization is requested.
 
 No implementation, image download, runtime startup or branch switch has occurred during planning.
+
+## Execution outcome
+
+T4 completed on 2026-11-17 on feature/002_T04-vue-nginx-entrypoint after the recorded continuation. [Actual evidence](./verification.md#t4-completion) supersedes historical planning-time pending statements: 11 unit checks, final build, development/static Chromium at both viewports, HMR through Nginx, private-path protections and PHPStan level-10 zero errors passed. Authorized browser image pinned; temporary runtime removed; no commit/push. Stop before T5.
