@@ -1,0 +1,62 @@
+#!/bin/sh
+set -eu
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+. "$ROOT/scripts/lib/common.sh"
+selection=${1:-all}
+[ "$#" -eq 0 ] || shift
+case "$selection" in
+    --help|-h) printf 'Uso: scripts/check [static|phpstan|backend [filtro]|mail [filtro]|frontend [archivo]|build|e2e [proyecto [archivo]]|all]\nNo instala dependencias. Las pruebas con servicios usan un entorno temporal exclusivo.\n'; exit 0 ;;
+    static|phpstan|build|all) [ "$#" -eq 0 ] || fail 'Esta selección no admite argumentos.' ;;
+    backend|mail|frontend) [ "$#" -le 1 ] || fail 'Se admite un único filtro o archivo.' ;;
+    e2e) [ "$#" -le 2 ] || fail 'Se admite proyecto y archivo.'
+        case "${1:-chromium-desktop}" in chromium-desktop|chromium-mobile|firefox-desktop|webkit-desktop) ;; *) fail 'Proyecto de navegador desconocido.' ;; esac ;;
+    *) fail 'Comprobación desconocida; consulta --help.' ;;
+esac
+# Selectors are positional values, never tool or Compose options.
+for selector do case "$selector" in -*|'') fail 'Selector no válido.' ;; esac; done
+if [ "$selection" = all ]; then
+    for stage in static phpstan backend mail frontend build e2e; do "$ROOT/scripts/check" "$stage"; done
+    exit 0
+fi
+require_inputs
+PROJECT=tocaregalo-test
+MODEL=compose.verification.yaml
+case "$selection" in
+    static)
+        for script in "$ROOT/scripts/dev" "$ROOT/scripts/check" "$ROOT/scripts/lib/common.sh" "$ROOT/tests/scripts/wrappers.sh"; do sh -n "$script"; done
+        git -C "$ROOT" diff --check
+        git -C "$ROOT" check-ignore -q .env
+        compose config --quiet
+        MODEL=compose.mail-smoke.yaml; compose config --quiet
+        MODEL=compose.verification.yaml
+        node_run node -e 'JSON.parse(require("fs").readFileSync("package.json", "utf8")); console.log("JSON checked")'
+        perl "$ROOT/tests/scripts/static.pl" "$ROOT"
+        sh "$ROOT/tests/scripts/wrappers.sh"
+        ;;
+    phpstan) analyse ;;
+    frontend) node_run npm test -- "$@" ;;
+    build) node_run npm run build ;;
+    backend|mail|e2e)
+        [ "$selection" != mail ] || MODEL=compose.mail-smoke.yaml
+        claim_test_stack
+        case "$selection" in
+            backend|mail)
+                if [ "$selection" = mail ]; then
+                    compose up -d --no-build --pull never --wait tocaregalo-mysql tocaregalo-mailpit
+                else
+                    compose up -d --no-build --pull never --wait tocaregalo-mysql
+                fi
+                if [ "$#" -gt 0 ]; then set -- --filter "$1"; fi
+                if [ "$selection" = backend ]; then set -- --exclude-group mail "$@"; fi
+                php_run vendor/bin/phpunit "$@"
+                ;;
+            e2e)
+                compose up -d --no-build --pull never --wait tocaregalo-nginx
+                if [ "$#" -gt 0 ]; then
+                    project=$1; shift
+                    compose run --rm --no-deps -T tocaregalo-browser npm run test:e2e -- "--project=$project" "$@"
+                else
+                    compose run --rm --no-deps -T tocaregalo-browser npm run test:e2e
+                fi ;;
+        esac ;;
+esac

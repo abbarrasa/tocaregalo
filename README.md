@@ -4,7 +4,7 @@ Aplicación web para organizar grupos y eventos de intercambio de regalos. El de
 
 ## Estado actual
 
-Se han completado **002:T1–T6 y 002:T9**: configuración y dependencias, API JSON con conexión MySQL verificada, PHPStan y una base Vue/Bootstrap servida por Nginx. Se han comprobado escritorio y móvil, HMR y archivos compilados. T5 incorpora PHPUnit con MySQL aislado, tests de componentes y pruebas de navegador. T6 añade captura local de correo y entradas de procesos verificadas. Faltan las funciones de negocio, las migraciones, sus pruebas y los trabajadores. Esta entrega todavía no permite realizar sorteos.
+Se han completado **002:T1–T7 y 002:T9**: configuración y dependencias, API JSON con conexión MySQL verificada, PHPStan y una base Vue/Bootstrap servida por Nginx. Se han comprobado escritorio y móvil, HMR y archivos compilados. T5 incorpora PHPUnit con MySQL aislado, tests de componentes y pruebas de navegador. T6 añade captura local de correo y entradas de procesos verificadas. T7 incorpora comandos reproducibles, tareas de VS Code y documentación operativa. Faltan las funciones de negocio, las migraciones, sus pruebas y los trabajadores. Esta entrega todavía no permite realizar sorteos.
 
 Con autorización previa se han descargado las seis imágenes previstas y la imagen de verificación Playwright 1.65.1, construido las dos herramientas e instalado las dependencias dentro de contenedores. [.env.example](./.env.example) fija las imágenes de desarrollo por digest y mantiene los marcadores públicos de secretos. No se han generado claves de asignación. Los entornos temporales de comprobación se han retirado. El [registro técnico](./specs/002-development-foundation/verification.md) recoge resultados y límites; los avisos de dependencias registrados en T2/T9 siguen pendientes.
 
@@ -33,7 +33,7 @@ La sobreescritura de puertos de pruebas usa `!override`, que requiere Docker Com
 
 ## Preparación posterior, pendiente de autorización
 
-1. Preparar y presentar el plan de ejecución de **002:T7** cuando el usuario solicite continuar; esperar su aprobación antes de implementarla.
+1. Tras T7, preparar y presentar el plan de ejecución de **002:T8** cuando el usuario solicite continuar; esperar su aprobación antes de implementarla.
 2. Conservar los digests y archivos de bloqueo revisados. Las instalaciones de dependencias nunca deben ejecutarse implícitamente al arrancar; futuras descargas fuera del alcance autorizado requieren aprobación.
 3. Completar las pruebas y funciones de Symfony y Vue en sus tareas correspondientes. El arranque nunca instalará sus dependencias automáticamente.
 4. Crear un archivo local ignorado a partir de [.env.example](./.env.example). Los valores `REVIEW_ONLY_*` son marcadores públicos para validar archivos: deben sustituirse antes de cualquier ejecución. No representan secretos de desarrollo utilizables.
@@ -155,3 +155,26 @@ docker compose --env-file .env --project-name tocaregalo-test -f compose.mail-sm
 La prueba crea explícitamente la tabla de transporte solo en la base temporal validada, encola un identificador de fixture y verifica el mensaje capturado, su remitente, destinatario y contenido. Fuerza SMTP a Mailpit, sin contactar servicios externos. La bandeja estará en `http://localhost:8026` mientras el entorno siga activo; SMTP no publica puertos. El entorno T5 sin correo excluye el grupo `mail`; esta suite T6 sí lo ejecuta completo.
 
 Los lanzadores de [notificaciones](./docker/worker/entrypoint.sh) y [cierre](./docker/scheduler/entrypoint.sh) comparten la imagen PHP, transmiten argumentos y señales, y conservan los códigos de error. Los trabajadores de consola usan `SIGTERM`; las pruebas comprobaron terminación con código 143, sin garantizar finalización de trabajos en curso. El comando real de cierre sigue pendiente de 004:T8: su invocación actualmente falla de forma visible. El probe de T6 es exclusivo de pruebas y no cierra eventos. No actives los trabajadores del entorno completo como si la funcionalidad de negocio estuviera terminada.
+
+## Comandos de desarrollo y comprobación
+
+Los scripts requieren `sh`, Git, Perl con JSON::PP (comprobación estática), Docker y Compose, además de las imágenes y dependencias ya instaladas con autorización. No instalan paquetes, descargan imágenes, generan claves ni eliminan volúmenes.
+
+```bash
+scripts/dev --help
+scripts/check static
+scripts/check phpstan
+scripts/check backend
+scripts/check frontend
+scripts/check mail
+scripts/check e2e chromium-desktop
+scripts/dev build
+```
+
+`backend` admite un filtro de PHPUnit; `frontend`, un archivo; `mail`, un filtro; `e2e`, un proyecto y opcionalmente un archivo. Sin proyecto ejecuta los cuatro perfiles configurados. `scripts/check all` (también sin argumentos) los encadena y se detiene ante el primer error; la verificación completa corresponde a T8.
+
+`scripts/dev up` requiere el archivo de claves autorizado, aún pendiente; no lo genera. `scripts/dev down` detiene únicamente el proyecto de desarrollo y conserva sus volúmenes. `build` compila Vue, no construye imágenes Docker. `migrate` y `create-super-admin` indican que sus operaciones de negocio todavía no están disponibles, sin modificar datos.
+
+Las pruebas con servicios reservan `tocaregalo-test`, usan MySQL temporal y se retiran al terminar o fallar. Rechazan un entorno de pruebas existente y los puertos ocupados. HTTP de pruebas usa 8081 y Mailpit 8026 por defecto; desarrollo usa 8080 y 8025. Si falta `.env`, una dependencia, una imagen o un parámetro, corrige el requisito indicado; los scripts no lo sustituyen automáticamente. No ejecutes otro proceso sobre el proyecto reservado durante las pruebas.
+
+En VS Code, **Terminal → Ejecutar tarea** ofrece los mismos comandos; abrir el proyecto no arranca servicios. Los detalles técnicos, los límites de los trabajadores y la política de claves y SMTP están en [la guía de desarrollo](./docs/development.md). Para SMTP de despliegue habrá que facilitar servidor, puerto, seguridad TLS, autenticación si procede y remitente; las comprobaciones locales solo usan Mailpit.

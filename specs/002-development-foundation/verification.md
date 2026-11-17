@@ -408,3 +408,28 @@ Inspection: MySQL tmpfs `/var/lib/mysql`, no published DB port/data mount. Mailp
 ### Acceptance limits and next boundary
 
 NFR-3: real shared-image process/configuration evidence. NFR-7: local fixture capture and external sender/transport configuration only; actual recovery/assignment messages and deployment SMTP remain future work. NFR-9: launch/15-second process contract only; event rules and immediate guards/background closure belong to 004/006. NFR-10: required successful post-task analysis. No full product acceptance is claimed from fixtures. Stop after T6; T7 needs its own presented/approved execution plan before implementation.
+
+## T7 completion
+
+Date: 2026-11-17. Scope: [execution plan v0.1](./t7-execution-plan.md), approved with “Apruebo el plan y autorizo su implementación”. Branch: `feature/002_T07-developer-check-commands`, created from current local dev preserving proposed-plan/MEMORY edits. No commit/push, install, image pull/build, key generation, migration, account creation or external delivery.
+
+### Implementation and traceability
+
+- NFR-3: POSIX [dev](../../scripts/dev) / [check](../../scripts/check) entrypoints with shared helpers, fixed Compose projects/models, installed-tool delegation, explicit selectors and nonzero failure propagation. Frontend/PHPStan containers have no network and create no Compose resources. Service-owning tests reject existing containers/networks, lock invocation ownership, preflight the configured loopback port, use existing tmpfs harnesses and trap scoped cleanup without volume removal.
+- NFR-5/8: Spanish help/error/README, English technical documentation/code/configuration, 11 VS Code task mappings and EditorConfig preserving existing family styles. Root resolution works outside repository cwd and with spaces. No folder-open automatic task. GUI task launch was not exercised; static task resolution and actual corresponding CLI paths were checked.
+- NFR-7: local Mailpit delegation and external deployment SMTP inputs documented; key policy/backup links retained without inventing/generating a key schema or secret. Shared development PHP now has the minimal read-only root `.env` bind already used by workers.
+- NFR-10: existing PHPStan 2.3.6 configuration remains fixed level 10 over all owned PHP including tests, no baseline or scope exclusions. No PHP/manifests/locks changed.
+
+### Actual checks
+
+1. Test first: `sh tests/scripts/wrappers.sh` initially exited 127 because `scripts/check` did not exist. Controlled CLI recorder tests then passed for help/invalid commands without daemon access, missing private dotenv, spaced root/cwd/selector arguments, fixed project/model, exact filter/browser routing, failure exits 37/23/19, cleanup on failed startup/test, existing-project refusal without teardown, and absent business-command discovery without mutation. Tests use their own temporary fixture root and do not claim runtime coverage. `perl tests/scripts/static.pl .` passed all 11 task mappings.
+2. `scripts/check static` passed shell syntax, `git diff --check`, private dotenv ignore, both standalone Compose validations, package JSON, task mappings and recorder checks. Initial live attempts found an incorrect static Node model and an interpolated test-script path; both corrected. The first Compose-based Node invocation created an empty test network; that owned network was explicitly removed. Final Node/PHPStan paths use standalone network-disabled containers.
+3. `scripts/check frontend`: Vitest 5.1.0, 2 files / 12 tests passed. `scripts/check build`: Vite 8.3.8, 31 modules, production compile passed. No package operation occurred.
+4. `scripts/check backend`: PHP 8.5.12 / PHPUnit 12.5.44, **23 tests / 74 assertions passed**, optional mail group explicitly excluded. Real MySQL tmpfs guard/rollback and JSON boundary ran. Container/network cleanup completed with no volume removal.
+5. `scripts/check e2e chromium-desktop`: **2 tests passed**, Spanish responsive/keyboard shell and same-origin JSON/private-path boundary. Live invocation verified port preflight and T5 service startup/delegation/cleanup. Four-project full run and live mail wrapper suite were not repeated: unchanged underlying harnesses retain T5/T6 evidence; new routing/failure handling has recorder evidence. Full `all` execution remains T8.
+6. During browser runtime, another `scripts/check backend` exited 2 with the existing-environment warning and left its resources intact. `scripts/dev up` exited 2 for missing assignment key file without starting development services. `scripts/dev migrate` exited 2 because development PHP was not running; no services or business commands were started. Recorder discovery proves missing-command refusal; real migration/bootstrap execution remains unavailable and unexecuted.
+7. `scripts/check phpstan` reported **[OK] No errors**, using fixed level 10. Final rerun after script implementation also passed. Dependency manifests/locks unchanged; root `.env` remained ignored/untracked with mode 600. New-file whitespace and final diff checks passed. No key contents, dotenv values, resolved private configuration or credentials printed.
+
+### Limits and next step
+
+This is command/configuration/documentation evidence supporting NFR-3/5/7/8/10, not complete product acceptance. No full key-dependent development startup, real migration/SUPERADMIN, real event closure, external SMTP or full aggregate/other browser rerun claimed. Existing audit/license warnings remain. T7 stops here; T8 requires a separately presented execution plan and explicit authorization. Final read-only SDD Validation remains later.

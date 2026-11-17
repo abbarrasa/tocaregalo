@@ -4,13 +4,15 @@ Last updated: 2026-11-17
 
 ## Current state
 
-- Phase: 002:T6 implementation complete; stopped at task boundary. Execution plan v0.1 and local runtime were approved with “Apruebo el plan y autorizo su implementación”, 2026-11-17. Branch feature/002_T06-mail-worker-runtime from local dev with planning edits preserved. No installation, external SMTP or T7 implementation authorized.
+- Phase: 002:T7 complete under [execution plan v0.1](./specs/002-development-foundation/t7-execution-plan.md), approved with “Apruebo el plan y autorizo su implementación”, 2026-11-17. Branch feature/002_T07-developer-check-commands. [Evidence](./specs/002-development-foundation/verification.md#t7-completion): recorder/static checks and 11 task mappings, Vitest 12, PHPUnit 23/74, Chromium desktop 2, build and PHPStan level 10 zero errors pass. Owned test runtime removed. No install, key generation, business mutation, commit or push.
 - Current approved application baseline: [specification v1.1](./specs/001-toca-regalo/spec.md), [technical plan v0.2](./specs/001-toca-regalo/plan.md), and unchanged [six-block decomposition v0.1](./specs/001-toca-regalo/decomposition-proposal.md).
-- The six child specs were synchronized to v0.2 by verbatim inheritance of parent NFR-10, without a new independent product decision. Revised task lists/index v0.2 are approved: 55 total, seven complete and 48 pending. Only 002:T9 is added, in order T3 → T9 → T4 → T5…; existing IDs remain unchanged. All pending tasks map NFR-10 and its completion gate. T9 is complete; approval evidence is recorded below.
+- The six child specs were synchronized to v0.2 by verbatim inheritance of parent NFR-10, without a new independent product decision. Revised task lists/index v0.2 are approved: 55 total, eight complete and 47 pending. Only 002:T9 is added, in order T3 → T9 → T4 → T5…; existing IDs remain unchanged. All pending tasks map NFR-10 and its completion gate. T9 is complete; approval evidence is recorded below.
 - T2 downloaded/built tools and dependencies; T3 wired the JSON runtime and verified an isolated real MySQL database in tmpfs. The temporary containers/network were removed without volume deletion. Local .env has generated secrets, mode 600, ignored and untracked; no secret was printed. No recipient encryption keys, business schema or product flow was implemented. T4 later downloaded only the explicitly approved Playwright verification image.
 - 002:T2 completed on `feature/002_T02-lock-dependencies`, created from clean local `dev`. Manifests, lockfiles and immutable image digests are present; [dependency evidence](./specs/002-development-foundation/dependency-resolution.md) records checks and audit warnings. No task after T2 is authorized. Public review-only secret values remain unusable at runtime. No commit/push performed.
 
 ## Approval evidence
+
+T7 approval: “Apruebo el plan y autorizo su implementación”, 2026-11-17. Approves execution plan v0.1 and its focused existing-image checks; no installation, keys, real migration/account creation or external mail. Completion recorded in verification.md#t7-completion.
 
 T6 approval: “Apruebo el plan y autorizo su implementación”, 2026-11-17. Execution plan v0.1 and local Mailpit/guarded tmpfs transport/worker-probe runtime authorized. No dependency download/install, external mail or real event closure.
 
@@ -118,7 +120,7 @@ All requirements/acceptance criteria are inherited without changes from the pare
 
 ## Next authorized step
 
-Stop after completed 002:T6. On user continuation prepare and present T7 execution plan (developer/check wrappers, VS Code tasks and setup documentation), then wait for approval before implementation. No T7/later code, install or runtime is authorized. Actual closure remains 004:T8; product delivery remains later slices. Keep .env private and existing audit warnings visible; no commit/push.
+Stop after completed T7. On user continuation prepare and present the T8 execution plan; await explicit approval and implementation/runtime authorization. Full setup/aggregate checks and final read-only Validation remain separate. No later task is authorized.
 
 User supplied database name tocaregalo, user tocaregalo, port 3306, then explicitly requested Docker service names prefixed with tocaregalo. Service keys and references now use tocaregalo-mysql, tocaregalo-php, tocaregalo-frontend, tocaregalo-nginx, tocaregalo-mailpit, tocaregalo-notification-worker, tocaregalo-closure-worker; smoke PHP uses tocaregalo-php-smoke. Example DSNs and Nginx upstreams follow these names. Database parameters/password file and runtime checks remain pending; naming work did not start any service. Historical evidence commands with old service names remain historical and must be adapted for future runs.
 
