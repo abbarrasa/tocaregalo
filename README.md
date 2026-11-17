@@ -4,9 +4,9 @@ Aplicación web para organizar grupos y eventos de intercambio de regalos. El de
 
 ## Estado actual
 
-Se ha preparado la configuración de desarrollo correspondiente a **002:T1**. La aplicación todavía no está implementada: no existen aún los proyectos Symfony y Vue, sus dependencias, migraciones ni los comandos de los trabajadores. Esta entrega no permite arrancar una aplicación funcional.
+Se han completado **002:T1 y 002:T2**: configuración de desarrollo, imágenes de herramientas PHP/Node y dependencias Composer/npm con archivos de bloqueo. La aplicación todavía no está implementada: faltan el arranque de la API y Vue, las migraciones y los comandos de los trabajadores. Esta entrega no permite arrancar una aplicación funcional.
 
-No se han instalado paquetes, descargado imágenes ni generado claves. Las referencias de imagen de ejemplo indican las familias aprobadas; las versiones exactas y sus digests se fijarán en **002:T2**, con autorización previa.
+Con autorización previa se han descargado las seis imágenes previstas, construido las dos herramientas e instalado las dependencias dentro de contenedores. [.env.example](./.env.example) fija las imágenes por digest y mantiene los marcadores públicos de secretos. No se han generado claves ni iniciado los servicios de la aplicación. El [registro técnico de dependencias](./specs/002-development-foundation/dependency-resolution.md) recoge versiones, comandos y límites: quedan cuatro avisos moderados en dependencias de pruebas npm y una dependencia PHP abandonada; las auditorías no detectan vulnerabilidades PHP ni avisos npm de producción.
 
 ## Configuración prevista
 
@@ -31,8 +31,8 @@ La sobreescritura de puertos de pruebas usa `!override`, que requiere Docker Com
 
 ## Preparación posterior, pendiente de autorización
 
-1. Revisar y autorizar **002:T2** y, por separado, las descargas e instalaciones de imágenes y dependencias. Construir la imagen PHP instalará los paquetes y extensiones declarados en su [Dockerfile](./docker/php/Dockerfile); no se ha ejecutado esa construcción.
-2. Resolver versiones exactas y digests de las imágenes aprobadas, además de las dependencias Composer/npm. No se deben usar estas referencias provisionales para una instalación reproducible definitiva.
+1. Autorizar **002:T3** antes de preparar y ejecutar la API JSON y la conexión real a MySQL. T2 no autoriza las tareas posteriores.
+2. Conservar los digests y archivos de bloqueo revisados. Las instalaciones de dependencias nunca deben ejecutarse implícitamente al arrancar; futuras descargas fuera del alcance autorizado requieren aprobación.
 3. Preparar los proyectos Symfony y Vue en sus tareas correspondientes. El arranque nunca instalará sus dependencias automáticamente.
 4. Crear un archivo local ignorado a partir de [.env.example](./.env.example). Los valores `REVIEW_ONLY_*` son marcadores públicos para validar archivos: deben sustituirse antes de cualquier ejecución. No representan secretos de desarrollo utilizables.
 5. Configurar el usuario local mediante `LOCAL_UID` y `LOCAL_GID`, y `APP_TIMEZONE` con la zona horaria del sistema de instalación. Europe/Madrid es solo el ejemplo. La base de datos almacenará instantes en UTC y la aplicación interpretará las fechas con la zona configurada.
@@ -60,4 +60,4 @@ El correo real se configurará por entorno con servidor, puerto, STARTTLS/TLS, a
 
 ## Comprobaciones todavía pendientes
 
-La validación estática no demuestra que PHP, Nginx, MySQL, Vue, el correo o los trabajadores funcionen. La construcción, las extensiones PHP, la resolución de dependencias, los permisos de archivos, la sintaxis de Nginx dentro de su imagen y el arranque se verificarán después de las autorizaciones y tareas correspondientes.
+T2 verifica la construcción de las herramientas, las extensiones PHP y la resolución de dependencias. Todavía están pendientes los permisos del entorno completo, la sintaxis de Nginx dentro de su imagen, la conexión real a MySQL, el arranque de la aplicación, el correo y los trabajadores. No se han descargado navegadores ni ejecutado pruebas de la aplicación.
