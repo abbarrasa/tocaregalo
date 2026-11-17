@@ -10,6 +10,8 @@ Con autorización previa se han descargado las seis imágenes previstas, constru
 
 ## Configuración prevista
 
+T3 está en curso. Symfony (HTTP y consola) y la comprobación temporal utilizan el mismo `.env` local situado en la raíz del repositorio. `DATABASE_URL` contiene la conexión de Doctrine; para el MySQL temporal, sus credenciales deben corresponderse con `MYSQL_DATABASE`, `MYSQL_USER` y `MYSQL_PASSWORD`. No se han elegido parámetros reales ni iniciado MySQL: están pendientes de confirmación. No envíes contraseñas por el chat ni las guardes en archivos versionados. La prueba HTTP aislada puede ejecutarse sin conectar una BBDD; eso no verifica MySQL.
+
 - Symfony/API Platform con PHP 8.5, MySQL 8.4 y Nginx.
 - Vue 3 y Bootstrap 5.3, con Node 24 y Vite 8.
 - Mailpit para capturar los correos de desarrollo, sin envío a destinatarios reales.
@@ -42,6 +44,8 @@ La sobreescritura de puertos de pruebas usa `!override`, que requiere Docker Com
 Las contraseñas elegidas para MySQL y las credenciales codificadas en `DATABASE_URL` deben corresponderse; los caracteres especiales del usuario/contraseña dentro de esa URL necesitan codificación URI. El servidor MySQL no publica puertos en el equipo anfitrión.
 
 ## Direcciones previstas
+
+Los servicios de Compose usan el prefijo `tocaregalo-`: `tocaregalo-mysql`, `tocaregalo-php`, `tocaregalo-frontend`, `tocaregalo-nginx`, `tocaregalo-mailpit`, `tocaregalo-notification-worker` y `tocaregalo-closure-worker`. La comprobación temporal utiliza `tocaregalo-php-smoke`. En `DATABASE_URL`, el host interno es `tocaregalo-mysql` y el puerto es `3306`; el SMTP local usa `tocaregalo-mailpit:1025`. Compose añade además el nombre del proyecto a los contenedores, conservando la separación entre desarrollo y pruebas.
 
 | Servicio | Desarrollo | Pruebas |
 | --- | --- | --- |

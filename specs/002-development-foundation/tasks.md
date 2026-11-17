@@ -5,9 +5,11 @@ Revision: v0.1
 Approval: The user stated “Apruebo y autorizo iniciar la T1 de spec 002”, approving the derived-document/task package and authorizing only 002:T1 on 2026-11-16. No installation is authorized.
 Derived documents: [spec v0.1](./spec.md), [plan v0.1](./plan.md), both approved
 Approved sources: [Spec 001 v1.0](../001-toca-regalo/spec.md), [Plan 001 v0.1](../001-toca-regalo/plan.md)
-Execution authorization: 002:T1 and T2 completed. “Continúa con la siguiente tarea” followed by “Autorizo todo” on 2026-11-17 authorizes T2 and its documented installation scope. No task after T2, browser binary download or application startup is authorized.
+Execution authorization: T1/T2 complete. T3 execution plan v0.1 was explicitly approved on 2026-11-17 with the condition to obtain database parameters from the user and use the shared root .env. T3 implementation is in progress; its actual database verification awaits those parameters. No task after T3 or new installation is authorized.
 
 ## Execution rules
+
+Additional user rule (2026-11-17): present a task-specific execution plan and await explicit approval before every implementation. [T3 execution plan v0.1](./t3-execution-plan.md) is approved with its recorded .env condition.
 
 Task IDs are qualified as 002:Tn across blocks; unqualified Tn references are local. Execute one explicitly authorized task at a time, with its prerequisite checks satisfied. Each task includes its applicable tests/checks and actual evidence when run. Do not mark product requirements fulfilled based on partial supporting work; Infrastructure enabling work only. Product acceptance remains with 003–007; no health check or empty SPA is presented as the finished application.
 
@@ -34,7 +36,7 @@ No dependency installation, image pull/build requiring packages, or browser down
   - Work: Create minimal Symfony/API Platform JSON runtime, external configuration and real database connection; disable template/docs UI and expose no business entities.
   - Files/responsibility: backend/config/; backend/public/; backend/src/Api/; docker/nginx/.
   - Done when: A reproducible internal smoke check demonstrates JSON API execution and MySQL connection; unavailable dependencies fail visibly; backend returns no user HTML.
-  - Evidence: not executed; no completion or passing result claimed.
+  - Evidence: in progress on feature/002_T03-backend-api-runtime. Initial missing-kernel check failed as expected; HTTP-only smoke, six PHP syntax checks and smoke Compose config pass. Root .env/database parameters are pending the user's response; actual MySQL/UTC/failure checks and remaining regression checks are unexecuted. See [T3 progress](./verification.md#t3-progress). Task is not complete.
 
 - [ ] **T4. Wire the Vue build and Nginx entry point.** NFR-2, NFR-3, NFR-4, NFR-5, NFR-6
   - Depends on: T3.
@@ -73,7 +75,7 @@ No dependency installation, image pull/build requiring packages, or browser down
 
 ## Traceability and acceptance
 
-See [plan traceability](./plan.md#traceability). FR-N maps to parent AC-N; NFR acceptance conditions are inherited verbatim in [spec](./spec.md). T1 is complete with static-check evidence; T2–T8 remain pending and unauthorized. No application/runtime acceptance is claimed.
+See [plan traceability](./plan.md#traceability). FR-N maps to parent AC-N; NFR acceptance conditions are inherited verbatim in [spec](./spec.md). T1/T2 are complete; T3 is authorized but incomplete; T4–T8 remain pending and unauthorized. No complete application acceptance is claimed.
 
 ## Phase boundary
 
