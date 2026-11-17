@@ -1,9 +1,10 @@
 # 002:T3 — Execution plan
 
 Revision: v0.1
-Status: approved with the user's environment-file condition; implementation in progress
+Status: approved with the user's environment-file condition; implementation complete
 Approval: “Para la configuración de la conexión a la base de datos, usa los parámetros del fichero .env que también usa Symfony. Cuando necesites que te diga los parámetros, pregúntamelos. Apruebo el plan” on 2026-11-17.
 Binding condition: use the project-root ignored .env as Symfony Dotenv and smoke Compose configuration source. Ask the user for database parameters before connecting; never invent or overwrite their credentials. Database verification is pending their response. The approval authorizes this task only.
+Completion: the user supplied database/user tocaregalo, port 3306, and explicitly authorized preparing ignored .env with generated local secrets. Actual runtime/negative/configuration checks and cleanup succeeded; see [T3 completion](./verification.md#t3-completion). Earlier pending statements describe the approval-stage context.
 User-directed naming adjustment: on 2026-11-17 the user explicitly requested representative Docker service names prefixed with tocaregalo. Apply `tocaregalo-` to existing service keys across development/test/smoke Compose files and update depends_on, Nginx upstreams and example DSN hosts. This changes technical names only, not the approved stack/product scope. The supplied DB name/user remain tocaregalo and port 3306; the internal service host is now tocaregalo-mysql. Do not overwrite a user-supplied .env or run databases as part of renaming.
 Date: 2026-11-17
 Authority: [Spec 002 v0.1](./spec.md), [Plan 002 v0.1](./plan.md), [parent architecture v0.1](../001-toca-regalo/plan.md), [task T3](./tasks.md).

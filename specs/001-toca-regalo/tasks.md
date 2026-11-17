@@ -1,6 +1,6 @@
 # Application Task Index — Toca Regalo
 
-Status: approved; 002:T1 and T2 complete; no later task authorized
+Status: approved; 002:T1, T2 and T3 complete; no later task authorized
 Revision: v0.1
 Approval: The user stated “Apruebo y autorizo iniciar la T1 de spec 002” on 2026-11-16. This approves the derived-document/task package and execution of only 002:T1, not installation or later tasks.
 Approved parent specification: [001 v1.0](./spec.md)
@@ -9,13 +9,13 @@ Approved split: [six-block decomposition v0.1](./decomposition-proposal.md)
 
 ## Approval and execution state
 
-The user approved the derived v0.1 specifications, plans and all 54 task definitions, initially authorizing only 002:T1. T1 is complete with [static configuration evidence](../002-development-foundation/verification.md). On 2026-11-17, “Continúa con la siguiente tarea” and “Autorizo todo” authorized T2 and its concrete installation scope; T2 is complete with [dependency evidence and audit warnings](../002-development-foundation/dependency-resolution.md). Two tasks are complete and 52 remain pending. No task after T2 is authorized. Parent scope, FR/NFR/AC identifiers, architecture and previous approvals are unchanged.
+The user approved the derived v0.1 specifications, plans and all 54 task definitions, initially authorizing only 002:T1. T1 is complete with [static configuration evidence](../002-development-foundation/verification.md). On 2026-11-17, “Continúa con la siguiente tarea” and “Autorizo todo” authorized T2 and its concrete installation scope; T2 is complete with [dependency evidence and audit warnings](../002-development-foundation/dependency-resolution.md). T3 was subsequently authorized through its execution plan and shared .env condition, and completed with real MySQL evidence. Three tasks are complete and 51 remain pending. No task after T3 is authorized. Parent scope, FR/NFR/AC identifiers, architecture and previous approvals are unchanged.
 
 ## Ordered blocks
 
 | Block | Specification | Plan | Tasks | Count | Dependency |
 | --- | --- | --- | --- | --- | --- |
-| 002 — Development foundation | [spec v0.1](../002-development-foundation/spec.md) | [plan v0.1](../002-development-foundation/plan.md) | [tasks v0.1](../002-development-foundation/tasks.md) | 2 complete, 6 pending | None |
+| 002 — Development foundation | [spec v0.1](../002-development-foundation/spec.md) | [plan v0.1](../002-development-foundation/plan.md) | [tasks v0.1](../002-development-foundation/tasks.md) | 3 complete, 5 pending | None |
 | 003 — Identity and account access | [spec v0.1](../003-identity-access/spec.md) | [plan v0.1](../003-identity-access/plan.md) | [tasks v0.1](../003-identity-access/tasks.md) | 9 pending | 002 |
 | 004 — Groups and events | [spec v0.1](../004-groups-events/spec.md) | [plan v0.1](../004-groups-events/plan.md) | [tasks v0.1](../004-groups-events/tasks.md) | 10 pending | 003 |
 | 005 — Confidential draw lifecycle | [spec v0.1](../005-confidential-draws/spec.md) | [plan v0.1](../005-confidential-draws/plan.md) | [tasks v0.1](../005-confidential-draws/tasks.md) | 10 pending | 004 |
@@ -94,5 +94,5 @@ Final read-only Validation and user acceptance remain separate from these implem
 
 ## Requested next approval
 
-The derived documents/task lists are approved and 002:T1/T2 are complete. Request authorization for 002:T3 (backend JSON API runtime and real MySQL boundary). No later task, browser binary download or secrets generation is authorized by T2's installation approval.
+The derived documents/task lists are approved and 002:T1/T2 are complete. Present a task-specific execution plan for 002:T4 (Vue build and Nginx entry point), then await its approval before implementation. No later task, browser binary download or secrets generation is authorized by T2's installation approval.
 
