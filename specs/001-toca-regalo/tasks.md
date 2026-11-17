@@ -11,13 +11,13 @@ Approved split: [six-block decomposition v0.1](./decomposition-proposal.md)
 
 ## Approval and execution state
 
-The original 54 tasks and their IDs are preserved. T1/T2/T3/T4/T9 are complete with [runtime/static evidence](../002-development-foundation/verification.md) and [dependency evidence](../002-development-foundation/dependency-resolution.md). Approved Spec 001 v1.1 adds NFR-10; approved plans v0.2 call for PHPStan preparation before T4. This approved task revision adds only 002:T9, dependent on completed T3, and changes T4 to depend on T9. Total: 55 tasks, five complete and 50 pending. T4 and its matching Playwright download are complete with recorded evidence. No later task implementation is authorized. Earlier results remain historical, not PHPStan acceptance.
+The original 54 tasks and their IDs are preserved. T1/T2/T3/T4/T5/T9 are complete with [runtime/static evidence](../002-development-foundation/verification.md) and [dependency evidence](../002-development-foundation/dependency-resolution.md). Approved Spec 001 v1.1 adds NFR-10; approved plans v0.2 call for PHPStan preparation before T4. This approved task revision adds only 002:T9, dependent on completed T3, and changes T4 to depend on T9. Total: 55 tasks, six complete and 49 pending. T4 and T5 are complete with recorded evidence; T5 reused existing tools and browser image. No later task implementation is authorized. Earlier results remain historical, not PHPStan acceptance.
 
 ## Ordered blocks
 
 | Block | Specification | Plan | Tasks | Count | Dependency |
 | --- | --- | --- | --- | --- | --- |
-| 002 — Development foundation | [spec v0.2](../002-development-foundation/spec.md) | [plan v0.2](../002-development-foundation/plan.md) | [tasks v0.2 approved](../002-development-foundation/tasks.md) | 5 complete, 4 pending | None |
+| 002 — Development foundation | [spec v0.2](../002-development-foundation/spec.md) | [plan v0.2](../002-development-foundation/plan.md) | [tasks v0.2 approved](../002-development-foundation/tasks.md) | 6 complete, 3 pending | None |
 | 003 — Identity and account access | [spec v0.2](../003-identity-access/spec.md) | [plan v0.2](../003-identity-access/plan.md) | [tasks v0.2 approved](../003-identity-access/tasks.md) | 9 pending | 002 |
 | 004 — Groups and events | [spec v0.2](../004-groups-events/spec.md) | [plan v0.2](../004-groups-events/plan.md) | [tasks v0.2 approved](../004-groups-events/tasks.md) | 10 pending | 003 |
 | 005 — Confidential draw lifecycle | [spec v0.2](../005-confidential-draws/spec.md) | [plan v0.2](../005-confidential-draws/plan.md) | [tasks v0.2 approved](../005-confidential-draws/tasks.md) | 10 pending | 004 |
@@ -97,4 +97,4 @@ Final read-only Validation and user acceptance remain separate from these implem
 
 ## Next task boundary
 
-Task lists v0.2 are approved and 002:T4 is complete. Stop at this boundary. On the next user continuation, prepare and present the T5 execution plan and await approval before implementation. No T5 installation or runtime is authorized by T4 completion.
+Task lists v0.2 are approved and 002:T5 is complete. Stop at this boundary. On the next user continuation, prepare and present the T6 execution plan and await approval before implementation. No T6 installation or runtime is authorized by T5 completion.

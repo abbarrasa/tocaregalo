@@ -249,3 +249,87 @@ Dedicated down exit 0; final project container/network filters empty, no volume 
 ### Traceability and limits
 
 NFR-2: real Vue/Bootstrap and build. NFR-3: actual Nginx development/static runtime. NFR-4: unit-tested fetch boundary and real same-origin JSON/FPM routing. NFR-5: Spanish shell/error/missing route/README and English technical artifacts. NFR-6: both approved shell viewports and keyboard checks; no complete product-flow acceptance. NFR-10: successful post-implementation level-10 analysis. No full application requirement is declared fulfilled by this scaffold; Firefox/WebKit, complete fixtures/harness and business acceptance remain future tasks. Stop after T4; T5 needs a presented and approved execution plan before implementation.
+
+## T5 completion
+
+Date: 2026-11-17. Branch: `feature/002_T05-verification-harnesses`, created from current local dev with pre-existing MEMORY/planning edits preserved. Approval: “Apruebo el plan y autorizo su implementación” approves [execution plan v0.1](./t5-execution-plan.md) and its bounded runtime, following T4 completion. No dependency installation, image pull/build, new secrets, commit/push or T6 implementation.
+
+### Delivered harnesses
+
+- PHPUnit discovery with unit/integration/functional suites, fail-on-empty/risky/warning settings, shared-root environment bootstrap and test-only Symfony framework support. Bootstrap preserves supplied test values and never resets data.
+- Guarded DBAL helper validates environment, declared URL, effective parsed driver/host/port/schema, distinct development schema and allowed connection options before connection. URL arguments are sensitive; refusal/connection errors omit DSNs. Eleven unsafe-target cases and one valid-target case use public fixture strings without opening connections. Includes socket/query override rejection, not merely an `_test` suffix check.
+- Real MySQL temporary-table fixtures use bound values and rollback in finally; tests prove normal cleanup/reuse and rollback after a failing callback. Temporary-table DDL is outside transactions; connection close removes temporary tables. No business schema, migrations, permanent fixture tables, drop-database, truncate, development resets or volume deletion.
+- Six BrowserKit JSON cases cover API entrypoint, unknown API and disabled docs with JSON/HTML Accept. Body checks reject HTML, trace and actual application-secret disclosure.
+- Explicit Vitest/jsdom/Vue-plugin configuration, one worker, existing 11 API-client tests and an actual mounted Vue/router navigation test.
+- Root Playwright configuration resolves the existing frontend-installed package, with no root manifest or second dependency tree. Chromium desktop 1440x900/mobile 390x844 and Firefox/WebKit desktop 1440x900 run sequentially, two cases per project. Current shell/navigation/layout/JSON/private-path coverage only; no business-flow acceptance claimed.
+- Standalone compose.verification.yaml provides seven prefixed runtime/check services. MySQL is tmpfs-only with no DB port; only test HTTP publishes on 127.0.0.1:8081. Shared root .env mounts read-only only in PHP; Node/browser receive no backend credentials/source. Reports/caches are ignored. Existing frontend test:e2e script now selects the root configuration; dependency constraints/locks unchanged.
+
+### Checks and actual outcomes
+
+Initial status was dev with only the planning MEMORY edit and untracked T5 execution plan. Branch creation preserved them. Before startup, project container/network filters were empty and the approved port was free. Local parameter validation used the existing PHP/Dotenv tool to check TEST_DATABASE_URL, TEST_MYSQL_DATABASE, MYSQL_DATABASE and account parameters for missing/placeholders without printing their values. A separate read-only consistency check confirmed the test URL matches configured application credentials and isolated schema, also without printing values or connecting.
+
+Tests-first command, before TestDatabase existed:
+
+```bash
+docker run --rm --pull never --user 1000:1000 \
+  -v /home/albertusko/Proyectos/tocaregalo/backend:/workspace/backend \
+  -w /workspace/backend tocaregalo-php:dev \
+  vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php tests/Unit/TestDatabaseTest.php
+```
+
+Exit 2: initial 10 tests had nine failures/one error because the helper class was absent. PHPUnit/autoload worked; this is the intended missing-implementation result. Later added socket/query-override cases and exception-rollback regression. Existing T3/T4 behavior was retained rather than artificially broken for new harnesses.
+
+```bash
+docker compose --env-file .env --project-name tocaregalo-test -f compose.verification.yaml --profile checks config --quiet
+docker compose --env-file .env --project-name tocaregalo-test -f compose.verification.yaml \
+  up --detach --no-build --pull never --wait --wait-timeout 120 tocaregalo-mysql
+docker inspect --format '{{json .HostConfig.Tmpfs}} {{json .HostConfig.PortBindings}} {{json .Mounts}}' \
+  tocaregalo-test-tocaregalo-mysql-1
+docker compose --env-file .env --project-name tocaregalo-test -f compose.verification.yaml \
+  up --detach --no-build --pull never tocaregalo-php tocaregalo-frontend tocaregalo-nginx
+docker compose --env-file .env --project-name tocaregalo-test -f compose.verification.yaml \
+  run --rm --no-deps --pull never tocaregalo-php-tests
+```
+
+Compose/start exit 0, healthy MySQL. Inspection: `{"/var/lib/mysql":""} {} []`, no data mount or publication. First PHPUnit suite: 19 tests/66 assertions pass. After adding the exception-rollback regression, final PHP verification ran:
+
+```bash
+docker compose --env-file .env --project-name tocaregalo-test -f compose.verification.yaml \
+  run --rm --no-deps --pull never tocaregalo-php-tests sh -c \
+  'vendor/bin/phpunit && composer analyse && find src tests config public -name "*.php" -exec php -l {} \; && php -l bin/console && php bin/console lint:container --resolve-env-vars && php bin/console lint:yaml config'
+```
+
+Exit 0: **20 tests, 68 assertions**, PHP 8.5.12/PHPUnit 12.5.44. MySQL 8.4 version, UTC session and selected test database checks pass; bound insert/read, rollback/reuse and rollback-on-callback-failure pass. PHPStan **2.3.6, fixed level 10, zero errors**, includes all new tests/support/bootstrap; no baseline/exclusions or vendor patches. All 11 owned PHP syntax checks, Symfony container lint and six YAML files pass. A prior backend-only composer analyse also exited 0 without mounting private root .env.
+
+```bash
+docker run --rm --pull never --user 1000:1000 \
+  -v /home/albertusko/Proyectos/tocaregalo/frontend:/workspace/frontend \
+  -w /workspace/frontend tocaregalo-node:dev npm test
+docker compose --env-file .env --project-name tocaregalo-test -f compose.verification.yaml \
+  run --rm --no-deps --pull never tocaregalo-node-tests
+docker compose --env-file .env --project-name tocaregalo-test -f compose.verification.yaml \
+  run --rm --no-deps --pull never tocaregalo-node-tests npm run build
+```
+
+Initial multi-worker jsdom run exited 1: two fork-worker startup timeouts, no tests executed; never counted as success. Direct import of installed jsdom succeeded (35.952s during initial cold-load diagnosis), showing no missing package. Limited Vitest to one worker without changing dependency versions, isolation or assertion/error policy. Final Vitest 5.1.0/jsdom 31.0.1 run: **12 tests, two files pass**, exit 0, 5.66s. Final Vite 8.3.8 build exit 0, 31 modules, unchanged artifact sizes/hashes from T4. Existing Node 24 tool image used throughout; no upgrade from npm's notice.
+
+```bash
+docker compose --env-file .env --project-name tocaregalo-test -f compose.verification.yaml \
+  exec -T tocaregalo-nginx nginx -t
+docker compose --env-file .env --project-name tocaregalo-test -f compose.verification.yaml \
+  run --rm --no-deps --pull never tocaregalo-browser
+```
+
+Nginx syntax exit 0. Existing pinned Playwright 1.65.1 image/installed runner, no browser downloads. **8 Playwright tests pass** across all four projects (2.2 minutes), exit 0. Each covers Spanish shell/document metadata, computed Bootstrap layout, no horizontal overflow, missing-route refresh, keyboard focus/navigation, same-origin relative JSON calls including HTML Accept/error responses, and private/dot/direct-PHP path protection. No CORS workaround or test endpoint added. T4 source-edit HMR/static smoke was not repeated: shell, Vite/Nginx configuration and runtime PHP remained unchanged; new BrowserKit/browser checks cover the test-only framework configuration and existing JSON boundary.
+
+### Isolation, cleanup and limits
+
+Full Compose JSON was parsed without printing environment values: seven prefixed services, pull_policy never, bind-only source mounts, tmpfs DB/no publication, secrets only in PHP and loopback HTTP 8081. Host runtime observations agree. New test parameters were not generated; .env remains ignored/untracked/mode 600. Locks/backend manifest unchanged; frontend manifest changes only the existing e2e command. Editor diagnostics and whitespace/task-count checks pass.
+
+```bash
+docker compose --env-file .env --project-name tocaregalo-test -f compose.verification.yaml --profile checks down
+docker ps -a --filter label=com.docker.compose.project=tocaregalo-test --format '{{.Names}}'
+docker network ls --filter label=com.docker.compose.project=tocaregalo-test --format '{{.Name}}'
+```
+
+Down exit 0; final project filters empty. No data-volume deletion and no unrelated project was restarted. Existing audit/license warnings from T2/T9 remain open; no new audit/installation or clean-security claim. These passing harnesses support NFR-1/2/3/4/6/8/10 on the current foundation only. Product migrations, fixtures, auth/forms/reveal/recovery, privacy/concurrency and mail/worker acceptance remain in their approved slices. Stop at T5; T6 requires a presented/approved execution plan before implementation.

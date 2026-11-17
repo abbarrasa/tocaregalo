@@ -6,7 +6,7 @@ Approval (v0.2): “Apruebo las listas de tareas y autorizo el inicio de 002:T9 
 Historical approval (v0.1): The user stated “Apruebo y autorizo iniciar la T1 de spec 002”, approving the derived-document/task package and authorizing only 002:T1 on 2026-11-16. No installation is authorized.
 Derived documents: [spec](./spec.md), synchronized from approved parent v1.1; [plan v0.2](./plan.md), approved.
 Approved sources: [Spec 001 v1.1](../001-toca-regalo/spec.md), [Plan 001 v0.2](../001-toca-regalo/plan.md)
-Execution authorization: T1–T4 and T9 complete. User resumed T4 with “Continúa con la siguiente tarea” after T9; prior runtime/Playwright approvals remained valid. No T5 or later task implementation is authorized.
+Execution authorization: T1–T5 and T9 complete. T5 plan v0.1 and bounded runtime approved with “Apruebo el plan y autorizo su implementación”, 2026-11-17. No T6 or later implementation is authorized.
 
 ## Execution rules
 
@@ -57,12 +57,12 @@ No dependency installation, image pull/build requiring packages, or browser down
   - Done when: Frontend builds and loads through Nginx on desktop/mobile profiles; API requests follow the same origin; no Twig or backend view renders.
   - Evidence: completed 2026-11-17 on feature/002_T04-vue-nginx-entrypoint. Approved plan v0.2 resumed after T9. Eleven client tests and build pass; Chromium desktop/mobile verifies development and compiled-static Nginx/JSON/privacy/keyboard behavior; HMR update/restoration preserves document. PHPStan level 10 zero errors. Exact authorized Playwright image pinned by digest; manifests/locks unchanged, private .env preserved. Dedicated environment removed, no commit/push. See [T4 evidence](./verification.md#t4-completion).
 
-- [ ] **T5. Prepare focused verification harnesses and database isolation.** NFR-1, NFR-2, NFR-3, NFR-4, NFR-6, NFR-8, NFR-10
+- [x] **T5. Prepare focused verification harnesses and database isolation.** NFR-1, NFR-2, NFR-3, NFR-4, NFR-6, NFR-8, NFR-10
   - Depends on: T4.
   - Work: Configure PHPUnit, Vue component tests and Playwright browser profiles with isolated MySQL fixture/reset support; use a meaningful runtime-boundary check rather than an empty-suite success.
   - Files/responsibility: backend/phpunit.xml.dist; backend/tests/; frontend/vitest.config.js; frontend/tests/; playwright.config.js; tests/e2e/.
   - Done when: A focused API/database check and frontend boundary check execute reproducibly; test fixtures never use/reset development data; browser/viewport profiles match the approved plan.
-  - Evidence: not executed; no completion or passing result claimed.
+  - Evidence: completed 2026-11-17 on feature/002_T05-verification-harnesses under approved execution plan v0.1. PHPUnit 20 tests/68 assertions, Vitest 12 tests, Playwright 8 tests across four projects and frontend build pass. Real MySQL temporary fixture rollback/failure cleanup and unsafe-target rejection verified; PHPStan level 10 zero errors, syntax/Symfony checks pass. No installations, locks unchanged, private .env preserved, dedicated tmpfs runtime removed. [T5 commands and limits](./verification.md#t5-completion). No commit/push.
 
 - [ ] **T6. Connect local mail capture and worker runtime contracts.** NFR-3, NFR-7, NFR-9, NFR-10
   - Depends on: T5.
@@ -87,7 +87,7 @@ No dependency installation, image pull/build requiring packages, or browser down
 
 ## Traceability and acceptance
 
-See [plan traceability](./plan.md#traceability). FR-N maps to parent AC-N; NFR acceptance conditions are inherited verbatim in [spec](./spec.md). T1/T2/T3/T4/T9 are complete; T5–T8 are pending. Stop after T4. T5 requires a presented and approved execution plan before implementation. NFR-10 setup maps to T9; its post-task gate maps to all pending tasks. No complete application acceptance is claimed.
+See [plan traceability](./plan.md#traceability). FR-N maps to parent AC-N; NFR acceptance conditions are inherited verbatim in [spec](./spec.md). T1/T2/T3/T4/T5/T9 are complete; T6–T8 are pending. Stop after T5. T6 requires a presented and approved execution plan before implementation. NFR-10 setup maps to T9; its post-task gate maps to all pending tasks. No complete application acceptance is claimed.
 
 ## Phase boundary
 
