@@ -7,6 +7,7 @@ Parent: [Spec 001 v1.0, approved](../001-toca-regalo/spec.md)
 Architecture: [Plan 001 v0.1, approved](../001-toca-regalo/plan.md)
 Organization: [approved decomposition v0.1](../001-toca-regalo/decomposition-proposal.md)
 Approval state: derived specification approved; parent requirements remain unchanged.
+Current execution state (2026-11-17): T1/T2 complete after subsequent explicit T2 installation authorization; see [tasks](./tasks.md) and [dependency evidence](./dependency-resolution.md). No later task is authorized. Earlier authorization statements below record the original approval context.
 
 ## Context and objective
 

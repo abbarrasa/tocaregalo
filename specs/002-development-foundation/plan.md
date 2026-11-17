@@ -7,6 +7,7 @@ Derived specification: [002 v0.1](./spec.md), approved
 Approved parent specification: [001 v1.0](../001-toca-regalo/spec.md)
 Approved architecture: [001 v0.1](../001-toca-regalo/plan.md)
 Approval state: scoped parent-plan extraction approved; only 002:T1 has task-start authorization, and no installation is authorized.
+Current execution state (2026-11-17): the original approval context above is superseded for execution by explicit T2 start and installation authorization. T1/T2 are complete; see [tasks](./tasks.md) and [dependency evidence](./dependency-resolution.md). No later task is authorized; the approved design is unchanged.
 
 ## Approach and approved design
 
