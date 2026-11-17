@@ -1,0 +1,105 @@
+# Standalone T5 harness: always use --project-name tocaregalo-test.
+name: tocaregalo-test
+
+x-php: &php
+  image: ${PHP_LOCAL_IMAGE:-tocaregalo-php:dev}
+  pull_policy: never
+  user: '${LOCAL_UID:-1000}:${LOCAL_GID:-1000}'
+  working_dir: /workspace/backend
+  init: true
+  environment:
+    APP_ENV: test
+    APP_DEBUG: '0'
+    APP_CACHE_DIR: /tmp/tocaregalo-t5-cache
+    DATABASE_URL: ${TEST_DATABASE_URL:?Set TEST_DATABASE_URL in the private root .env}
+    TEST_DATABASE_URL: ${TEST_DATABASE_URL:?Set TEST_DATABASE_URL in the private root .env}
+    TEST_MYSQL_DATABASE: ${TEST_MYSQL_DATABASE:?Set TEST_MYSQL_DATABASE in the private root .env}
+  volumes:
+    - ./backend:/workspace/backend
+    - type: bind
+      source: ./.env
+      target: /workspace/.env
+      read_only: true
+      bind:
+        create_host_path: false
+
+x-node: &node
+  image: ${NODE_LOCAL_IMAGE:-tocaregalo-node:dev}
+  pull_policy: never
+  user: '${LOCAL_UID:-1000}:${LOCAL_GID:-1000}'
+  working_dir: /workspace/frontend
+  init: true
+  volumes:
+    - ./frontend:/workspace/frontend
+
+services:
+  tocaregalo-mysql:
+    image: ${MYSQL_IMAGE:?Set the pinned MYSQL_IMAGE}
+    pull_policy: never
+    environment:
+      MYSQL_DATABASE: ${TEST_MYSQL_DATABASE:?Set TEST_MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER:?Set MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD}
+    command: ['--character-set-server=utf8mb4', '--collation-server=utf8mb4_0900_ai_ci', '--default-time-zone=+00:00']
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ['CMD-SHELL', 'MYSQL_PWD="$${MYSQL_PASSWORD}" mysql --host=127.0.0.1 --user="$${MYSQL_USER}" --database="$${MYSQL_DATABASE}" --execute="SELECT 1" >/dev/null']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  tocaregalo-php:
+    <<: *php
+    command: ['php-fpm', '-F']
+    depends_on:
+      tocaregalo-mysql:
+        condition: service_healthy
+
+  tocaregalo-php-tests:
+    <<: *php
+    profiles: ['checks']
+    command: ['vendor/bin/phpunit']
+    depends_on:
+      tocaregalo-mysql:
+        condition: service_healthy
+
+  tocaregalo-frontend:
+    <<: *node
+    command: ['npm', 'run', 'dev', '--', '--host', '0.0.0.0', '--port', '5173', '--strictPort']
+
+  tocaregalo-node-tests:
+    <<: *node
+    profiles: ['checks']
+    command: ['npm', 'test']
+
+  tocaregalo-nginx:
+    image: ${NGINX_IMAGE:?Set the pinned NGINX_IMAGE}
+    pull_policy: never
+    ports:
+      - '127.0.0.1:${TEST_HTTP_PORT:-8081}:80'
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      tocaregalo-php:
+        condition: service_started
+      tocaregalo-frontend:
+        condition: service_started
+
+  tocaregalo-browser:
+    image: mcr.microsoft.com/playwright:v1.65.1-noble@sha256:1507cbfc550a63a6b7396791ca4f00df17beb56342d2447b3f106c306f525579
+    pull_policy: never
+    profiles: ['checks']
+    user: '${LOCAL_UID:-1000}:${LOCAL_GID:-1000}'
+    working_dir: /workspace/frontend
+    init: true
+    shm_size: '1gb'
+    environment:
+      PLAYWRIGHT_BASE_URL: http://tocaregalo-nginx
+    volumes:
+      - ./frontend:/workspace/frontend
+      - ./playwright.config.js:/workspace/playwright.config.js:ro
+      - ./tests/e2e:/workspace/tests/e2e:ro
+    command: ['npm', 'run', 'test:e2e']
