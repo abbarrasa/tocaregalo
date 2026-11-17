@@ -54,3 +54,7 @@ Use one optional completion field: scheduled closure is end-of-day in system tim
 - Follow all six principles in the [constitution](./docs/constitution.md), including independent domain rules and explicit responsibility boundaries.
 - Use English for code identifiers, comments, technical documentation, specifications, plans, tasks, and governance documents.
 - Use Spanish for user-facing documentation, such as `README.md`, and application text. Additional localization requires an approved specification.
+
+## Latest task boundary (supersedes historical execution statements)
+
+002:T7 is complete on `feature/002_T07-developer-check-commands`, under execution plan v0.1 approved with “Apruebo el plan y autorizo su implementación”, 2026-11-17. Wrapper/static checks, 11 task mappings, Vitest 12 tests, PHPUnit 23 tests/74 assertions, Chromium desktop 2 tests, build and PHPStan fixed level 10 zero errors passed. See [T7 evidence](./specs/002-development-foundation/verification.md#t7-completion). No installation, keys, real migrations/accounts, commit or push; isolated runtime removed. Eight of 55 tasks are complete, 47 pending. Stop after T7. On continuation prepare/present T8 execution plan and await explicit approval before implementing. Full development startup/aggregate checks, business commands and final read-only Validation remain unexecuted under T7.

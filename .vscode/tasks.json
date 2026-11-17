@@ -1,0 +1,16 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    { "label": "Toca Regalo: Static checks", "type": "process", "command": "${workspaceFolder}/scripts/check", "args": ["static"], "options": { "cwd": "${workspaceFolder}" }, "problemMatcher": [] },
+    { "label": "Toca Regalo: PHPStan", "type": "process", "command": "${workspaceFolder}/scripts/check", "args": ["phpstan"], "options": { "cwd": "${workspaceFolder}" }, "problemMatcher": [] },
+    { "label": "Toca Regalo: Backend tests", "type": "process", "command": "${workspaceFolder}/scripts/check", "args": ["backend"], "options": { "cwd": "${workspaceFolder}" }, "problemMatcher": [] },
+    { "label": "Toca Regalo: Frontend tests", "type": "process", "command": "${workspaceFolder}/scripts/check", "args": ["frontend"], "options": { "cwd": "${workspaceFolder}" }, "problemMatcher": [] },
+    { "label": "Toca Regalo: Mail capture tests", "type": "process", "command": "${workspaceFolder}/scripts/check", "args": ["mail"], "options": { "cwd": "${workspaceFolder}" }, "problemMatcher": [] },
+    { "label": "Toca Regalo: Browser tests", "type": "process", "command": "${workspaceFolder}/scripts/check", "args": ["e2e"], "options": { "cwd": "${workspaceFolder}" }, "problemMatcher": [] },
+    { "label": "Toca Regalo: Frontend build", "type": "process", "command": "${workspaceFolder}/scripts/dev", "args": ["build"], "options": { "cwd": "${workspaceFolder}" }, "problemMatcher": [] },
+    { "label": "Toca Regalo: Development up", "type": "process", "command": "${workspaceFolder}/scripts/dev", "args": ["up"], "options": { "cwd": "${workspaceFolder}" }, "problemMatcher": [] },
+    { "label": "Toca Regalo: Development down", "type": "process", "command": "${workspaceFolder}/scripts/dev", "args": ["down"], "options": { "cwd": "${workspaceFolder}" }, "problemMatcher": [] },
+    { "label": "Toca Regalo: Migrate", "type": "process", "command": "${workspaceFolder}/scripts/dev", "args": ["migrate"], "options": { "cwd": "${workspaceFolder}" }, "problemMatcher": [] },
+    { "label": "Toca Regalo: Create super administrator", "type": "process", "command": "${workspaceFolder}/scripts/dev", "args": ["create-super-admin"], "options": { "cwd": "${workspaceFolder}" }, "problemMatcher": [] }
+  ]
+}

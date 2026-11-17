@@ -6,7 +6,7 @@ Approval (v0.2): “Apruebo las listas de tareas y autorizo el inicio de 002:T9 
 Historical approval (v0.1): The user stated “Apruebo y autorizo iniciar la T1 de spec 002”, approving the derived-document/task package and authorizing only 002:T1 on 2026-11-16. No installation is authorized.
 Derived documents: [spec](./spec.md), synchronized from approved parent v1.1; [plan v0.2](./plan.md), approved.
 Approved sources: [Spec 001 v1.1](../001-toca-regalo/spec.md), [Plan 001 v0.2](../001-toca-regalo/plan.md)
-Execution authorization: T1–T6 and T9 complete. T6 execution plan v0.1 and bounded runtime approved with “Apruebo el plan y autorizo su implementación”, 2026-11-17. No T7 or later implementation authorized.
+Execution authorization: T1–T6 and T9 complete. T6 execution plan v0.1 and bounded runtime approved with “Apruebo el plan y autorizo su implementación”, 2026-11-17. T7 execution plan v0.1 and bounded runtime approved with “Apruebo el plan y autorizo su implementación”, 2026-11-17. T7 complete; no T8 implementation authorized.
 
 ## Execution rules
 
@@ -71,12 +71,12 @@ No dependency installation, image pull/build requiring packages, or browser down
   - Done when: Local capture receives a fixture message; workers start/stop with their shared PHP image; SMTP secrets are absent from tracked files and the SMTP port stays internal.
   - Evidence: completed 2026-11-17 on feature/002_T06-mail-worker-runtime under approved execution plan v0.1. Real Messenger fixture consumed and captured by Mailpit with sender/recipient/body checks and queue acknowledgement; PHP shared-image launchers delegate/fail visibly and stop with SIGTERM (143). PHPUnit 29 tests/105 assertions, PHPStan level 10 zero errors, 19 syntax checks and Symfony/Compose checks pass. Test-only probe is not real event closure. Dedicated tmpfs stack removed; no install, secrets change, commit or push. [T6 evidence](./verification.md#t6-completion).
 
-- [ ] **T7. Document and expose approved developer/check commands.** NFR-3, NFR-5, NFR-7, NFR-8, NFR-10
+- [x] **T7. Document and expose approved developer/check commands.** NFR-3, NFR-5, NFR-7, NFR-8, NFR-10
   - Depends on: T6.
   - Work: Add development/check wrappers, VS Code tasks, editor conventions, Spanish README and English technical setup notes; startup/check wrappers never install packages.
   - Files/responsibility: scripts/dev; scripts/check; .vscode/tasks.json; .editorconfig; README.md; docs/development.md.
   - Done when: Documented wrapper commands invoke the intended container tools, VS Code tasks resolve, and setup/SMTP/key placeholders are understandable without real secrets.
-  - Evidence: not executed; no completion or passing result claimed.
+  - Evidence: completed 2026-11-17 on feature/002_T07-developer-check-commands under approved execution plan v0.1. Wrapper recorder/static checks, 11 task mappings, Vitest 12 tests, build, PHPUnit 23 tests/74 assertions, Chromium desktop 2 tests and final PHPStan level 10 zero errors pass. Owned tmpfs runtime removed; no installs, keys, business mutation or lock changes. See [T7 evidence](./verification.md#t7-completion).
 
 - [ ] **T8. Verify the complete development setup and record limits.** NFR-1, NFR-2, NFR-3, NFR-4, NFR-5, NFR-6, NFR-7, NFR-8, NFR-9, NFR-10
   - Depends on: T7.
@@ -87,7 +87,7 @@ No dependency installation, image pull/build requiring packages, or browser down
 
 ## Traceability and acceptance
 
-See [plan traceability](./plan.md#traceability). FR-N maps to parent AC-N; NFR acceptance conditions are inherited verbatim in [spec](./spec.md). T1/T2/T3/T4/T5/T6/T9 are complete; T7–T8 are pending. Stop after T6; T7 requires a presented and approved execution plan before implementation. NFR-10 setup maps to T9; its post-task gate maps to all pending tasks. No complete application acceptance is claimed.
+See [plan traceability](./plan.md#traceability). FR-N maps to parent AC-N; NFR acceptance conditions are inherited verbatim in [spec](./spec.md). T1/T2/T3/T4/T5/T6/T7/T9 are complete; T8 is pending. Stop after T7; T8 requires a presented and approved execution plan before implementation. NFR-10 setup maps to T9; its post-task gate maps to all pending tasks. No complete application acceptance is claimed.
 
 ## Phase boundary
 

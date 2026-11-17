@@ -1,0 +1,34 @@
+#!/bin/sh
+set -eu
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+. "$ROOT/scripts/lib/common.sh"
+operation=${1:---help}
+[ "$#" -eq 0 ] || shift
+[ "$#" -eq 0 ] || fail 'No se admiten argumentos adicionales.'
+case "$operation" in
+    --help|-h) printf 'Uso: scripts/dev [build|up|down|migrate|create-super-admin]\nNo instala paquetes ni genera claves. Los workers no arrancan automáticamente.\n'; exit 0 ;;
+    build) exec "$ROOT/scripts/check" build ;;
+    up|down|migrate|create-super-admin) ;;
+    *) fail 'Operación desconocida; consulta --help.' ;;
+esac
+require_inputs
+PROJECT=tocaregalo
+MODEL=compose.yaml
+case "$operation" in
+    down) compose down ;;
+    up)
+        # Resolve the configured secret path without disclosing configuration values.
+        key_path=$(compose config --format json | docker run --rm -i --pull never tocaregalo-node:dev node -e 'let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{console.log(JSON.parse(s).secrets.assignment_keys.file)})')
+        [ -n "$key_path" ] && [ -r "$key_path" ] || fail 'Falta el archivo de claves autorizado; consulta docs/development.md.'
+        compose up -d --no-build --pull never tocaregalo-nginx tocaregalo-mailpit ;;
+    migrate|create-super-admin)
+        case "$operation" in
+            migrate) command_name=doctrine:migrations:migrate ;;
+            create-super-admin) command_name=app:user:create-super-admin ;;
+        esac
+        # Discovery is read-only and never starts an unavailable runtime.
+        commands=$(compose exec -T tocaregalo-php php bin/console list --raw 2>/dev/null) || fail 'El servicio PHP no está disponible; consulta docs/development.md.'
+        printf '%s\n' "$commands" | awk '{print $1}' | grep -Fx "$command_name" >/dev/null || fail 'Comando de negocio aún no disponible en esta fase; consulta docs/development.md.'
+        [ -t 0 ] && [ -t 1 ] || fail 'Esta operación requiere una terminal interactiva.'
+        compose exec tocaregalo-php php bin/console "$command_name" ;;
+esac

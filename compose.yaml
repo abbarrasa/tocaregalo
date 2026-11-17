@@ -35,6 +35,12 @@ x-php-service: &php-service
       target: /workspace/backend
       bind:
         create_host_path: false
+    - type: bind
+      source: ./.env
+      target: /workspace/.env
+      read_only: true
+      bind:
+        create_host_path: false
   secrets:
     - assignment_keys
   depends_on:
