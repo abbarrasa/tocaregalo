@@ -1,11 +1,12 @@
 # Plan 001 — Toca Regalo
 
-Status: approved
-Revision: v0.1
-Approval: The user explicitly stated “Apruebo el plan” on 2026-11-16 in response to the request to approve v0.1 and proceed to task decomposition.
-Approved specification: [v1.0](./spec.md)
+Status: approved; task execution and installation remain separately gated
+Revision: v0.2
+Historical approval (v0.1): The user explicitly stated “Apruebo el plan” on 2026-11-16 in response to the request to approve v0.1 and proceed to task decomposition. Unchanged architecture and prior evidence retain that approval.
+Approval (v0.2): “Apruebo estas revisiones y autorizo actualizar las tareas”, 2026-11-17, approves the displayed PHPStan plan revision and authorizes task-list preparation, not implementation or installation.
+Approved specification: [v1.1](./spec.md)
 Constitution: [v1](../../docs/constitution.md)
-Scope: approved technical basis for Tasks; no dependency installation or implementation is authorized by this approval.
+Scope: v0.1 remains the approved application architecture; proposed v0.2 adds the NFR-10 tooling/completion gate. Task-list preparation is authorized; installation and task execution still require explicit approval.
 
 ## 1. Approach and observed environment
 
@@ -30,6 +31,7 @@ Read-only environment inspection found Docker Engine client/server 29.9.3 and Co
 | SMTP capture | Mailpit 1 stable line | Local SMTP plus inspectable messages; development-only service, not a delivery provider. |
 | Reverse proxy | Nginx stable release | Required frontend/API entry point, no PHP-rendered HTML. |
 | PHP verification | PHPUnit 12; Symfony BrowserKit/Clock test helpers | Isolated domain tests and real-MySQL/API checks with controlled time. |
+| PHP static analysis | PHPStan 2, fixed level 10; compatible Symfony/Doctrine/PHPUnit extensions in major 2 | NFR-10 requires zero post-task errors on project-owned PHP, including tests, without baseline concealment. Separate installation approval required. |
 | UI verification | Vitest compatible stable version, Vue Test Utils 2, Playwright 1 | Component timer/forms and full browser flows; match Playwright image to installed version. |
 
 The proposed families require approval of this plan. Exact patch versions, image digests, npm/Composer lockfiles, and dependency compatibility must be recorded during the authorized bootstrap task. Do not use floating `latest` images or silently switch major families on resolution failure. Check compatibility without running dependency installation before the user authorizes it.
@@ -218,6 +220,8 @@ README provides Spanish setup, ports, expected screens, bootstrap command, email
 
 ## 11. Verification strategy and evidence
 
+- Mandatory post-implementation static analysis: run PHPStan at fixed level 10 over project-owned PHP including tests after every future implementation task, even when the task changes only frontend code. Exclude third-party dependencies and generated caches by explicit owned-code paths. Require exit 0/zero errors, record the command/configuration/result, and do not hide findings in a baseline. Failed/unavailable analysis prevents task completion (NFR-10).
+- Establish the PHPStan tool/configuration before closing T4. Use the [proposed setup execution plan](../002-development-foundation/phpstan-execution-plan.md); introduce its enabling task during the separately approved Tasks update, preserving existing task IDs and completed evidence. Resolve actual existing-code findings in that authorized setup task, without claiming findings before analysis runs.
 - Unit: pure normalization/validation/state rules, uniform shuffling, retry delays, membership decision matrix, closure time conversion and DST. No database/HTTP/framework in domain tests.
 - Integration: real MySQL migrations/default lengths/collations/uniqueness/cascades; scoped repositories; encryption and tamper rejection; versioned-key lookup and null semantics; atomic notification enqueue; session/recovery persistence; real parallel connections for concurrency. Do not substitute SQLite for MySQL behavior.
 - Functional API: every endpoint's owner/USER/SUPER ADMIN matrix, mass-assignment denial, own-only recipient disclosure, account changes/bootstrap, timers' API guards, stale notifications, delivery statuses, request confirmation, and no backend HTML/Twig dependency.
@@ -278,6 +282,7 @@ Proposed check wrappers invoke backend unit/integration/API suites, frontend uni
 | NFR-7 | External SMTP templates + local Mailpit + ignored secrets | Captured recovery/assignment mail, config review, no committed real credentials |
 | NFR-8 | State components, labels/errors, keyboard/focus | Loading/empty/failure exercises, keyboard walkthrough, associated fields/errors |
 | NFR-9 | Boundary guards + closure polling/worker | Controlled-clock boundary test and at-most-60-second background check |
+| NFR-10 | Containerized PHPStan 2 level-10 configuration, owned PHP/test scope, post-task gate | Successful zero-error run after each future implementation task, without a concealing baseline; record command/version/result and relevant regressions |
 
 All AC-1…35 are verified by the same-numbered FR row; NFR rows cover their inline acceptance conditions. Specification completion requires every row's evidence, relevant regressions, constitution compliance, and accepted authorized Validation; a plan approval does not claim any is already satisfied.
 
@@ -289,4 +294,4 @@ All AC-1…35 are verified by the same-numbered FR row; NFR rows cover their inl
 - This is a whole-application plan; 35 FR will likely need more than about ten 20–30-minute tasks. At the Tasks phase, propose coherent task/specification decomposition for user approval before changing document scope. Do not silently split/renumber the approved specification or start implementation.
 - No deployment target, cloud account, SMTP vendor, billing service, or CI provider is selected. Those choices are outside current setup beyond the documented configuration interfaces.
 
-Plan approval is recorded above. Next: prepare the Tasks-phase decomposition proposal, obtain approval for any specification split before changing scope/documents, then approve task lists and task-start authorization. Installation still needs separate explicit authorization.
+Plan v0.2 approval is recorded above; the original six-block decomposition remains unchanged. Next: approve task-list/index v0.2 and authorize the new 002:T9 PHPStan setup task plus its separate four-package development installation scope. Prior T4/Playwright approvals remain valid pending that prerequisite. No task execution is authorized merely by task-list preparation.

@@ -1,12 +1,12 @@
 # Spec 007 — Account deletion and application verification
 
-Status: approved; individual task execution remains separately gated
-Revision: v0.1
-Approval: The user stated “Apruebo y autorizo iniciar la T1 de spec 002”, approving the derived-document/task package and authorizing only 002:T1 on 2026-11-16. No installation is authorized.
-Parent: [Spec 001 v1.0, approved](../001-toca-regalo/spec.md)
-Architecture: [Plan 001 v0.1, approved](../001-toca-regalo/plan.md)
+Status: synchronized with approved parent requirements; task execution remains separately gated
+Revision: v0.2
+Historical approval (v0.1): The user stated “Apruebo y autorizo iniciar la T1 de spec 002”, approving the derived-document/task package and authorizing only 002:T1 on 2026-11-16. No installation is authorized.
+Parent: [Spec 001 v1.1, approved](../001-toca-regalo/spec.md)
+Architecture: [Plan 001 v0.2, approved](../001-toca-regalo/plan.md)
 Organization: [approved decomposition v0.1](../001-toca-regalo/decomposition-proposal.md)
-Approval state: derived specification approved; parent requirements remain unchanged.
+Inheritance authority: approved parent v1.1 supplies NFR-10 verbatim; the user approved revised plans and authorized downstream task updates on 2026-11-17. This synchronized extraction adds no independent product decision.
 
 ## Context and objective
 
@@ -75,6 +75,9 @@ The following rows are copied verbatim from the approved parent. Inclusion ident
 | NFR-7 | Configure SMTP externally per environment, capture email locally in development, and supply real-server settings for deployment without embedding credentials in the repository. | Demonstrate development capture of assignment and recovery emails and review environment configuration templates for host, port, transport security, authentication, and sender identity; verify no real credentials are committed. Real-delivery verification requires supplied deployment values. | S13 |
 | NFR-8 | Show loading, empty, and error states in Spanish; support keyboard navigation and associate form labels and validation errors with their fields. | Exercise loading/empty/failure cases and complete specified form and navigation actions using the keyboard; inspect label/error associations. Browser and viewport profiles are recorded in the approved plan. | S13 |
 | NFR-9 | Enforce logical closure immediately at its boundary and complete background closure processing within one minute while the required environment services are running. | With a controlled clock, prove new draws/replacements are blocked at the boundary, including before background processing runs; verify background closure completes no later than 60 seconds afterward. | S13 |
+| NFR-10 | Run PHPStan at fixed level 10 on project-owned PHP, including tests and excluding third-party dependencies, after each implementation task and before marking it complete. Require zero reported errors without hiding findings in a baseline. | The recorded PHPStan command/configuration demonstrates level 10 and the required scope; each subsequent implementation task records a successful run with zero errors and no findings hidden in a baseline. Failed or unavailable analysis prevents task completion. | S14 |
+
+NFR-10 is inherited from approved parent Spec 001 v1.1. It applies to every future implementation task; completed task evidence remains historical under its original approved scope. A failed or unavailable PHPStan check blocks completion.
 
 ## Acceptance criteria inherited without changes
 

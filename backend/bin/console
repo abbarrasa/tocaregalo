@@ -6,7 +6,13 @@ declare(strict_types=1);
 use App\Kernel;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 
-$_SERVER['APP_RUNTIME_OPTIONS']['dotenv_path'] = '../.env';
+/** @var array<string, mixed> $runtimeOptions Application runtime options must be an array. */
+$runtimeOptions = $_SERVER['APP_RUNTIME_OPTIONS'] ?? [];
+$runtimeOptions['dotenv_path'] = '../.env';
+$_SERVER['APP_RUNTIME_OPTIONS'] = $runtimeOptions;
 require_once dirname(__DIR__).'/vendor/autoload_runtime.php';
 
-return static fn (array $context): Application => new Application(new Kernel($context['APP_ENV'], (bool) $context['APP_DEBUG']));
+return static function (array $context): Application {
+    /** @var array{APP_ENV: string, APP_DEBUG: bool|string|int} $context Symfony Runtime environment context. */
+    return new Application(new Kernel($context['APP_ENV'], (bool) $context['APP_DEBUG']));
+};

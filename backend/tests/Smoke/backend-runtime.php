@@ -3,11 +3,14 @@
 declare(strict_types=1);
 
 use App\Kernel;
+use Doctrine\DBAL\Connection;
+use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Dotenv\Dotenv;
 use Symfony\Component\HttpFoundation\Request;
 
 require dirname(__DIR__, 2).'/vendor/autoload.php';
 
+/** @var list<string> $argv CLI arguments supplied by PHP. */
 $httpOnly = in_array('--http-only', $argv, true);
 $kernel = null;
 $stage = 'kernel availability';
@@ -23,6 +26,8 @@ try {
     }
     // This ephemeral value belongs only to the HTTP smoke process.
     $_SERVER['APP_SECRET'] ??= bin2hex(random_bytes(32));
+    /** @var string $applicationSecret Dotenv strings or the generated process-local secret. */
+    $applicationSecret = $_SERVER['APP_SECRET'];
     if ($httpOnly && !isset($_SERVER['DATABASE_URL']) && !isset($_ENV['DATABASE_URL'])) {
         // Non-routable fixture only: the HTTP check never opens this connection.
         $_SERVER['DATABASE_URL'] = 'mysql://unused:unused@no-database.invalid/unused?serverVersion=8.4.0';
@@ -44,7 +49,7 @@ try {
             }
             $body = (string) $response->getContent();
             json_decode($body, true, flags: JSON_THROW_ON_ERROR);
-            if (str_contains($body, '<html') || str_contains($body, 'trace') || str_contains($body, $_SERVER['APP_SECRET'])) {
+            if (str_contains($body, '<html') || str_contains($body, 'trace') || str_contains($body, $applicationSecret)) {
                 throw new RuntimeException('The API response exposes HTML or private diagnostic information.');
             }
             $kernel->terminate($request, $response);
@@ -54,9 +59,16 @@ try {
 
     if (!$httpOnly) {
         $stage = 'MySQL connection and queries';
-        $connection = $kernel->getContainer()->get('doctrine')->getConnection();
-        if ((int) $connection->fetchOne('SELECT 1') !== 1
-            || !str_starts_with((string) $connection->fetchOne('SELECT VERSION()'), '8.4.')
+        /** @var ManagerRegistry $registry The public doctrine service registered by DoctrineBundle. */
+        $registry = $kernel->getContainer()->get('doctrine');
+        /** @var Connection $connection DoctrineBundle uses DBAL for the configured MySQL connection. */
+        $connection = $registry->getConnection();
+        /** @var int|string $probe MySQL SELECT 1 returns an integer or its string representation. */
+        $probe = $connection->fetchOne('SELECT 1');
+        /** @var string $version MySQL VERSION() returns a string. */
+        $version = $connection->fetchOne('SELECT VERSION()');
+        if ((int) $probe !== 1
+            || !str_starts_with($version, '8.4.')
             || $connection->fetchOne('SELECT @@session.time_zone') !== '+00:00') {
             throw new RuntimeException('The MySQL version, query or timezone check failed.');
         }
