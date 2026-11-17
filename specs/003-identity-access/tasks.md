@@ -1,13 +1,16 @@
 # Tasks 003 — Identity and account access
 
-Status: approved; individual task execution remains separately gated
-Revision: v0.1
-Approval: The user stated “Apruebo y autorizo iniciar la T1 de spec 002”, approving the derived-document/task package and authorizing only 002:T1 on 2026-11-16. No installation is authorized.
-Derived documents: [spec v0.1](./spec.md), [plan v0.1](./plan.md), both approved
-Approved sources: [Spec 001 v1.0](../001-toca-regalo/spec.md), [Plan 001 v0.1](../001-toca-regalo/plan.md)
-Execution authorization: only 002:T1 is authorized. All other tasks and every package/image/browser installation require separate authorization.
+Status: approved; task execution remains separately gated
+Revision: v0.2
+Approval (v0.2): “Apruebo las listas de tareas y autorizo el inicio de 002:T9 y las instalaciones”, 2026-11-17. Approves all revised task lists and authorizes only 002:T9 and its concrete four-package installation scope.
+Historical approval (v0.1): The user stated “Apruebo y autorizo iniciar la T1 de spec 002”, approving the derived-document/task package and authorizing only 002:T1 on 2026-11-16. No installation is authorized.
+Derived documents: [spec](./spec.md), synchronized from approved parent v1.1; [plan v0.2](./plan.md), approved.
+Approved sources: [Spec 001 v1.1](../001-toca-regalo/spec.md), [Plan 001 v0.2](../001-toca-regalo/plan.md)
+Execution authorization: no task in this block is authorized. Upstream 002:T9 and its installation were authorized separately; follow prerequisite and per-task approval gates.
 
 ## Execution rules
+
+Revision preparation authorized by “Apruebo estas revisiones y autorizo actualizar las tareas” on 2026-11-17. This v0.2 task list is approved under the approval evidence above. Every pending task carries NFR-10: before completion, run fixed PHPStan level 10 on all project-owned PHP including tests, with zero errors and no concealing baseline; record command/configuration/version/result. Failed or unavailable analysis blocks completion. Earlier checked tasks retain historical evidence under their original scope.
 
 Task IDs are qualified as 003:Tn across blocks; unqualified Tn references are local. Execute one explicitly authorized task at a time, with its prerequisite checks satisfied. Each task includes its applicable tests/checks and actual evidence when run. Do not mark product requirements fulfilled based on partial supporting work; No global account deletion until 007. Ordinary-user creation is an application boundary exercised with fixtures here; its owner/group entry point is completed in 004. Final assignment dashboard and assignment-delivery acceptance remain in 006.
 
@@ -15,63 +18,63 @@ No dependency installation, image pull/build requiring packages, or browser down
 
 ## Proposed tasks
 
-- [ ] **T1. Implement normalized user values and persistence constraints.** FR-3, FR-4, NFR-1
+- [ ] **T1. Implement normalized user values and persistence constraints.** FR-3, FR-4, NFR-1, NFR-10
   - Depends on: 002:T8.
   - Work: Write behavioral tests for trim/email/phone/password rules; implement pure normalizers, Symfony validation adapter, external user/role mappings and unique normalized indexes.
   - Files/responsibility: backend/src/Domain/User/; backend/src/Infrastructure/Doctrine/; backend/config/doctrine/; backend/migrations/.
   - Done when: Missing/duplicate/case/format tests pass against real MySQL; passwords retain exact entered characters and policy accepts six-character category variants.
   - Evidence: not executed; no completion or passing result claimed.
 
-- [ ] **T2. Adapt and verify the interactive SUPER ADMIN command.** FR-3, FR-4, FR-22, FR-30
+- [ ] **T2. Adapt and verify the interactive SUPER ADMIN command.** FR-3, FR-4, FR-22, FR-30, NFR-10
   - Depends on: T1.
   - Work: Adapt supplied reference with required first name/phone, optional surnames, confirmed hidden password and role creation if missing; omit account verification.
   - Files/responsibility: backend/src/Command/; backend/tests/Functional/.
   - Done when: Interactive fixtures cover missing role, duplicates, validation, confirmation and failure exits; no existing user is overwritten or verified.
   - Evidence: not executed; no completion or passing result claimed.
 
-- [ ] **T3. Implement session authentication and logout JSON contracts.** FR-15, FR-22, FR-35, NFR-4
+- [ ] **T3. Implement session authentication and logout JSON contracts.** FR-15, FR-22, FR-35, NFR-4, NFR-10
   - Depends on: T2.
   - Work: Implement identifier login, session actor projection, CSRF and explicit logout with same-origin cookies; no public registration.
   - Files/responsibility: backend/src/Infrastructure/Security/; backend/src/Api/; backend/config/packages/.
   - Done when: Email and cleaned-phone login succeed, invalid credentials fail, logout invalidates old-session access, and forged role/owner input grants no privilege.
   - Evidence: not executed; no completion or passing result claimed.
 
-- [ ] **T4. Implement authenticated own-account changes and creation boundary.** FR-3, FR-4, FR-5, FR-22, FR-29
+- [ ] **T4. Implement authenticated own-account changes and creation boundary.** FR-3, FR-4, FR-5, FR-22, FR-29, NFR-10
   - Depends on: T3.
   - Work: Implement ordinary-user creation service and own-data/password updates with actor policies and validation. Do not expose owner-dependent account creation before group authorization exists.
   - Files/responsibility: backend/src/Application/; backend/src/Api/; backend/tests/Functional/.
   - Done when: Own updates and password verification pass; unauthorized other-member edits fail; normal creation produces USER only; duplicate races produce field errors.
   - Evidence: not executed; no completion or passing result claimed.
 
-- [ ] **T5. Implement recovery token lifecycle.** FR-28
+- [ ] **T5. Implement recovery token lifecycle.** FR-28, NFR-10
   - Depends on: T4.
   - Work: Generate random single-use tokens stored as hashes; configurable one-hour default, latest-link supersession, consumption and password reset.
   - Files/responsibility: backend/src/Application/; backend/src/Infrastructure/Doctrine/; backend/tests/Unit/; backend/tests/Integration/.
   - Done when: Controlled-clock tests prove expiry, supersession and reuse rejection; valid reset changes the password and permits login; raw tokens never appear in persistence/logs.
   - Evidence: not executed; no completion or passing result claimed.
 
-- [ ] **T6. Deliver recovery email through durable mail infrastructure.** FR-13, FR-28, FR-34, NFR-7
+- [ ] **T6. Deliver recovery email through durable mail infrastructure.** FR-13, FR-28, FR-34, NFR-7, NFR-10
   - Depends on: T5.
   - Work: Implement foundational transactional message-ID transport/retry status needed for recovery, guarding expiry/supersession before handoff; assignment rendering remains 006.
   - Files/responsibility: backend/src/Infrastructure/Mail/; backend/config/packages/messenger.yaml; backend/tests/Integration/.
   - Done when: Mailpit captures a usable link; transport failure does not regenerate credentials, guards suppress stale reset delivery, and no second hidden mail queue is introduced.
   - Evidence: not executed; no completion or passing result claimed.
 
-- [ ] **T7. Implement login and recovery/reset screens.** FR-3, FR-15, FR-28, FR-35, NFR-2, NFR-5, NFR-6, NFR-8
+- [ ] **T7. Implement login and recovery/reset screens.** FR-3, FR-15, FR-28, FR-35, NFR-2, NFR-5, NFR-6, NFR-8, NFR-10
   - Depends on: T6.
   - Work: Create Vue forms, phone wrapper with restricted input, session route guards and logout; successful login enters the dashboard route shell.
   - Files/responsibility: frontend/src/views/; frontend/src/plugins/phone.js; frontend/src/composables/; frontend/tests/.
   - Done when: Typing/paste, loading/errors and keyboard component tests pass; browser login/logout/reset succeeds on desktop/mobile; no registration/verification link.
   - Evidence: not executed; no completion or passing result claimed.
 
-- [ ] **T8. Implement responsive own-account editing.** FR-3, FR-4, FR-29, NFR-5, NFR-6, NFR-8
+- [ ] **T8. Implement responsive own-account editing.** FR-3, FR-4, FR-29, NFR-5, NFR-6, NFR-8, NFR-10
   - Depends on: T7.
   - Work: Create own-data/password form bound to JSON API, required/unique errors and exact password handling; omit delete until 007.
   - Files/responsibility: frontend/src/views/AccountView.vue; frontend/src/api/; tests/e2e/.
   - Done when: Logged-in profile/password changes work in browser, unauthorized edits remain denied, and mobile/keyboard labels and errors are verified.
   - Evidence: not executed; no completion or passing result claimed.
 
-- [ ] **T9. Verify identity privacy and record slice evidence.** FR-3, FR-4, FR-5, FR-13, FR-15, FR-22, FR-28, FR-29, FR-30, FR-34, FR-35, NFR-1, NFR-2, NFR-4, NFR-5, NFR-6, NFR-7, NFR-8
+- [ ] **T9. Verify identity privacy and record slice evidence.** FR-3, FR-4, FR-5, FR-13, FR-15, FR-22, FR-28, FR-29, FR-30, FR-34, FR-35, NFR-1, NFR-2, NFR-4, NFR-5, NFR-6, NFR-7, NFR-8, NFR-10
   - Depends on: T8.
   - Work: Run focused account/API/command/browser regressions, inspect DTOs/logs for credentials, and record partial owner/draw coverage explicitly.
   - Files/responsibility: specs/003-identity-access/verification.md; backend/tests/; tests/e2e/.

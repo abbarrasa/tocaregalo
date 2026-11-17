@@ -33,7 +33,7 @@ La sobreescritura de puertos de pruebas usa `!override`, que requiere Docker Com
 
 ## Preparación posterior, pendiente de autorización
 
-1. Revisar y aprobar el plan de ejecución de **002:T4** antes de implementar Vue y su entrada por Nginx. Cada tarea requiere su propio plan y autorización.
+1. Continuar con **002:T4** cuando el usuario lo solicite, bajo su plan de ejecución aprobado. T9 ya ha preparado PHPStan y superado su comprobación. Las tareas posteriores requieren su propio plan y autorización.
 2. Conservar los digests y archivos de bloqueo revisados. Las instalaciones de dependencias nunca deben ejecutarse implícitamente al arrancar; futuras descargas fuera del alcance autorizado requieren aprobación.
 3. Preparar los proyectos Symfony y Vue en sus tareas correspondientes. El arranque nunca instalará sus dependencias automáticamente.
 4. Crear un archivo local ignorado a partir de [.env.example](./.env.example). Los valores `REVIEW_ONLY_*` son marcadores públicos para validar archivos: deben sustituirse antes de cualquier ejecución. No representan secretos de desarrollo utilizables.
@@ -64,4 +64,18 @@ El correo real se configurará por entorno con servidor, puerto, STARTTLS/TLS, a
 
 ## Comprobaciones todavía pendientes
 
-T2 verifica la construcción de las herramientas, las extensiones PHP y la resolución de dependencias. Todavía están pendientes los permisos del entorno completo, la sintaxis de Nginx dentro de su imagen, la conexión real a MySQL, el arranque de la aplicación, el correo y los trabajadores. No se han descargado navegadores ni ejecutado pruebas de la aplicación.
+T3 verifica el núcleo JSON y una conexión real a MySQL en un entorno temporal aislado. Todavía están pendientes el entorno completo, Nginx con Vue, las funciones de la aplicación, el correo y los trabajadores. No se han descargado navegadores.
+
+## Análisis estático de PHP
+
+Después de cada tarea de implementación, ejecuta PHPStan en nivel **10** sobre todo el PHP propio, incluidos los tests. La tarea solo puede cerrarse con cero errores; no se permite ocultarlos mediante una línea base. La configuración está en [phpstan.neon.dist](./backend/phpstan.neon.dist).
+
+Desde la raíz del proyecto, con la imagen PHP ya preparada:
+
+```bash
+docker run --rm --pull never --user "$(id -u):$(id -g)" \
+  -v "$PWD/backend:/workspace/backend" -w /workspace/backend \
+  tocaregalo-php:dev composer analyse
+```
+
+Este comando no instala paquetes ni monta el archivo privado de entorno. Analiza `src`, `tests`, `config`, `public` y `bin/console`; las dependencias aportan sus tipos, pero no se analizan como código propio. El resultado no sustituye las pruebas de ejecución. La instalación requiere autorización independiente.

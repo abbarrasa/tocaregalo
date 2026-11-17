@@ -1,9 +1,10 @@
 # Spec 001 — Toca Regalo
 
 Status: approved
-Revision: v1.0
-Phase: Clarification accepted; approved basis for the Plan phase.
-Approval: The user explicitly stated “Apruebo la especificacion” in response to the request to approve v1.0 and start Planning, 2026-11-16. No implementation or package installation is authorized by this approval.
+Revision: v1.1
+Phase: Change specification approved; affected plan revisions authorized for preparation.
+Approval (v1.1): “Apruebo la especificación y autorizo actualizar los planes”, 2026-11-17, explicitly approves the displayed PHPStan change and authorizes plan revision, not installation or unreviewed task execution.
+Historical approval (v1.0): The user explicitly stated “Apruebo la especificacion” in response to the request to approve v1.0 and start Planning, 2026-11-16. No implementation or package installation is authorized by this approval.
 
 ## Context and objective
 
@@ -33,6 +34,8 @@ Enable group owners to manage participants and events, randomly assign gift reci
 - S12: Latest user answers, 2026-11-16: duplicate association shows “El usuario ya pertenece al grupo” without changes; empty search shows “No se encontraron usuarios”. Provide logout; issuing a new recovery link invalidates earlier links. Group name/description and event name/date/notes remain editable after a draw without redrawing. Concurrent membership changes may proceed after event closure without redrawing closed events. Assignment email includes event name and recipient first name/surnames when present. After five failed retries, show delivery failure to the owner and SUPER ADMIN and keep resend available under the existing assignment/event validity restrictions.
 
 - S13: The user explicitly approved all six final clarification proposals: environment-specific external SMTP configuration with local email capture in development and real-server values supplied for deployment; trim surrounding whitespace from names/email, use Symfony email validation, and compare email uniqueness case-insensitively; all group members participate with no extra exclusions and all complete valid assignments have equal probability; no role-management screen, with SUPER ADMIN creation through the command and ordinary users through specified flows; Spanish loading/empty/error states, keyboard navigation, associated field labels/errors, with test viewport/browser profiles in the plan; immediate logical draw blocking at closure and up to one minute for background closure processing. The consolidated specification v1.0 was subsequently explicitly approved as recorded above.
+
+- S14: On 2026-11-17 the user requested PHPStan after implementation, then confirmed fixed level 10, analysis of project-owned PHP including tests and excluding third-party dependencies, and zero errors without hiding findings in a baseline after each implementation task before completion. This confirms the criteria; the specification revision and installation scope still require their respective approvals.
 
 Later clarification sources supersede earlier conflicting interview or conversation statements. In particular, S8 supersedes S7's no-email rule and S11 specifies the retry policy initially discussed in S10. The source title's Nurschool and school-nursing references are confirmed errors and impose no product scope or branding requirements.
 
@@ -114,6 +117,7 @@ Each requirement includes a corresponding acceptance criterion with the same num
 | NFR-7 | Configure SMTP externally per environment, capture email locally in development, and supply real-server settings for deployment without embedding credentials in the repository. | Demonstrate development capture of assignment and recovery emails and review environment configuration templates for host, port, transport security, authentication, and sender identity; verify no real credentials are committed. Real-delivery verification requires supplied deployment values. | S13 |
 | NFR-8 | Show loading, empty, and error states in Spanish; support keyboard navigation and associate form labels and validation errors with their fields. | Exercise loading/empty/failure cases and complete specified form and navigation actions using the keyboard; inspect label/error associations. Browser and viewport profiles are recorded in the approved plan. | S13 |
 | NFR-9 | Enforce logical closure immediately at its boundary and complete background closure processing within one minute while the required environment services are running. | With a controlled clock, prove new draws/replacements are blocked at the boundary, including before background processing runs; verify background closure completes no later than 60 seconds afterward. | S13 |
+| NFR-10 | Run PHPStan at fixed level 10 on project-owned PHP, including tests and excluding third-party dependencies, after each implementation task and before marking it complete. Require zero reported errors without hiding findings in a baseline. | The recorded PHPStan command/configuration demonstrates level 10 and the required scope; each subsequent implementation task records a successful run with zero errors and no findings hidden in a baseline. Failed or unavailable analysis prevents task completion. | S14 |
 
 ## Acceptance criteria
 
@@ -168,13 +172,14 @@ The following criteria apply to permitted actions and valid inputs unless they e
 
 ## Scope boundaries
 
-This revision covers S1 as amended by S4–S13. ER attributes are ignored; entity attributes follow S1 and explicit user additions. Multiple owners, public registration, account verification, role-management screens, additional participant exclusions, and reopening finished events are out of scope. Architecture, runtime/package versions, entity mappings and concrete default lengths, test browser/viewport profiles, encryption key policy, and development capture tooling belong to the plan. Real SMTP connection/sender values are deployment inputs. No additional product behavior may be introduced through those choices.
+This revision covers S1 as amended by S4–S14. ER attributes are ignored; entity attributes follow S1 and explicit user additions. Multiple owners, public registration, account verification, role-management screens, additional participant exclusions, and reopening finished events are out of scope. Architecture, runtime/package versions, entity mappings and concrete default lengths, test browser/viewport profiles, encryption key policy, and development capture tooling belong to the plan. Real SMTP connection/sender values are deployment inputs. No additional product behavior may be introduced through those choices.
 
 ## Completion criteria
 
 - Resolve blocking questions and approve a clarified specification revision before planning.
 - Trace every FR and NFR to approved work and verification; demonstrate all applicable acceptance criteria and relevant errors/regressions.
 - Verify compliance with constitution v1 and record actual evidence and remaining limitations.
+- Record the post-implementation PHPStan result required by NFR-10 before completing each subsequent implementation task; retain earlier task evidence as historical verification under its approved scope.
 - Complete the authorized SDD validation, including the separate code review, before claiming fulfillment; mark implemented only after user acceptance.
 
 ## Clarification resolution
