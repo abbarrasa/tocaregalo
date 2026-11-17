@@ -1,0 +1,13 @@
+framework:
+    messenger:
+        transports:
+            notifications:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                options:
+                    auto_setup: false
+                retry_strategy:
+                    max_retries: 5
+                    delay: '%env(int:NOTIFICATION_RETRY_BASE_MS)%'
+                    multiplier: 2
+                    max_delay: 0
+                    jitter: 0

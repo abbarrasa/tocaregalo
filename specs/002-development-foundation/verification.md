@@ -333,3 +333,78 @@ docker network ls --filter label=com.docker.compose.project=tocaregalo-test --fo
 ```
 
 Down exit 0; final project filters empty. No data-volume deletion and no unrelated project was restarted. Existing audit/license warnings from T2/T9 remain open; no new audit/installation or clean-security claim. These passing harnesses support NFR-1/2/3/4/6/8/10 on the current foundation only. Product migrations, fixtures, auth/forms/reveal/recovery, privacy/concurrency and mail/worker acceptance remain in their approved slices. Stop at T5; T6 requires a presented/approved execution plan before implementation.
+
+## T6 completion
+
+Date: 2026-11-17. Branch: `feature/002_T06-mail-worker-runtime`, created from current local dev preserving existing planning/MEMORY edits. Authorization: “Apruebo el plan y autorizo su implementación”, approving [execution plan v0.1](./t6-execution-plan.md) and bounded local runtime. No dependency install, image pull/build, external SMTP, new secrets, business schema, commit/push or T7 implementation.
+
+### Implementation and scope
+
+Mailer reads external MAILER_DSN/sender defaults and sets message_bus=false: synchronous SMTP handoff inside the eventual delivery worker, no hidden second email queue. Messenger uses the existing Doctrine notifications transport with auto_setup=false, five retries, configurable base, multiplier two, max_delay zero and jitter zero. No product routing/handlers or independent retry loop.
+
+Worker/scheduler launchers validate the console path and exec PHP, forward explicit arguments and retain nonzero exits. Development worker services mount launchers and the shared root .env read-only, retain their opt-in profile/shared PHP image and use SIGTERM for CLI workers. The future production closure command is deliberately absent: its default invocation fails visibly, not a fake success.
+
+Test-only service registration provides marker-only queue fixtures, synchronous local mail handler, guarded transport setup, capture inspection and a bounded 15-second process probe. Root sender configuration was verified on the captured message. Mail fixture policy rejects non-test environments/external SMTP; a focused test proves unsafe DB targets are rejected before transport setup/dispatch. Existing T5 target tests remain in the suite. Explicit Messenger infrastructure-table setup occurred only in the guarded tmpfs test database; no startup auto-setup, development migration, data reset or volume deletion.
+
+The dedicated compose.mail-smoke.yaml starts only MySQL, Mailpit and PHP worker/check/probe containers. SMTP is forced to the internal local Mailpit target. The independent T5 configuration now excludes the `mail` group because it intentionally has no Mailpit/process-launcher mounts; the full T6 suite includes that group. No test source is excluded from PHPStan. Fixtures/services are proven absent in a dev kernel. The native process helper uses installed PHP proc_open; Symfony Process was not installed, so no new package was introduced.
+
+Mailpit API shapes were checked against [official API documentation](https://mailpit.axllent.org/docs/api-v1/) and its linked Swagger schema; actual runtime capture verified subject, Spanish body, sender address/name and reserved-domain recipient. Capture uses read-only list/message requests, not external relay/send endpoints or global deletion.
+
+### Tests first and corrections
+
+An initial standalone integration-test invocation without the PHPUnit bootstrap failed for missing KERNEL_CLASS; this was a test invocation prerequisite error, not a claimed behavioral red result. The corrected isolated tests-first command used Unit/LocalMailPolicyTest.php with vendor autoload and no private environment; it exited 1 with two failures because MailFixture did not exist, proving missing implementation. Added the fixture policy/wiring afterward.
+
+First full runtime suite: 28 tests, 89 assertions and one test-service lookup error. Real worker delivery/capture already passed. Corrected the test's service identifier by exposing the actual configured Symfony multiplier strategy through a test-only public alias; no strategy reimplementation. Next full suite: 28 tests/101 assertions pass. Added explicit unsafe-DB-before-DDL/dispatch proof; final suite below has 29 tests/105 assertions.
+
+First process stop inherited SIGQUIT from the FPM-based image: notification exit 131, bounded probe naturally exited 0. The final inventory found its generated backend/core.7 dump; it was removed without opening it, and narrow numeric core-dump ignore patterns were added because native dumps can contain private environment data. No dump was committed, surfaced or retained. Set explicit SIGTERM for CLI workers and repeated start/stop after observing probe readiness. Final both exits 143, no OOM, actual PHP console process observed under docker-init. This proves forwarding/termination, not graceful completion/recovery of in-flight jobs. That behavior remains subject to future delivery semantics and signal support.
+
+### Reproducible checks and actual outcomes
+
+Preflight: Git status, empty dedicated project container/network filters and free 8026 loopback port checked before startup. Existing .env test parameters reused without printing or modifying values. All commands below ran from repository root, using already pinned/local images and UID/GID 1000:1000.
+
+```bash
+docker run --rm --pull never --user 1000:1000 \
+  -v /home/albertusko/Proyectos/tocaregalo/backend:/workspace/backend \
+  -w /workspace/backend tocaregalo-php:dev \
+  vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php tests/Unit/LocalMailPolicyTest.php
+
+docker compose --env-file .env --project-name tocaregalo-test -f compose.mail-smoke.yaml --profile checks config --quiet
+docker compose --env-file .env --project-name tocaregalo-test -f compose.mail-smoke.yaml \
+  up --detach --no-build --pull never --wait --wait-timeout 120 tocaregalo-mysql tocaregalo-mailpit
+docker compose --env-file .env --project-name tocaregalo-test -f compose.mail-smoke.yaml \
+  run --rm --no-deps --pull never tocaregalo-php-tests sh -c \
+  'vendor/bin/phpunit && composer analyse && find src tests config public -name "*.php" -exec php -l {} \; && php -l bin/console && php bin/console lint:container --resolve-env-vars && php bin/console lint:yaml config'
+```
+
+Final exit 0: **29 PHPUnit tests, 105 assertions**, PHP 8.5.12/PHPUnit 12.5.44. Includes prior API/MySQL fixture regressions, local policy/setup rejection, real cross-process Messenger consumption, actual SMTP capture and queue acknowledgement (zero remaining notifications), configured retry sequence/terminal count, fixture exclusion in dev, scheduler argument forwarding/two ticks and missing default closure failure. The scheduler probe is a test-only command; no event was closed.
+
+Final PHPStan **2.3.6, numeric level 10, zero errors**, includes all owned fixtures/tests/support, no baseline/exclusions/vendor patches. All **19 PHP syntax checks**, Symfony container lint and **10 YAML files** pass. Shell `sh -n` checks pass. Targeted editor diagnostics report no errors. Existing Composer/npm manifests/locks unchanged; no new audit or clean-security claim. T2/T9 audit/license warnings remain open. No frontend/browser rerun: UI and HTTP runtime PHP were unchanged; discovered API regressions passed with new framework wiring.
+
+```bash
+docker compose --env-file .env --project-name tocaregalo-test -f compose.mail-smoke.yaml \
+  up --detach --no-build --pull never tocaregalo-notification-worker tocaregalo-closure-probe
+docker top tocaregalo-test-tocaregalo-notification-worker-1 -eo pid,comm,args
+docker compose --env-file .env --project-name tocaregalo-test -f compose.mail-smoke.yaml \
+  logs --tail 3 tocaregalo-closure-probe
+docker compose --env-file .env --project-name tocaregalo-test -f compose.mail-smoke.yaml \
+  stop --timeout 5 tocaregalo-notification-worker tocaregalo-closure-probe
+docker inspect --format '{{.Name}} stop={{.Config.StopSignal}} exit={{.State.ExitCode}} oom={{.State.OOMKilled}}' \
+  tocaregalo-test-tocaregalo-notification-worker-1 tocaregalo-test-tocaregalo-closure-probe-1
+```
+
+Actual repeat after SIGTERM configuration used a bounded readiness poll (up to ten one-second checks for `fixture-ready interval=15`) before stopping. Both final stop signals SIGTERM, exits 143 and oom=false; no forced timeout kill reported. The PHPUnit probe independently verifies natural two-tick completion with the 15-second argument. Real retry/status/stale-work rules and <=60-second closure processing remain in later blocks.
+
+```bash
+docker inspect --format '{{.Name}} {{json .HostConfig.Tmpfs}} {{json .HostConfig.PortBindings}} {{range .Mounts}}{{.Destination}}:{{.RW}} {{end}}' \
+  tocaregalo-test-tocaregalo-mysql-1 tocaregalo-test-tocaregalo-mailpit-1
+docker compose --env-file .env.example -f compose.yaml --profile workers config --quiet
+docker compose --project-name tocaregalo-test --env-file .env.example \
+  -f compose.yaml -f compose.test.yaml --profile workers config --quiet
+docker compose --env-file .env --project-name tocaregalo-test -f compose.mail-smoke.yaml --profile checks down
+```
+
+Inspection: MySQL tmpfs `/var/lib/mysql`, no published DB port/data mount. Mailpit only publishes UI 8025 on **127.0.0.1:8026**, SMTP 1025 remains internal. Full Compose model check passes: five prefixed services, pull_policy never, bind-only mounts, private root environment only in PHP, no external/named data volume or relay configuration. Development/test Compose parsing passes. Dedicated down exit 0; final dedicated container/network filters empty, no unrelated service restarted. .env remains ignored/untracked/mode 600; no credentials printed. Diff/new-file whitespace and task-count checks pass.
+
+### Acceptance limits and next boundary
+
+NFR-3: real shared-image process/configuration evidence. NFR-7: local fixture capture and external sender/transport configuration only; actual recovery/assignment messages and deployment SMTP remain future work. NFR-9: launch/15-second process contract only; event rules and immediate guards/background closure belong to 004/006. NFR-10: required successful post-task analysis. No full product acceptance is claimed from fixtures. Stop after T6; T7 needs its own presented/approved execution plan before implementation.
