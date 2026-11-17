@@ -6,7 +6,7 @@ Approval (v0.2): “Apruebo las listas de tareas y autorizo el inicio de 002:T9 
 Historical approval (v0.1): The user stated “Apruebo y autorizo iniciar la T1 de spec 002”, approving the derived-document/task package and authorizing only 002:T1 on 2026-11-16. No installation is authorized.
 Derived documents: [spec](./spec.md), synchronized from approved parent v1.1; [plan v0.2](./plan.md), approved.
 Approved sources: [Spec 001 v1.1](../001-toca-regalo/spec.md), [Plan 001 v0.2](../001-toca-regalo/plan.md)
-Execution authorization: T1–T3 and T9 complete. T9 execution and its four-package installation were explicitly authorized above. T4/Playwright approvals are preserved; do not begin T4 during this task.
+Execution authorization: T1–T4 and T9 complete. User resumed T4 with “Continúa con la siguiente tarea” after T9; prior runtime/Playwright approvals remained valid. No T5 or later task implementation is authorized.
 
 ## Execution rules
 
@@ -49,13 +49,13 @@ No dependency installation, image pull/build requiring packages, or browser down
   - Done when: Targeted dependency resolution and configuration checks succeed; PHPStan exits 0 with zero errors for the entire owned-PHP/test scope, without a concealing baseline; relevant syntax/config/runtime regressions pass; private environment remains ignored and no secrets are printed. Record audits and remaining external warnings honestly.
   - Evidence: completed 2026-11-17 on feature/002_T09-phpstan-quality-gate. Four authorized packages locked/installed, no existing package updated/removed. Initial level-10 analysis: 14 errors; boundary types documented, final analysis zero errors. PHP syntax/platform, Symfony container/YAML, JSON HTTP and real MySQL 8.4/UTC checks passed; invalid connection failed as expected. No baseline/exclusions/vendor patches. See [T9 evidence](./verification.md#t9-completion) for commands, audit warnings and limits. No commit/push.
 
-- [ ] **T4. Wire the Vue build and Nginx entry point.** NFR-2, NFR-3, NFR-4, NFR-5, NFR-6, NFR-10
+- [x] **T4. Wire the Vue build and Nginx entry point.** NFR-2, NFR-3, NFR-4, NFR-5, NFR-6, NFR-10
   - Execution plan: [v0.2](./t4-execution-plan.md), approved; original implementation/runtime and matching Playwright image download approvals remain valid. T9 prerequisite is complete; stop after T9 and wait for the user to resume T4.
   - Depends on: T9 (which depends on completed T3).
   - Work: Create Vue/Router/Bootstrap shell, native-fetch API boundary, Vite HMR and built-static Nginx routing; keep product routes for their own slices.
   - Files/responsibility: frontend/src/main.js; frontend/src/router/; frontend/src/api/; frontend/vite.config.js; docker/nginx/.
   - Done when: Frontend builds and loads through Nginx on desktop/mobile profiles; API requests follow the same origin; no Twig or backend view renders.
-  - Evidence: not executed; no completion or passing result claimed.
+  - Evidence: completed 2026-11-17 on feature/002_T04-vue-nginx-entrypoint. Approved plan v0.2 resumed after T9. Eleven client tests and build pass; Chromium desktop/mobile verifies development and compiled-static Nginx/JSON/privacy/keyboard behavior; HMR update/restoration preserves document. PHPStan level 10 zero errors. Exact authorized Playwright image pinned by digest; manifests/locks unchanged, private .env preserved. Dedicated environment removed, no commit/push. See [T4 evidence](./verification.md#t4-completion).
 
 - [ ] **T5. Prepare focused verification harnesses and database isolation.** NFR-1, NFR-2, NFR-3, NFR-4, NFR-6, NFR-8, NFR-10
   - Depends on: T4.
@@ -87,7 +87,7 @@ No dependency installation, image pull/build requiring packages, or browser down
 
 ## Traceability and acceptance
 
-See [plan traceability](./plan.md#traceability). FR-N maps to parent AC-N; NFR acceptance conditions are inherited verbatim in [spec](./spec.md). T1/T2/T3/T9 are complete; T4–T8 are pending. T9 prerequisite is satisfied; T4 approvals are preserved. Stop after T9 and wait for the user to resume the next task. NFR-10 setup maps to T9; its post-task gate maps to all pending tasks. No complete application acceptance is claimed.
+See [plan traceability](./plan.md#traceability). FR-N maps to parent AC-N; NFR acceptance conditions are inherited verbatim in [spec](./spec.md). T1/T2/T3/T4/T9 are complete; T5–T8 are pending. Stop after T4. T5 requires a presented and approved execution plan before implementation. NFR-10 setup maps to T9; its post-task gate maps to all pending tasks. No complete application acceptance is claimed.
 
 ## Phase boundary
 

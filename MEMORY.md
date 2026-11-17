@@ -4,13 +4,15 @@ Last updated: 2026-11-17
 
 ## Current state
 
-- Phase: 002:T9 implementation complete; stopped at task boundary. Spec 001 v1.1, plans v0.2 and task lists v0.2 are approved. PHPStan level 10 passes with zero errors across all owned PHP including tests. T4/Playwright approvals remain preserved; T4 has not started.
+- Phase: 002:T4 implementation complete; stopped at task boundary. T4 execution plan v0.2, existing Playwright download approval and user continuation after T9 authorized this work. Branch feature/002_T04-vue-nginx-entrypoint from clean current local dev. No T5 implementation authorization.
 - Current approved application baseline: [specification v1.1](./specs/001-toca-regalo/spec.md), [technical plan v0.2](./specs/001-toca-regalo/plan.md), and unchanged [six-block decomposition v0.1](./specs/001-toca-regalo/decomposition-proposal.md).
-- The six child specs were synchronized to v0.2 by verbatim inheritance of parent NFR-10, without a new independent product decision. Revised task lists/index v0.2 are approved: 55 total, four complete and 51 pending. Only 002:T9 is added, in order T3 → T9 → T4 → T5…; existing IDs remain unchanged. All pending tasks map NFR-10 and its completion gate. T9 is complete; approval evidence is recorded below.
-- T2 downloaded/built tools and dependencies; T3 wired the JSON runtime and verified an isolated real MySQL database in tmpfs. The temporary containers/network were removed without volume deletion. Local .env has generated secrets, mode 600, ignored and untracked; no secret was printed. No recipient encryption keys, browser downloads, business schema or product flow was implemented.
+- The six child specs were synchronized to v0.2 by verbatim inheritance of parent NFR-10, without a new independent product decision. Revised task lists/index v0.2 are approved: 55 total, five complete and 50 pending. Only 002:T9 is added, in order T3 → T9 → T4 → T5…; existing IDs remain unchanged. All pending tasks map NFR-10 and its completion gate. T9 is complete; approval evidence is recorded below.
+- T2 downloaded/built tools and dependencies; T3 wired the JSON runtime and verified an isolated real MySQL database in tmpfs. The temporary containers/network were removed without volume deletion. Local .env has generated secrets, mode 600, ignored and untracked; no secret was printed. No recipient encryption keys, business schema or product flow was implemented. T4 later downloaded only the explicitly approved Playwright verification image.
 - 002:T2 completed on `feature/002_T02-lock-dependencies`, created from clean local `dev`. Manifests, lockfiles and immutable image digests are present; [dependency evidence](./specs/002-development-foundation/dependency-resolution.md) records checks and audit warnings. No task after T2 is authorized. Public review-only secret values remain unusable at runtime. No commit/push performed.
 
 ## Approval evidence
+
+T4 continuation, 2026-11-17: “Continúa con la siguiente tarea” after T9 completion resumes T4 under its previously approved execution plan v0.2 and exact Playwright image scope. T4 is now complete; no new package or lock changes. Older pending/T9-only statements below are historical.
 
 Latest user approval, 2026-11-17: “Apruebo las listas de tareas y autorizo el inicio de 002:T9 y las instalaciones”. Approves all task lists v0.2, starts only 002:T9 under its approved execution plan v0.1 and authorizes the four concrete PHPStan packages (^2.0) plus required transitives. Branch created from current local dev, preserving all pre-existing documentation edits; no commit/push. T9 is complete; see [verification](./specs/002-development-foundation/verification.md#t9-completion). Older statements below are historical and superseded for this scope.
 
@@ -57,7 +59,7 @@ The approved child scope/task definitions remain unchanged; T2 and its authorize
 
 | Block | Documents | Tasks | Prerequisite |
 | --- | --- | --- | --- |
-| 002 — Development foundation | [spec](./specs/002-development-foundation/spec.md), [plan](./specs/002-development-foundation/plan.md), [tasks](./specs/002-development-foundation/tasks.md) | 4 complete, 5 pending | None |
+| 002 — Development foundation | [spec](./specs/002-development-foundation/spec.md), [plan](./specs/002-development-foundation/plan.md), [tasks](./specs/002-development-foundation/tasks.md) | 5 complete, 4 pending | None |
 | 003 — Identity and account access | [spec](./specs/003-identity-access/spec.md), [plan](./specs/003-identity-access/plan.md), [tasks](./specs/003-identity-access/tasks.md) | 9 pending | 002:T8 |
 | 004 — Groups and events | [spec](./specs/004-groups-events/spec.md), [plan](./specs/004-groups-events/plan.md), [tasks](./specs/004-groups-events/tasks.md) | 10 pending | 003:T9 |
 | 005 — Confidential draw lifecycle | [spec](./specs/005-confidential-draws/spec.md), [plan](./specs/005-confidential-draws/plan.md), [tasks](./specs/005-confidential-draws/tasks.md) | 10 pending | 004:T10 |
@@ -89,6 +91,8 @@ All requirements/acceptance criteria are inherited without changes from the pare
 
 ## Verification state
 
+- 002:T4 complete: Spanish Vue/Router/Bootstrap shell, JSON fetch client, Vite/Nginx development and compiled-static routing. Initial missing-client red check; final 11 unit tests and Vite build pass. Authorized Playwright 1.65.1 image pinned at sha256:1507cbfc550a63a6b7396791ca4f00df17beb56342d2447b3f106c306f525579; Chromium 159.0.8154.6 passes desktop 1440x900 and mobile 390x844, SPA refresh/keyboard/API JSON/private paths, proxied HMR update and restoration without reload. Static pass with Vite stopped. Final PHPStan level 10 zero errors. Cache-path and atomic test-save findings documented. Root .env ignored/untracked/600, only PHP mounts it read-only; final dedicated containers/network removed, locks unchanged. [T4 commands and limits](./specs/002-development-foundation/verification.md#t4-completion). No business behavior, full cross-browser acceptance, commit or push.
+
 - 002:T9 complete: PHPStan 2.3.6 with Symfony 2.1.1, Doctrine 2.1.2 and PHPUnit 2.1.2 extensions; four added packages only, no existing lock version changes/removals. First analysis had 14 findings; boundary type contracts corrected; final composer analyse and uncached debug analysis exit 0, all six owned PHP files including the smoke test. No baseline/exclusion/bootstrap. Syntax/platform, Symfony container/five YAML, HTTP JSON and actual MySQL 8.4/UTC passed; invalid DB connection failed as expected. Tmpfs runtime removed; final dedicated container/network filters empty. .env still ignored/untracked/600. Composer audit: zero advisories, doctrine/common abandonment (exit 1); manifest valid with existing missing-license warning (strict exit 1, ordinary exit 0). Editor diagnostics, lock-scope/task-count checks and git diff --check passed. See [T9 commands and limits](./specs/002-development-foundation/verification.md#t9-completion). No browser download, T4 work, commit or push.
 
 - T3 complete: real HTTP-kernel JSON and MySQL 8.4 SELECT 1/UTC checks passed; invalid connection failed at its intended stage without secret disclosure; Symfony container/YAML/platform checks passed; dependency locks unchanged. .env ignore/tracking/600 checks passed. Dedicated project used tmpfs/no ports and was removed afterward. No external Nginx/frontend/product acceptance is claimed; see [T3 completion](./specs/002-development-foundation/verification.md#t3-completion).
@@ -106,10 +110,10 @@ All requirements/acceptance criteria are inherited without changes from the pare
 
 ## Next authorized step
 
-Stop after completed 002:T9. Wait for the user to resume T4; its execution plan v0.2 and matching Playwright download approvals remain valid, with T9 now complete. Do not re-request already granted approvals or start T5. Keep .env private, preserve existing edits and do not commit/push.
+Stop after completed 002:T4. On user continuation, prepare and present the T5 execution plan (verification harnesses and database isolation), then wait for explicit approval before implementation. No T5/later work, installation or runtime is authorized now. Preserve private .env and existing audit warnings; no commit/push.
 
 User supplied database name tocaregalo, user tocaregalo, port 3306, then explicitly requested Docker service names prefixed with tocaregalo. Service keys and references now use tocaregalo-mysql, tocaregalo-php, tocaregalo-frontend, tocaregalo-nginx, tocaregalo-mailpit, tocaregalo-notification-worker, tocaregalo-closure-worker; smoke PHP uses tocaregalo-php-smoke. Example DSNs and Nginx upstreams follow these names. Database parameters/password file and runtime checks remain pending; naming work did not start any service. Historical evidence commands with old service names remain historical and must be adapted for future runs.
 
-T9 is complete. Specification, plans and task lists are approved; PHPStan is installed and its level-10 gate passes. Wait at the T9 task boundary before T4. Existing .env remains private. T2 audit warnings stay visible; no automatic merge/commit/push or unrelated installation.
+T9 is complete. Specification, plans and task lists are approved; PHPStan is installed and its level-10 gate passes. T4 is now complete; wait at its task boundary before preparing the T5 execution plan on user request. Existing .env remains private. T2 audit warnings stay visible; no automatic merge/commit/push or unrelated installation.
 
 Preserve existing approvals. Requirement or material plan changes follow SDD Change; do not restart Clarification or select new product behavior silently. Final read-only Validation and user acceptance remain separate future phases.

@@ -4,9 +4,9 @@ Aplicación web para organizar grupos y eventos de intercambio de regalos. El de
 
 ## Estado actual
 
-Se han completado **002:T1, 002:T2 y 002:T3**: configuración de desarrollo, herramientas y dependencias bloqueadas, arranque mínimo de API JSON y conexión verificada con MySQL 8.4 temporal. La aplicación todavía no está implementada: faltan Vue, las funciones de negocio, las migraciones y los trabajadores. Esta entrega no es una aplicación funcional de sorteos.
+Se han completado **002:T1–T4 y 002:T9**: configuración y dependencias, API JSON con conexión MySQL verificada, PHPStan y una base Vue/Bootstrap servida por Nginx. Se han comprobado escritorio y móvil, HMR y archivos compilados. Faltan las funciones de negocio, las migraciones, el conjunto completo de pruebas y los trabajadores. Esta entrega todavía no permite realizar sorteos.
 
-Con autorización previa se han descargado las seis imágenes previstas, construido las dos herramientas e instalado las dependencias dentro de contenedores. [.env.example](./.env.example) fija las imágenes por digest y mantiene los marcadores públicos de secretos. No se han generado claves ni iniciado los servicios de la aplicación. El [registro técnico de dependencias](./specs/002-development-foundation/dependency-resolution.md) recoge versiones, comandos y límites: quedan cuatro avisos moderados en dependencias de pruebas npm y una dependencia PHP abandonada; las auditorías no detectan vulnerabilidades PHP ni avisos npm de producción.
+Con autorización previa se han descargado las seis imágenes previstas y la imagen de verificación Playwright 1.65.1, construido las dos herramientas e instalado las dependencias dentro de contenedores. [.env.example](./.env.example) fija las imágenes de desarrollo por digest y mantiene los marcadores públicos de secretos. No se han generado claves de asignación. Los entornos temporales de comprobación se han retirado. El [registro técnico](./specs/002-development-foundation/verification.md) recoge resultados y límites; los avisos de dependencias registrados en T2/T9 siguen pendientes.
 
 ## Configuración prevista
 
@@ -33,9 +33,9 @@ La sobreescritura de puertos de pruebas usa `!override`, que requiere Docker Com
 
 ## Preparación posterior, pendiente de autorización
 
-1. Continuar con **002:T4** cuando el usuario lo solicite, bajo su plan de ejecución aprobado. T9 ya ha preparado PHPStan y superado su comprobación. Las tareas posteriores requieren su propio plan y autorización.
+1. Preparar y presentar el plan de ejecución de **002:T5** cuando el usuario solicite continuar; esperar su aprobación antes de implementarla.
 2. Conservar los digests y archivos de bloqueo revisados. Las instalaciones de dependencias nunca deben ejecutarse implícitamente al arrancar; futuras descargas fuera del alcance autorizado requieren aprobación.
-3. Preparar los proyectos Symfony y Vue en sus tareas correspondientes. El arranque nunca instalará sus dependencias automáticamente.
+3. Completar las pruebas y funciones de Symfony y Vue en sus tareas correspondientes. El arranque nunca instalará sus dependencias automáticamente.
 4. Crear un archivo local ignorado a partir de [.env.example](./.env.example). Los valores `REVIEW_ONLY_*` son marcadores públicos para validar archivos: deben sustituirse antes de cualquier ejecución. No representan secretos de desarrollo utilizables.
 5. Configurar el usuario local mediante `LOCAL_UID` y `LOCAL_GID`, y `APP_TIMEZONE` con la zona horaria del sistema de instalación. Europe/Madrid es solo el ejemplo. La base de datos almacenará instantes en UTC y la aplicación interpretará las fechas con la zona configurada.
 6. Suministrar las claves de asignación como archivos secretos separados para desarrollo y pruebas, según la política aprobada. Ninguna imagen ni comando de arranque generará claves automáticamente. No se deben guardar en Git ni facilitar por el chat.
@@ -64,7 +64,37 @@ El correo real se configurará por entorno con servidor, puerto, STARTTLS/TLS, a
 
 ## Comprobaciones todavía pendientes
 
-T3 verifica el núcleo JSON y una conexión real a MySQL en un entorno temporal aislado. Todavía están pendientes el entorno completo, Nginx con Vue, las funciones de la aplicación, el correo y los trabajadores. No se han descargado navegadores.
+T3 verifica el núcleo JSON y una conexión real a MySQL; T4 verifica Vue y Nginx con Chromium, escritorio y móvil. Todavía están pendientes el entorno completo, las funciones de la aplicación, el correo, los trabajadores y las pruebas de producto en los demás navegadores previstos.
+
+## Comprobar la base Vue y Nginx
+
+Usa las dependencias e imágenes ya autorizadas y preparadas; estos comandos no instalan nada. Requieren el archivo privado de entorno existente. Ejecuta desde la raíz y comprueba que `127.0.0.1:8082` esté libre. El proyecto temporal no inicia MySQL ni trabajadores.
+
+```bash
+docker run --rm --pull never --user "$(id -u):$(id -g)" \
+  -v "$PWD/frontend:/workspace/frontend" -w /workspace/frontend \
+  tocaregalo-node:dev sh -c 'npm test -- tests/api-client.test.js && npm run build'
+docker compose --env-file .env --project-name tocaregalo-t4 -f compose.frontend-smoke.yaml \
+  up --detach --no-build --pull never tocaregalo-php tocaregalo-frontend tocaregalo-nginx
+docker compose --env-file .env --project-name tocaregalo-t4 -f compose.frontend-smoke.yaml \
+  run --rm --no-deps --pull never tocaregalo-browser
+```
+
+La pantalla provisional estará en `http://localhost:8082`. La prueba HMR modifica y restaura únicamente su componente provisional. Para comprobar el compilado sin Vite:
+
+```bash
+docker compose --env-file .env --project-name tocaregalo-t4 -f compose.frontend-smoke.yaml \
+  stop tocaregalo-frontend
+SMOKE_NGINX_MODE=static docker compose --env-file .env --project-name tocaregalo-t4 \
+  -f compose.frontend-smoke.yaml up --detach --no-build --pull never tocaregalo-nginx
+SMOKE_NGINX_MODE=static SMOKE_MODE=static docker compose --env-file .env \
+  --project-name tocaregalo-t4 -f compose.frontend-smoke.yaml \
+  run --rm --no-deps --pull never tocaregalo-browser
+docker compose --env-file .env --project-name tocaregalo-t4 \
+  -f compose.frontend-smoke.yaml --profile checks down
+```
+
+La imagen de navegador está fijada por digest en [compose.frontend-smoke.yaml](./compose.frontend-smoke.yaml). Los archivos compilados y las capturas quedan ignorados dentro de `frontend/dist`. Los comandos de limpieza no borran volúmenes de datos.
 
 ## Análisis estático de PHP
 

@@ -1,0 +1,59 @@
+# T4 only: invoke with --project-name tocaregalo-t4 and the root .env.
+name: tocaregalo-t4
+
+services:
+  tocaregalo-php:
+    image: ${PHP_LOCAL_IMAGE:-tocaregalo-php:dev}
+    pull_policy: never
+    user: '${LOCAL_UID:-1000}:${LOCAL_GID:-1000}'
+    working_dir: /workspace/backend
+    environment:
+      APP_ENV: test
+      APP_DEBUG: '0'
+      APP_CACHE_DIR: /tmp/tocaregalo-t4-cache
+    volumes:
+      - ./backend:/workspace/backend:ro
+      - type: bind
+        source: ./.env
+        target: /workspace/.env
+        read_only: true
+        bind:
+          create_host_path: false
+    command: ['php-fpm', '-F']
+
+  tocaregalo-frontend:
+    image: ${NODE_LOCAL_IMAGE:-tocaregalo-node:dev}
+    pull_policy: never
+    user: '${LOCAL_UID:-1000}:${LOCAL_GID:-1000}'
+    working_dir: /workspace/frontend
+    init: true
+    volumes:
+      - ./frontend:/workspace/frontend
+    command: ['npm', 'run', 'dev', '--', '--host', '0.0.0.0', '--port', '5173', '--strictPort']
+
+  tocaregalo-nginx:
+    image: ${NGINX_IMAGE:?Set the approved pinned NGINX_IMAGE}
+    pull_policy: never
+    ports:
+      - '127.0.0.1:8082:80'
+    volumes:
+      - ./docker/nginx/${SMOKE_NGINX_MODE:-default}.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
+    depends_on:
+      tocaregalo-php:
+        condition: service_started
+
+  tocaregalo-browser:
+    image: mcr.microsoft.com/playwright:v1.65.1-noble@sha256:1507cbfc550a63a6b7396791ca4f00df17beb56342d2447b3f106c306f525579
+    pull_policy: never
+    profiles: ['checks']
+    user: '${LOCAL_UID:-1000}:${LOCAL_GID:-1000}'
+    working_dir: /workspace/frontend
+    init: true
+    shm_size: '1gb'
+    environment:
+      SMOKE_BASE_URL: http://tocaregalo-nginx
+      SMOKE_MODE: ${SMOKE_MODE:-development}
+    volumes:
+      - ./frontend:/workspace/frontend
+    command: ['node', 'tests/smoke/frontend-runtime.mjs']
