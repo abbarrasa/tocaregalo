@@ -1,4 +1,5 @@
 # Shared POSIX orchestration helpers. Dotenv is data, never shell code.
+EXTRA_MODEL=
 fail() { printf '%s\n' "$*" >&2; exit 2; }
 require_inputs() {
     command -v docker >/dev/null 2>&1 || fail 'Falta Docker con Compose.'
@@ -7,6 +8,10 @@ require_inputs() {
     [ -d "$ROOT/frontend/node_modules" ] || fail 'Faltan las dependencias frontend autorizadas.'
 }
 compose() {
+    if [ -n "${EXTRA_MODEL:-}" ]; then
+        docker compose --env-file "$ROOT/.env" --project-name "$PROJECT" -f "$ROOT/$MODEL" -f "$ROOT/$EXTRA_MODEL" "$@"
+        return
+    fi
     docker compose --env-file "$ROOT/.env" --project-name "$PROJECT" -f "$ROOT/$MODEL" "$@"
 }
 node_run() {
@@ -52,4 +57,9 @@ claim_test_stack() {
             ;;
     esac
     OWNED=yes
+}
+
+# Both development and isolated verification use the same main service graph.
+start_application() {
+    compose up -d --no-build --pull never --wait --wait-timeout 120 tocaregalo-nginx tocaregalo-mailpit
 }

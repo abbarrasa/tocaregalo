@@ -1,7 +1,8 @@
 # Plan 002 — Development foundation
 
-Status: approved; task execution and installation remain separately gated
-Revision: v0.2
+Status: approved v0.3; task execution and installation remain separately gated
+Approval (v0.3): “apruebo la revisiones y autorizo actualizar las listas de tareas”, 2026-11-17. Approves displayed plan revisions and authorizes task-list preparation only.
+Revision: v0.3
 Historical approval (v0.1): The user stated “Apruebo y autorizo iniciar la T1 de spec 002”, approving the derived-document/task package and authorizing only 002:T1 on 2026-11-16. No installation is authorized.
 Derived specification: [002 v0.2](./spec.md), synchronized from approved parent v1.1
 Approved parent specification: [001 v1.1](../001-toca-regalo/spec.md)
@@ -77,3 +78,31 @@ The authorized Tasks update proposes nine tasks, including 002:T9 for PHPStan be
 
 The original derived-document/task package remains historical approval for unchanged scope. This v0.2 revision is approved; the proposed task-list v0.2 update now awaits its own approval. Preserve T4 v0.1 and Playwright approvals for their unchanged scope; present the expanded PHPStan gate and enabling work separately. No installation or implementation is authorized by preparing this revision.
 
+
+## v0.3 — Main startup remediation and verification
+
+Preparation authorized on 2026-11-17: “apruebo la propuesta y autorizo preparar las revisiones”. The [technical direction](./startup-remediation-proposal.md) is approved; this revision and task/runtime execution remain pending. Approved Spec 002 v0.2 and parent Spec 001 v1.1 are unchanged. This amendment supersedes the premature key dependency and prior startup-blocker guidance, not the original task evidence.
+
+### Corrective scope and files
+
+Proposed 002:T10 depends on completed T7/T8 and addresses NFR-3, supporting NFR-1/4/5/7/10. Remove unused assignment secret wiring from `compose.yaml` and `compose.test.yaml`, and its unconditional guard from `scripts/dev`. Keep other environment/DB/port/image/service contracts. Update `README.md`, `docs/development.md` and future-key comments in `.env.example` only where necessary; never modify private dotenv values. Extend `tests/scripts/` with meaningful prerequisite/routing/cleanup tests. Update task/evidence/memory after actual checks.
+
+Add a bounded `scripts/dev verify` command for verification of the main graph, sharing the same internal startup delegation as ordinary `up`. Ordinary `up` and `down` continue to target explicit project `tocaregalo`. Verification uses fixed project `tocaregalo-startup`, root `compose.yaml` plus a reviewed `compose.startup-verification.yaml` override: replace MySQL's persistent data mount with tmpfs; bind Nginx/Mailpit to fixed loopback ports 8083/8028; force APP_ENV=dev; do not change the main database URL/credentials, images, service startup commands, dotenv mounts or dependencies. The same database name inside a separate isolated MySQL instance does not target the development server. Do not execute migrations/accounts/worker commands.
+
+Before startup, refuse existing development or verification containers/networks/volumes, occupied verification ports, or an active invocation lock. Do not adopt or remove existing resources. Use `--no-build --pull never`, explicit services with workers disabled, and no user-supplied Compose/model/project overrides. Ensure inspection failures fail closed. Cleanup only invocation-owned verification containers/network/lock, on success/failure/INT/TERM; never delete volumes. Refuse named data mounts in the resolved verification model before starting anything.
+
+Add `tests/startup/` verification procedures that use the installed tools to wait for MySQL health, inspect selected non-secret metadata, perform read-only DB SELECT 1 via the main PHP service and check main Nginx HTTP JSON/private-path/Spanish shell behavior. A temporary Playwright `docker run --rm --pull never` on the owned network may mount existing frontend dependencies/tests/config, with base URL pointing to main Nginx. Do not add a browser/fixture service to the main graph. Use existing Chromium desktop/mobile cases for smoke; keep their scope explicit. The verification must start through the same startup helper as ordinary `up`, with only the documented storage/ports differences; do not claim ordinary persistent-volume initialization was tested.
+
+### Proposed execution/check sequence
+
+1. Before implementation, present a separate T10 execution plan with exact override/assertions/command map and obtain explicit authorization. Create the feature branch from then-current local dev only if approved prerequisites are present and no edits are lost.
+2. Write failing focused tests for premature secret dependency removal, fixed main verification routing, existing-resource/port refusal, startup failure exit propagation and owned cleanup. Then make the minimum correction.
+3. Validate base/overlay/verification models; assert main graph parity except documented storage/ports and APP_ENV selection; assert no required key file and no automatic install/build/pull/schema operations.
+4. Execute the new isolated main-graph verification with existing images and supplied root dotenv. Verify service health/running state, SPA/JSON/private-path/browser smoke, read-only DB connection and actual loopback/internal port bindings.
+5. Run applicable wrapper regressions and final PHPStan level 10 across all owned PHP/tests with zero errors/no baseline. Preserve lockfiles/private inputs. Record results and cleanup; stop before renewed read-only Validation.
+
+Rejected alternative: removing only `scripts/dev`'s check while leaving Docker's required secret mount would retain the failure. Generating a dummy/real key before a consumer exists adds unsupported schema/custody work. Separate T5-only runtime success does not close main-graph verification.
+
+### Task-list proposal for subsequent approval
+
+Add **T10. Remove premature key dependency and verify main startup**, depending on T7/T8. Done when main-graph startup no longer requires unused keys, isolated verification passes, future crypto prerequisites are explicit in 005:T2, no existing resources/data are altered, final analysis passes and review evidence is recorded. Do not reopen completed T1–T9 or relabel their historical evidence as new verification. Task lists are not changed until this plan revision is approved. No runtime/install/key action is authorized by preparing this revision.

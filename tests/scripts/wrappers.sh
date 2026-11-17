@@ -14,10 +14,15 @@ cat > "$work/bin/docker" <<'MOCK'
 printf '<%s>' "$@" >> "$RECORDER"
 printf '\n' >> "$RECORDER"
 case "$*" in
-  'ps '*|'network ls '*) printf '%s' "${EXISTING:-}" ;;
+  'ps '*| 'network ls '*| 'volume ls '*)
+    [ "${INSPECT_EXIT:-0}" = 0 ] || exit "$INSPECT_EXIT"
+    case "$*" in 'volume ls '*) printf '%s' "${VOLUME_EXISTS:-}" ;; esac
+    printf '%s' "${EXISTING:-}" ;;
+  *assert-model.cjs*) cat >/dev/null; exit "${MODEL_EXIT:-0}" ;;
+  *"--network host"*) exit "${PORT_EXIT:-0}" ;;
   *'config --format json'*) printf '{"services":{"test":{"ports":[{"published":"8081"}]}}}' ;;
   *'console.log(ports[0].published)'*) cat >/dev/null; printf '8081\n' ;;
-  *' up '*) exit "${UP_EXIT:-0}" ;;
+  *' up '*) [ "${SIGNAL_UP:-0}" = 0 ] || kill -TERM "$PPID"; exit "${UP_EXIT:-0}" ;;
   'run '*|*' run '*) exit "${RUN_EXIT:-0}" ;;
 esac
 MOCK
@@ -67,3 +72,41 @@ grep -F '<down><--remove-orphans>' "$RECORDER" >/dev/null
 "$root/scripts/check" e2e chromium-desktop 'sample test.js'
 grep -F '<--project=chromium-desktop><sample test.js>' "$RECORDER" >/dev/null
 printf 'Mail failure cleanup and browser routing checks passed.\n'
+: > "$RECORDER"
+"$root/scripts/dev" up
+grep -F '<up><-d><--no-build><--pull><never>' "$RECORDER" >/dev/null
+if grep -F 'assignment_keys' "$RECORDER"; then exit 1; fi
+printf 'Key-free shared startup routing passed.\n'
+: > "$RECORDER"
+if MODEL_EXIT=17 "$root/scripts/dev" verify 2>/dev/null; then exit 1; else [ "$?" = 17 ]; fi
+if grep -E '<(up|down)>' "$RECORDER"; then exit 1; fi
+: > "$RECORDER"
+if UP_EXIT=29 "$root/scripts/dev" verify 2>/dev/null; then exit 1; else [ "$?" = 29 ]; fi
+grep -F '<--project-name><tocaregalo-startup>' "$RECORDER" >/dev/null
+grep -F 'compose.startup-verification.yaml>' "$RECORDER" >/dev/null
+grep -F '<down><--remove-orphans>' "$RECORDER" >/dev/null
+: > "$RECORDER"
+if PORT_EXIT=18 "$root/scripts/dev" verify 2>/dev/null; then exit 1; else [ "$?" = 18 ]; fi
+if grep -E '<(up|down)>' "$RECORDER"; then exit 1; fi
+: > "$RECORDER"
+if EXISTING=occupied "$root/scripts/dev" verify 2>/dev/null; then exit 1; fi
+if grep -E '<(up|down)>' "$RECORDER"; then exit 1; fi
+printf 'Main verification ownership/model/port/startup failure boundaries passed.\n'
+for mode in inspect volume; do
+    : > "$RECORDER"
+    if [ "$mode" = inspect ]; then
+        if INSPECT_EXIT=31 "$root/scripts/dev" verify 2>/dev/null; then exit 1; else [ "$?" = 31 ]; fi
+    else
+        if VOLUME_EXISTS=existing-volume "$root/scripts/dev" verify 2>/dev/null; then exit 1; fi
+    fi
+    if grep -E '<(up|down)>' "$RECORDER"; then exit 1; fi
+done
+mkdir "$root/backend/var/startup-verification.lock"
+if "$root/scripts/dev" verify 2>/dev/null; then exit 1; fi
+[ -d "$root/backend/var/startup-verification.lock" ]
+rmdir "$root/backend/var/startup-verification.lock"
+: > "$RECORDER"
+if SIGNAL_UP=1 "$root/scripts/dev" verify 2>/dev/null; then exit 1; else [ "$?" = 143 ]; fi
+grep -F '<down><--remove-orphans>' "$RECORDER" >/dev/null
+[ ! -d "$root/backend/var/startup-verification.lock" ]
+printf 'Daemon, existing-volume, lock and SIGTERM cleanup checks passed.\n'

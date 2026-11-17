@@ -1,7 +1,8 @@
 # Plan 001 — Toca Regalo
 
-Status: approved; task execution and installation remain separately gated
-Revision: v0.2
+Status: approved v0.3; task execution and installation remain separately gated
+Approval (v0.3): “apruebo la revisiones y autorizo actualizar las listas de tareas”, 2026-11-17. Approves displayed plan revisions and authorizes task-list preparation only.
+Revision: v0.3
 Historical approval (v0.1): The user explicitly stated “Apruebo el plan” on 2026-11-16 in response to the request to approve v0.1 and proceed to task decomposition. Unchanged architecture and prior evidence retain that approval.
 Approval (v0.2): “Apruebo estas revisiones y autorizo actualizar las tareas”, 2026-11-17, approves the displayed PHPStan plan revision and authorizes task-list preparation, not implementation or installation.
 Approved specification: [v1.1](./spec.md)
@@ -295,3 +296,15 @@ All AC-1…35 are verified by the same-numbered FR row; NFR rows cover their inl
 - No deployment target, cloud account, SMTP vendor, billing service, or CI provider is selected. Those choices are outside current setup beyond the documented configuration interfaces.
 
 Plan v0.2 approval is recorded above; the original six-block decomposition remains unchanged. Next: approve task-list/index v0.2 and authorize the new 002:T9 PHPStan setup task plus its separate four-package development installation scope. Prior T4/Playwright approvals remain valid pending that prerequisite. No task execution is authorized merely by task-list preparation.
+
+## v0.3 — Startup/key-consumer sequencing amendment
+
+Preparation authorized on 2026-11-17: “apruebo la propuesta y autorizo preparar las revisiones”, approving the [remediation direction v0.1](../002-development-foundation/startup-remediation-proposal.md), not these plan revisions or implementation. This section supersedes earlier key-mount timing for foundation startup only; all other v0.2 architecture, requirements and approvals remain historical baseline.
+
+The current foundation runtime has no encryption consumer. Remove its unused assignment-key environment/mount/declaration and unconditional startup preflight. Current API/SPA/database startup must depend only on inputs it actually consumes. Preserve private root dotenv, existing installed/pinned tools, same-origin API/Nginx architecture, internal DB/SMTP and loopback web publications. No key schema, dummy key or actual provisioning is introduced by this correction.
+
+Before block 005 enables any encrypted assignment or destructive operation requiring recipient-reference cleanup, 005:T2 must implement and verify the real key loader plus mandatory read-only mounts/preflight for API, worker and operational consumers. Missing/invalid/unknown-version keys must fail closed before protected operations or partial transactions. Preserve the existing 32-byte master-secret, labeled derivation, versioned-ring, separate encrypted offline backup/restoration and rotation policy. Actual provisioning/backup requires its own approved task execution plan and explicit secret-generation authorization; plan approval alone does not authorize it.
+
+No FR/NFR/AC changes. NFR-3 maps additionally to proposed 002:T10; NFR-1/4/5/7/10 support its verification/documentation. Historical T7/T8 evidence remains valid for unchanged paths, but does not verify corrected startup. NFR-6/7/8 product flows and NFR-9 real closure retain downstream ownership.
+
+After plan approval, revise the parent task index and child 002/005 tasks as proposed below. Keep existing IDs; add only 002:T10, producing 56 total tasks (nine previously complete, 47 pending), ten tasks in block 002 and ten unchanged IDs in block 005. Final Validation must reassess the corrected main startup; specifications cannot be marked implemented on this amendment.

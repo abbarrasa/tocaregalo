@@ -1,12 +1,14 @@
 # Tasks 002 — Development foundation
 
-Status: approved; task execution remains separately gated
-Revision: v0.2
+Status: approved v0.3; implementation and runtime remain separately gated
+Approval (v0.3): “apruebo las listas y autorizo a preparar el plan de ejecución”, 2026-11-17. Authorizes T10 execution-plan preparation only.
+Preparation authorization (v0.3): “apruebo la revisiones y autorizo actualizar las listas de tareas”, 2026-11-17. Proposed lists require approval; no implementation authorized.
+Revision: v0.3
 Approval (v0.2): “Apruebo las listas de tareas y autorizo el inicio de 002:T9 y las instalaciones”, 2026-11-17. Approves all revised task lists and authorizes only 002:T9 and its concrete four-package installation scope.
 Historical approval (v0.1): The user stated “Apruebo y autorizo iniciar la T1 de spec 002”, approving the derived-document/task package and authorizing only 002:T1 on 2026-11-16. No installation is authorized.
-Derived documents: [spec](./spec.md), synchronized from approved parent v1.1; [plan v0.2](./plan.md), approved.
-Approved sources: [Spec 001 v1.1](../001-toca-regalo/spec.md), [Plan 001 v0.2](../001-toca-regalo/plan.md)
-Execution authorization: T1–T6 and T9 complete. T6 execution plan v0.1 and bounded runtime approved with “Apruebo el plan y autorizo su implementación”, 2026-11-17. T7 execution plan v0.1 and bounded runtime approved with “Apruebo el plan y autorizo su implementación”, 2026-11-17. T7 complete; no T8 implementation authorized.
+Derived documents: [spec](./spec.md), synchronized from approved parent v1.1; [plan v0.3](./plan.md), approved.
+Approved sources: [Spec 001 v1.1](../001-toca-regalo/spec.md), [Plan 001 v0.3](../001-toca-regalo/plan.md)
+Execution authorization: T1–T6 and T9 complete. T6 execution plan v0.1 and bounded runtime approved with “Apruebo el plan y autorizo su implementación”, 2026-11-17. T7 execution plan v0.1 and bounded runtime approved with “Apruebo el plan y autorizo su implementación”, 2026-11-17. T7 complete. T8 execution plan v0.1 approved with “Apruebo el plan y autorizo su ejecución”, 2026-11-17; T8 now complete within its evidenced scope. No Validation or later block authorized.
 
 ## Execution rules
 
@@ -78,18 +80,34 @@ No dependency installation, image pull/build requiring packages, or browser down
   - Done when: Documented wrapper commands invoke the intended container tools, VS Code tasks resolve, and setup/SMTP/key placeholders are understandable without real secrets.
   - Evidence: completed 2026-11-17 on feature/002_T07-developer-check-commands under approved execution plan v0.1. Wrapper recorder/static checks, 11 task mappings, Vitest 12 tests, build, PHPUnit 23 tests/74 assertions, Chromium desktop 2 tests and final PHPStan level 10 zero errors pass. Owned tmpfs runtime removed; no installs, keys, business mutation or lock changes. See [T7 evidence](./verification.md#t7-completion).
 
-- [ ] **T8. Verify the complete development setup and record limits.** NFR-1, NFR-2, NFR-3, NFR-4, NFR-5, NFR-6, NFR-7, NFR-8, NFR-9, NFR-10
+- [x] **T8. Verify the complete development setup and record limits.** NFR-1, NFR-2, NFR-3, NFR-4, NFR-5, NFR-6, NFR-7, NFR-8, NFR-9, NFR-10
   - Depends on: T7.
   - Work: Run the authorized clean test-environment build/start/health/migration-harness and frontend-build procedures, inspect loopback ports and capture, and record commands/versions/results.
   - Files/responsibility: specs/002-development-foundation/verification.md; README.md; docs/development.md.
   - Done when: Reproducible setup checks pass or are explicitly blocked with evidence; no data volume is destroyed automatically; foundation coverage is distinguished from unimplemented product behavior.
-  - Evidence: not executed; no completion or passing result claimed.
+  - Evidence: completed 2026-11-17 on feature/002_T08-foundation-verification under approved execution plan v0.1. Aggregate exited 0: backend 23/74, mail 29/105, Vitest 12, build, Playwright 8 and PHPStan level 10 zero errors; final analysis also passed. Runtime tmpfs/loopback isolation observed; owned resources removed. Full development startup, keys, application migrations/SUPERADMIN and real closure remain unavailable with explicit evidence. See [T8 record](./verification.md#t8-execution-record).
+
+- [x] **T10. Remove premature key dependency and verify main startup.** NFR-1, NFR-3, NFR-4, NFR-5, NFR-7, NFR-10
+  - Depends on: T7, T8.
+  - Work: Remove unused assignment-key wiring and startup guard from the current foundation; add the approved allowlisted main-graph verification mode with a fixed isolated project, tmpfs MySQL and loopback verification ports. Preserve future mandatory crypto provisioning/mount/fail-closed prerequisites in 005:T2.
+  - Files/responsibility: compose.yaml; compose.test.yaml; compose.startup-verification.yaml; scripts/dev and shared helpers; tests/scripts/; tests/startup/; README.md; docs/development.md; optional .env.example comments; verification and governance records.
+  - Done when: The current main startup path no longer requires unused keys; main-graph runtime/read-only DB/SPA/JSON/private-path/Chromium desktop-mobile smoke passes with documented storage/port differences; existing resources/ports are refused before mutation; owned success/failure/signal cleanup preserves volumes and unrelated data; final fixed PHPStan level 10 passes with zero errors. No install, key generation, account or business migration.
+  - Execution gate: Present a task-specific execution plan with exact override, assertions and runtime scope and obtain explicit approval/implementation authorization. Task-list preparation authorizes none of those operations.
+  - Evidence: completed 2026-11-17 on feature/002_T10-main-startup-prerequisites under approved execution plan v0.1 and explicit Git adjustment. Main graph/tmpfs/loopback/read-only DB/UTC/JSON checks, Chromium desktop-mobile 4 tests, model safety 9 tests, recorder failure/ownership/SIGTERM checks, static checks and final PHPStan level 10 zero errors pass. Owned resources removed, no persistent volume or key generated; locks unchanged. See [T10 evidence](./verification.md#t10-completion).
 
 ## Traceability and acceptance
 
-See [plan traceability](./plan.md#traceability). FR-N maps to parent AC-N; NFR acceptance conditions are inherited verbatim in [spec](./spec.md). T1/T2/T3/T4/T5/T6/T7/T9 are complete; T8 is pending. Stop after T7; T8 requires a presented and approved execution plan before implementation. NFR-10 setup maps to T9; its post-task gate maps to all pending tasks. No complete application acceptance is claimed.
+See [plan traceability](./plan.md#traceability). FR-N maps to parent AC-N; NFR acceptance conditions are inherited verbatim in [spec](./spec.md). T1–T9 retain their historical completion and limits; proposed T10 is pending. Validation remains INCOMPLETE until corrective startup evidence and authorized reassessment. Await task-list approval, then the task-specific execution-plan and implementation gates. NFR-10 setup maps to T9; its post-task gate maps to all pending tasks. No complete application acceptance is claimed.
 
 ## Phase boundary
 
 After the last task, report evidence/limitations and request authorization for the next task/block as applicable. Final read-only application Validation requires its own authorization and the installed sdd-code-review workflow. Do not mark the parent specification implemented before accepted fulfilled Validation.
 
+
+## T10 completion boundary
+
+All ten block tasks are complete with scoped evidence and historical limits. T10 implementation/runtime was explicitly authorized; prior pending statements describe earlier boundaries. The main startup correction/evidence require renewed read-only Validation, not automatic specification acceptance or block 003 execution. No later work is authorized.
+
+## Accepted foundation Validation — 2026-11-17
+
+User stated “Acepto la validación”, accepting the renewed scoped PASS review. Spec 002 v0.2 is implemented for its foundation-only scope. All ten tasks are complete; product requirements deferred by the specification remain in blocks 003–007. Parent Spec 001 remains approved. No next task, installation, runtime, Git history operation or push is authorized by this acceptance.

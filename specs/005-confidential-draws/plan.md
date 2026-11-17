@@ -1,7 +1,8 @@
 # Plan 005 — Confidential draw lifecycle
 
-Status: approved; task execution and installation remain separately gated
-Revision: v0.2
+Status: approved v0.3; task execution and installation remain separately gated
+Approval (v0.3): “apruebo la revisiones y autorizo actualizar las listas de tareas”, 2026-11-17. Approves displayed plan revisions and authorizes task-list preparation only.
+Revision: v0.3
 Historical approval (v0.1): The user stated “Apruebo y autorizo iniciar la T1 de spec 002”, approving the derived-document/task package and authorizing only 002:T1 on 2026-11-16. No installation is authorized.
 Derived specification: [005 v0.2](./spec.md), synchronized from approved parent v1.1
 Approved parent specification: [001 v1.1](../001-toca-regalo/spec.md)
@@ -86,3 +87,15 @@ The [task list](./tasks.md) supplies concrete work and done conditions. Parent A
 
 The original derived-document/task package remains historical approval for unchanged scope. This v0.2 revision is approved; the proposed task-list v0.2 update now awaits its own approval. Preserve T4 v0.1 and Playwright approvals for their unchanged scope; present the expanded PHPStan gate and enabling work separately. No installation or implementation is authorized by preparing this revision.
 
+
+## v0.3 — Mandatory key-consumer readiness before crypto activation
+
+Preparation authorized on 2026-11-17: “apruebo la propuesta y autorizo preparar las revisiones”. This revision remains proposed. The approved [startup direction](../002-development-foundation/startup-remediation-proposal.md) removes a foundation dependency before any consumer exists; it does not relax FR-14/23, confidentiality, deletion atomicity or the approved key policy. Spec 005 v0.2 and all requirement IDs remain unchanged.
+
+Expand the existing 005:T2 work when task revisions are approved: define/present the key-file contract and explicit operational provisioning procedure, then obtain separate approval/secret-generation authorization before producing real material. Implement the versioned loader and restore mandatory read-only assignment-key mounts and relevant environment wiring for every API/worker/operational consumer before any crypto-backed feature can be enabled. Validate absent/unreadable/malformed rings, invalid key length/encoding, absent active version and unavailable historical versions. Fail closed before writes or destructive transaction side effects; never fall back to plaintext or placeholder material.
+
+Keep the existing random 32-byte master secret, independently labeled encryption/HMAC derivation, versioning, separate encrypted offline backups, restoration checks and explicit rotation/retained-version policy. Future task execution planning must resolve custody/backup inputs with the user; no storage vendor, ring schema, passphrase or retention interval is invented here. Development/test material must be separate, ignored, never printed or committed. No keys are generated as a consequence of approving this plan.
+
+Files impacted by the future T2 revision include the existing Crypto adapter/loader/tests plus consumer Compose/environment wiring, an explicitly reviewed operational provisioning command and security-operations documentation. Tests must prove consumer startup/operation rejection without valid keys, real roundtrip/tamper/wrong-key/scoped-index behavior, and no partial destructive mutation on key failure. Existing T3/T4/T6 dependencies on T2 continue to enforce consumer readiness; no task is marked complete on mounts alone.
+
+After plan approval, amend only T2's work/files/done conditions in the existing task list, preserving its ID and dependencies and the block's ten-task count. No block 005 implementation is authorized by this document preparation.

@@ -33,12 +33,12 @@ La sobreescritura de puertos de pruebas usa `!override`, que requiere Docker Com
 
 ## Preparación posterior, pendiente de autorización
 
-1. Tras T7, preparar y presentar el plan de ejecución de **002:T8** cuando el usuario solicite continuar; esperar su aprobación antes de implementarla.
+1. Tras T8, solicitar autorización para la validación SDD de solo lectura del bloque 002; esperar su aprobación antes de iniciarla.
 2. Conservar los digests y archivos de bloqueo revisados. Las instalaciones de dependencias nunca deben ejecutarse implícitamente al arrancar; futuras descargas fuera del alcance autorizado requieren aprobación.
 3. Completar las pruebas y funciones de Symfony y Vue en sus tareas correspondientes. El arranque nunca instalará sus dependencias automáticamente.
 4. Crear un archivo local ignorado a partir de [.env.example](./.env.example). Los valores `REVIEW_ONLY_*` son marcadores públicos para validar archivos: deben sustituirse antes de cualquier ejecución. No representan secretos de desarrollo utilizables.
 5. Configurar el usuario local mediante `LOCAL_UID` y `LOCAL_GID`, y `APP_TIMEZONE` con la zona horaria del sistema de instalación. Europe/Madrid es solo el ejemplo. La base de datos almacenará instantes en UTC y la aplicación interpretará las fechas con la zona configurada.
-6. Suministrar las claves de asignación como archivos secretos separados para desarrollo y pruebas, según la política aprobada. Ninguna imagen ni comando de arranque generará claves automáticamente. No se deben guardar en Git ni facilitar por el chat.
+6. Al implementar el cifrado en 005:T2, suministrar las claves de asignación como archivos secretos separados para desarrollo y pruebas, según la política aprobada. Ninguna imagen ni comando de arranque generará claves automáticamente. No se deben guardar en Git ni facilitar por el chat.
 7. Completar las tareas de API, frontend, pruebas y trabajadores antes de validar un arranque funcional.
 
 Las contraseñas elegidas para MySQL y las credenciales codificadas en `DATABASE_URL` deben corresponderse; los caracteres especiales del usuario/contraseña dentro de esa URL necesitan codificación URI. El servidor MySQL no publica puertos en el equipo anfitrión.
@@ -54,7 +54,7 @@ Los servicios de Compose usan el prefijo `tocaregalo-`: `tocaregalo-mysql`, `toc
 
 Solo Nginx y la bandeja local publican puertos, vinculados a `127.0.0.1`. PHP, Node, MySQL y SMTP permanecen dentro de la red de Compose. El perfil `workers` habilita los trabajadores cuando sus comandos estén implementados. No se ejecutan durante esta tarea.
 
-El proyecto de pruebas se llama `tocaregalo-test` y tiene sus propios volúmenes, base de datos y archivo de claves. Usa siempre `--project-name tocaregalo-test`: esta opción prevalece sobre `COMPOSE_PROJECT_NAME`, cuyo valor de ejemplo identifica el entorno de desarrollo. No debe ejecutarse usando el nombre del proyecto de desarrollo ni apuntar a su base de datos. No hay borrado automático de volúmenes.
+El proyecto de pruebas se llama `tocaregalo-test` y tiene sus propios volúmenes, base de datos y, cuando se implemente el cifrado, claves separadas. Usa siempre `--project-name tocaregalo-test`: esta opción prevalece sobre `COMPOSE_PROJECT_NAME`, cuyo valor de ejemplo identifica el entorno de desarrollo. No debe ejecutarse usando el nombre del proyecto de desarrollo ni apuntar a su base de datos. No hay borrado automático de volúmenes.
 
 ## Correo y secretos
 
@@ -173,8 +173,22 @@ scripts/dev build
 
 `backend` admite un filtro de PHPUnit; `frontend`, un archivo; `mail`, un filtro; `e2e`, un proyecto y opcionalmente un archivo. Sin proyecto ejecuta los cuatro perfiles configurados. `scripts/check all` (también sin argumentos) los encadena y se detiene ante el primer error; la verificación completa corresponde a T8.
 
-`scripts/dev up` requiere el archivo de claves autorizado, aún pendiente; no lo genera. `scripts/dev down` detiene únicamente el proyecto de desarrollo y conserva sus volúmenes. `build` compila Vue, no construye imágenes Docker. `migrate` y `create-super-admin` indican que sus operaciones de negocio todavía no están disponibles, sin modificar datos.
+`scripts/dev up` inicia la base técnica con las imágenes y dependencias existentes, sin exigir claves que todavía no se utilizan. `scripts/dev down` detiene únicamente el proyecto de desarrollo y conserva sus volúmenes. `build` compila Vue, no construye imágenes Docker. `migrate` y `create-super-admin` indican que sus operaciones de negocio todavía no están disponibles, sin modificar datos.
 
 Las pruebas con servicios reservan `tocaregalo-test`, usan MySQL temporal y se retiran al terminar o fallar. Rechazan un entorno de pruebas existente y los puertos ocupados. HTTP de pruebas usa 8081 y Mailpit 8026 por defecto; desarrollo usa 8080 y 8025. Si falta `.env`, una dependencia, una imagen o un parámetro, corrige el requisito indicado; los scripts no lo sustituyen automáticamente. No ejecutes otro proceso sobre el proyecto reservado durante las pruebas.
 
 En VS Code, **Terminal → Ejecutar tarea** ofrece los mismos comandos; abrir el proyecto no arranca servicios. Los detalles técnicos, los límites de los trabajadores y la política de claves y SMTP están en [la guía de desarrollo](./docs/development.md). Para SMTP de despliegue habrá que facilitar servidor, puerto, seguridad TLS, autenticación si procede y remitente; las comprobaciones locales solo usan Mailpit.
+
+## Resultado de la comprobación de T8
+
+El agregado `scripts/check all` ha terminado correctamente: PHPUnit de backend (23 pruebas), suite local de correo (29), Vitest (12), compilación y Playwright (8 pruebas en Chromium de escritorio y móvil, Firefox y WebKit). PHPStan mantiene nivel 10 sin errores. Los entornos temporales se han retirado sin borrar volúmenes.
+
+En la comprobación histórica de T8, el arranque principal quedó pendiente de las claves; T10 corrige esa dependencia prematura. Las migraciones de la aplicación, el comando SUPERADMIN y las funciones de negocio todavía no están implementados. No se han instalado paquetes ni generado secretos en T8. La validación SDD y su aceptación son el siguiente paso, sujeto a autorización. Consulta los [resultados y límites](./specs/002-development-foundation/verification.md#t8-execution-record).
+
+## Verificar el arranque principal sin datos persistentes
+
+Ejecuta `scripts/dev verify` con las imágenes y dependencias ya preparadas. Usa los mismos servicios y la misma función de arranque que `scripts/dev up`, con un proyecto temporal fijo `tocaregalo-startup`, MySQL en memoria y puertos locales 8083 (HTTP) y 8028 (Mailpit). Rechaza recursos existentes de desarrollo o verificación y puertos ocupados; no los elimina ni reutiliza. Conserva el archivo privado de entorno y no crea claves, cuentas ni migraciones.
+
+Comprueba conexión MySQL de solo lectura, API JSON y navegación Chromium de escritorio y móvil; al terminar o fallar retira solo sus contenedores y red, sin borrar volúmenes. No equivale a probar la inicialización de un volumen persistente ni las funciones de sorteo. Si se interrumpe por un cierre forzoso del sistema, inspecciona los recursos y el bloqueo ignorado antes de limpiarlos manualmente.
+
+Las claves serán obligatorias en los consumidores de cifrado cuando se implemente 005:T2, con validación y rechazo de operaciones si faltan o son inválidas. Los valores de claves de [.env.example](./.env.example) quedan reservados para ese trabajo futuro.

@@ -31,7 +31,3 @@ services:
   tocaregalo-mailpit:
     ports: !override
       - "127.0.0.1:${TEST_MAILPIT_PORT:-8026}:8025"
-
-secrets:
-  assignment_keys:
-    file: ${TEST_ASSIGNMENT_KEY_PATH:-./.secrets/test-assignment-keys.json}

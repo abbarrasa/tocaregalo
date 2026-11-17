@@ -1,6 +1,7 @@
 # Spec 002 — Development foundation
 
-Status: synchronized with approved parent requirements; task execution remains separately gated
+Status: implemented — accepted foundation-only scope
+Validation acceptance: “Acepto la validación”, 2026-11-17, accepts the scoped PASS review recorded in MEMORY.md. Evidence: verification.md#t10-completion and prior T8 checks. Product acceptance remains with blocks 003–007; this does not mark the parent application implemented.
 Revision: v0.2
 Historical approval (v0.1): The user stated “Apruebo y autorizo iniciar la T1 de spec 002”, approving the derived-document/task package and authorizing only 002:T1 on 2026-11-16. No installation is authorized.
 Parent: [Spec 001 v1.1, approved](../001-toca-regalo/spec.md)
