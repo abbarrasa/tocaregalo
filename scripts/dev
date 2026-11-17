@@ -6,9 +6,9 @@ operation=${1:---help}
 [ "$#" -eq 0 ] || shift
 [ "$#" -eq 0 ] || fail 'No se admiten argumentos adicionales.'
 case "$operation" in
-    --help|-h) printf 'Uso: scripts/dev [build|up|down|migrate|create-super-admin]\nNo instala paquetes ni genera claves. Los workers no arrancan automáticamente.\n'; exit 0 ;;
+    --help|-h) printf 'Uso: scripts/dev [build|up|verify|down|migrate|create-super-admin]\nNo instala paquetes ni genera claves. Los workers no arrancan automáticamente.\n'; exit 0 ;;
     build) exec "$ROOT/scripts/check" build ;;
-    up|down|migrate|create-super-admin) ;;
+    up|verify|down|migrate|create-super-admin) ;;
     *) fail 'Operación desconocida; consulta --help.' ;;
 esac
 require_inputs
@@ -16,11 +16,8 @@ PROJECT=tocaregalo
 MODEL=compose.yaml
 case "$operation" in
     down) compose down ;;
-    up)
-        # Resolve the configured secret path without disclosing configuration values.
-        key_path=$(compose config --format json | docker run --rm -i --pull never tocaregalo-node:dev node -e 'let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{console.log(JSON.parse(s).secrets.assignment_keys.file)})')
-        [ -n "$key_path" ] && [ -r "$key_path" ] || fail 'Falta el archivo de claves autorizado; consulta docs/development.md.'
-        compose up -d --no-build --pull never tocaregalo-nginx tocaregalo-mailpit ;;
+    up) start_application ;;
+    verify) . "$ROOT/scripts/lib/startup.sh"; verify_startup ;;
     migrate|create-super-admin)
         case "$operation" in
             migrate) command_name=doctrine:migrations:migrate ;;

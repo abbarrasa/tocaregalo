@@ -433,3 +433,66 @@ Date: 2026-11-17. Scope: [execution plan v0.1](./t7-execution-plan.md), approved
 ### Limits and next step
 
 This is command/configuration/documentation evidence supporting NFR-3/5/7/8/10, not complete product acceptance. No full key-dependent development startup, real migration/SUPERADMIN, real event closure, external SMTP or full aggregate/other browser rerun claimed. Existing audit/license warnings remain. T7 stops here; T8 requires a separately presented execution plan and explicit authorization. Final read-only SDD Validation remains later.
+
+## T8 execution record
+
+Date: 2026-11-17. [Execution plan v0.1](./t8-execution-plan.md) approved with “Apruebo el plan y autorizo su ejecución”. Branch `feature/002_T08-foundation-verification` created from current local dev, preserving proposed-plan/MEMORY edits. Runtime/code/configuration/manifests/locks unchanged; no installation, image pull/build, browser download, key generation, business migration/account, external SMTP, commit or push.
+
+### Preflight and model/runtime evidence
+
+- Installed tools observed: Docker server **29.10.0**, Compose **5.8.0**. These differ from historical T7 tool observations; this task did not install/update them. Existing local `tocaregalo-php:dev` and `tocaregalo-node:dev` image inspection succeeded. All executed service/browser images were already available with pull disabled.
+- Quiet configuration checks passed: `docker compose --env-file .env -f compose.yaml --profile workers config --quiet` and explicit `--project-name tocaregalo-test -f compose.yaml -f compose.test.yaml --profile workers config --quiet`. Aggregate static checks also validated both standalone test models.
+- Selectively parsed JSON assertions passed for prefixed service names, pull policy `never`, loopback-only test HTTP **8081** / Mailpit UI **8026**, no published database or SMTP port, tmpfs MySQL data, shared read-only root dotenv, worker opt-in profiles and SIGTERM. Full resolved private configuration was never printed.
+- During live backend startup, selected Docker metadata showed MySQL tmpfs `/var/lib/mysql`, empty host port bindings, and health starting then healthy in the wrapper log. During mail runtime, MySQL remained tmpfs/internal and Mailpit's sole binding was `127.0.0.1:8026` to UI port 8025; SMTP was not published. Observations used `docker ps` with project label and narrowly formatted `docker inspect`, excluding environment/credentials.
+- Root `.env` remained ignored with mode **600**. Dependency manifests/locks were unchanged. Wrapper ownership checks found no occupied reserved project; service stacks were created and torn down sequentially by the aggregate.
+
+### Aggregate execution
+
+Executed `scripts/check all` without installing or rebuilding images. This is foundation runtime evidence, not product acceptance:
+
+| Stage | Actual result |
+| --- | --- |
+| static | Shell/whitespace/ignore/Compose/package JSON checks, 11 task mappings and CLI-recorder boundary checks passed. |
+| PHPStan | Fixed level 10, zero errors. Existing config covers src, tests, config, public, bin/console; no baseline/exclusions introduced. |
+| backend | PHP 8.5.12, PHPUnit 12.5.44: **23 tests / 74 assertions passed**, real MySQL fixture/rollback/API boundary; mail group explicitly excluded. |
+| mail | Same PHPUnit runtime: **29 tests / 105 assertions passed**, local capture/queue acknowledgement, retries/process fixtures and guarded database checks. |
+| frontend | Vitest 5.1.0: **12 tests in 2 files passed**. Existing jsdom performance advice was informational; no pool/isolation change made. |
+| build | Vite 8.3.8: **31 modules**, production compilation passed. No image build/package install. |
+| e2e | **8 tests passed (1.9 minutes)**: Chromium desktop/mobile, Firefox desktop and WebKit desktop. Nginx runtime inspection confirmed sole loopback binding `127.0.0.1:8081`. |
+
+Existing tests provide behavior evidence; no new synthetic documentation tests were written. MySQL fixture checks are temporary-table/rollback evidence, not executed application migrations. Mail fixture probes are not real event closure. Historical npm/Composer audit/license warnings remain; no new security audit claimed.
+
+The aggregate exited **0** and removed its containers/network after each service stage. Browser npm update notices were informational; npm was not updated.
+
+### Coverage limits and next boundary
+
+NFR-1/2/3/4 have direct foundation API/MySQL/Vue/Nginx/build evidence; NFR-5/6/8 have existing shell language/keyboard/responsive-profile evidence; NFR-7 has local fixture capture and external configuration evidence. These do not demonstrate future business flows. NFR-9 real logical/60-second closure remains unimplemented in 004:T8; T6 process evidence does not fulfill it. NFR-10 retains its mandatory fixed-level owned-PHP gate.
+
+Full key-dependent development startup is **blocked**: no assignment key directory/material has been provisioned. Migration bundle registration/configuration/schema and the SUPERADMIN command are unfinished; no application migration or real account creation was attempted. This task did not invent a key file or bypass these prerequisites. Configuration parsing and temporary-table fixtures cannot be reported as complete startup/migration success. Existing T7 safe-failure evidence remains applicable; it was not rerun unnecessarily.
+
+T8's bounded done condition allows explicitly evidenced setup blockers. Block 002 implementation/check work is complete with these readiness limits; final read-only SDD Validation and user acceptance are still pending. The parent and child specifications remain approved, not accepted as implemented. No block 003 task is started.
+
+Final gate: `scripts/check phpstan` exited 0 with **[OK] No errors** after aggregate execution. Label-filtered `docker ps -aq` and `docker network ls -q` both returned empty; `backend/var/wrapper-test.lock` was absent. Dependency manifests/locks and runtime code/configuration were unchanged. Private dotenv remained ignored/untracked with mode 600. Whitespace/local-link checks and targeted editor diagnostics passed. T8 completes only its documented foundation/check scope with the readiness blockers above; no application fulfillment verdict is issued.
+
+## T10 completion
+
+Date: 2026-11-17. [Execution plan v0.1](./t10-execution-plan.md) approved with “Apruebo el plan y autorizo su implementación y las comprobaciones”; Git prerequisite amended by “Autorizo” to preserve approved local documentation edits while creating `feature/002_T10-main-startup-prerequisites` from local dev at `48147c797c9f426f007b9dbe81b1926ac20e4f11`. No commit/merge/stash/push or discarded edits.
+
+### Implementation and coverage
+
+- NFR-3: removed unused assignment-key environment/mount/declaration from main/test-overlay Compose and removed its unconditional startup guard. Added `scripts/dev verify` using the same startup helper as `up`; explicit `tocaregalo-startup` project and [main-model override](../../compose.startup-verification.yaml), MySQL tmpfs, loopback HTTP 8083/Mailpit UI 8028 and matching verification URL selections. No replacement standalone service graph.
+- NFR-1/4/7: private model parity/effective DB checks before startup; reject changed services/images/commands/credentials, external or ambiguous DB destinations, extra data mounts/secrets/publications and other unexpected differences. Main PHP read-only DBAL SELECT 1/UTC, bounded HTTP/JSON readiness and selected runtime metadata checks. No credential/model/environment snapshot printed.
+- NFR-5: Spanish usage/README, English code/technical documentation. Existing Chromium desktop/mobile cases check shell/Bootstrap/keyboard/JSON/private paths. Full product criteria remain deferred.
+- NFR-10: full owned-PHP level-10 configuration unchanged; no baseline. No owned PHP file was added; read-only DB probe is an inline console invocation. Crypto policy/consumer fail-closed obligations remain in approved 005:T2; no ring schema, keys or business crypto code introduced.
+
+### Checks actually run
+
+1. Test-first extension to `sh tests/scripts/wrappers.sh` demonstrated key-free up failure on the previous implementation (exit 2, missing key prerequisite). After correction recorder checks pass for shared startup routing, model refusal (17), startup failure (29) and owned cleanup, port refusal (18), existing project/volume, daemon inspection failure (31), lock contention preserving the other's lock, and SIGTERM (143) with cleanup. Existing T7 recorder cases still pass. Controlled tests use their own temporary root and do not prove runtime success.
+2. Installed Node container: `node --test /checks/model.test.cjs` passed **9 tests**. Covered accepted documented differences; named data volume, external DB, changed image, public web port, SMTP publication, secret dependency, wrong project and unsafe shared URL parameters rejected.
+3. `scripts/dev verify` validated parity/effective DB destination and started exactly main MySQL/PHP/frontend/Nginx/Mailpit using existing images and the shared `up` helper with wait/no-build/pull-never. MySQL healthy and other selected services running. Read-only main PHP connection and UTC passed. Main shell/API readiness passed. Runtime assertions passed for tmpfs/healthy MySQL/no DB port and exact loopback HTTP/UI/no SMTP publications.
+4. `scripts/check static` passed after removing extra EOF blank lines reported on the initial modified Compose files. Final shell syntax checks cover dev/common/startup/recorder scripts. Main and test-overlay quiet Compose validations passed; no key input required.
+5. `scripts/check phpstan` completed with **[OK] No errors**, fixed level 10 over src/tests/config/public/bin/console. No PHP or dependency-manifest/lock modification, installation, image pull/build, browser download, secret generation, account, application migration, worker startup or external email occurred.
+6. Main-graph Playwright smoke: **4 tests passed (1.1 minutes)** across Chromium desktop/mobile. Actual service startup, read-only DB, HTTP readiness and browser checks ran using the main Compose model/shared startup helper. Storage/address override differences are asserted, not concealed. Persistent development-volume initialization is not claimed. npm update notice was informational; no update executed.
+7. Scoped teardown removed the invocation's containers/network. Label-filtered Docker container/network/volume queries returned empty, confirming no persistent startup volume created. Root dotenv remains mode 600/ignored/untracked; no assignment key directory was created. PHP/manifests/locks unchanged. Whitespace/syntax/model-link checks and targeted editor diagnostics pass. Existing T8 full-suite results apply to untouched business-free PHP/frontend harnesses; no unnecessary aggregate or Firefox/WebKit/mail rerun.
+
+T10 closes its implementation/check conditions only. The prior INCOMPLETE review must be reassessed against these new paths/evidence under separately authorized read-only Validation. No specification acceptance/PASS verdict or product readiness is inferred. No migrations/SUPERADMIN/real event closure implemented; crypto consumer provisioning remains mandatory in 005:T2. Stop after T10.

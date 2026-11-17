@@ -1,0 +1,20 @@
+# Main-graph verification only: scripts/dev verify owns this fixed project.
+name: tocaregalo-startup
+services:
+  tocaregalo-mysql:
+    volumes: !reset []
+    tmpfs:
+      - /var/lib/mysql
+  tocaregalo-php:
+    environment:
+      APP_ENV: dev
+      APP_PUBLIC_URL: http://localhost:8083
+  tocaregalo-frontend:
+    environment:
+      VITE_PUBLIC_PORT: '8083'
+  tocaregalo-nginx:
+    ports: !override
+      - '127.0.0.1:8083:80'
+  tocaregalo-mailpit:
+    ports: !override
+      - '127.0.0.1:8028:8025'

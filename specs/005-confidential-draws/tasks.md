@@ -1,11 +1,13 @@
 # Tasks 005 — Confidential draw lifecycle
 
-Status: approved; task execution remains separately gated
-Revision: v0.2
+Status: approved v0.3; implementation and runtime remain separately gated
+Approval (v0.3): “apruebo las listas y autorizo a preparar el plan de ejecución”, 2026-11-17. Authorizes T10 execution-plan preparation only.
+Preparation authorization (v0.3): “apruebo la revisiones y autorizo actualizar las listas de tareas”, 2026-11-17. Proposed lists require approval; no implementation authorized.
+Revision: v0.3
 Approval (v0.2): “Apruebo las listas de tareas y autorizo el inicio de 002:T9 y las instalaciones”, 2026-11-17. Approves all revised task lists and authorizes only 002:T9 and its concrete four-package installation scope.
 Historical approval (v0.1): The user stated “Apruebo y autorizo iniciar la T1 de spec 002”, approving the derived-document/task package and authorizing only 002:T1 on 2026-11-16. No installation is authorized.
-Derived documents: [spec](./spec.md), synchronized from approved parent v1.1; [plan v0.2](./plan.md), approved.
-Approved sources: [Spec 001 v1.1](../001-toca-regalo/spec.md), [Plan 001 v0.2](../001-toca-regalo/plan.md)
+Derived documents: [spec](./spec.md), synchronized from approved parent v1.1; [plan v0.3](./plan.md), approved.
+Approved sources: [Spec 001 v1.1](../001-toca-regalo/spec.md), [Plan 001 v0.3](../001-toca-regalo/plan.md)
 Execution authorization: no task in this block is authorized. Upstream 002:T9 and its installation were authorized separately; follow prerequisite and per-task approval gates.
 
 ## Execution rules
@@ -27,9 +29,9 @@ No dependency installation, image pull/build requiring packages, or browser down
 
 - [ ] **T2. Implement versioned recipient encryption and lookup tokens.** FR-14, FR-23, NFR-10
   - Depends on: T1.
-  - Work: Implement approved Sodium authenticated envelope/scoped HMAC adapter and versioned key-file loader without committing keys.
-  - Files/responsibility: backend/src/Infrastructure/Crypto/; backend/tests/Integration/.
-  - Done when: Roundtrip/tamper/wrong-key tests pass, lookup tags are draw-scoped, and encrypted records contain no readable recipient identity; missing-key failure is explicit.
+  - Work: Implement approved Sodium envelope/scoped HMAC adapter and versioned loader. Present and approve the real key-file contract and operational provisioning/custody/backup procedure before explicit secret-generation authorization. Restore mandatory read-only key mounts and preflight for API/worker/operational consumers before enabling any protected feature.
+  - Files/responsibility: backend/src/Infrastructure/Crypto/; backend/tests/Integration/; consumer Compose/environment wiring; explicitly approved provisioning command; security-operations documentation.
+  - Done when: Roundtrip/tamper/wrong-key tests pass, lookup tags are draw-scoped and stored records expose no readable recipient identity. Missing/unreadable/malformed rings, invalid length/encoding, absent active version and unavailable historical keys fail closed before writes or partial destructive side effects. Read-only mounts, separate development/test material, no plaintext/dummy fallback, and approved backup/restoration checks are verified; no keys are printed or committed.
   - Evidence: not executed; no completion or passing result claimed.
 
 - [ ] **T3. Map draw assignments and durable revision references.** FR-10, FR-11, FR-13, FR-14, FR-23, NFR-1, NFR-10

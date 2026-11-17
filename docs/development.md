@@ -8,7 +8,8 @@ T7 exposes the installed foundation through POSIX shell entrypoints. Run from an
 | --- | --- |
 | `scripts/dev --help`, `scripts/check --help` | Spanish usage, no daemon access. |
 | `scripts/dev build` / `scripts/check build` | Compile frontend assets; never build Docker images. |
-| `scripts/dev up` | Existing development Nginx/PHP/MySQL/frontend and Mailpit; no implicit workers. Fails if assignment key file is unavailable. |
+| `scripts/dev up` | Existing development Nginx/PHP/MySQL/frontend and Mailpit; no implicit workers. No assignment-key dependency until the crypto consumer is implemented. |
+| `scripts/dev verify` | Main graph in fixed tocaregalo-startup project, tmpfs MySQL, loopback 8083/8028, read-only DB and Chromium desktop/mobile smoke; refuses existing development/verification resources. |
 | `scripts/dev down` | Stop only the explicit `tocaregalo` development project; keep volumes. |
 | `scripts/dev migrate`, `scripts/dev create-super-admin` | Read-only command discovery in an already running PHP service; delegate only if registered and attached to an interactive terminal. Currently unavailable; no runtime is started and no migrations/accounts are performed. |
 | `scripts/check static` | Shell syntax, whitespace, secret ignore, Compose models, package JSON and VS Code task mappings, orchestration tests. |
@@ -44,3 +45,15 @@ Worker profiles are opt-in. Restart workers after code changes; they share the P
 Deployment operators supply SMTP host, port, TLS mode, authentication user/password where required, and sender address/display name through environment/secret management. Development uses Mailpit, not external delivery. Do not request production credentials for local checks or commit real values. External delivery, recovery/assignment business email content and monitoring remain their respective future slices.
 
 Historical audits report four moderate npm development advisories and abandoned doctrine/common, with zero PHP security advisories and zero npm production advisories at their recorded runs. The Composer license warning is also retained. See [dependency evidence](../specs/002-development-foundation/dependency-resolution.md) and [verification](../specs/002-development-foundation/verification.md); T7 does not silently refresh dependencies or claim new audit results.
+
+## T8 verification snapshot
+
+On 2026-11-17 the installed-image `scripts/check all` completed successfully: static/11 task mappings, PHPStan level 10, PHPUnit backend 23 tests/74 assertions, local mail harness 29/105, Vitest 12, frontend compilation and all 8 Playwright cases across four profiles. MySQL tmpfs/internal ports and loopback HTTP/Mailpit bindings were observed live. See [T8 evidence](../specs/002-development-foundation/verification.md#t8-execution-record). No image/dependency rebuild or fresh audit occurred. At T8, key-dependent development startup was blocked; application migrations, SUPERADMIN and real event closure remain unavailable; passing the aggregate is foundation evidence. Read-only SDD Validation/user acceptance remain pending.
+
+## T10 main-graph verification
+
+`scripts/dev verify` uses the shared main startup helper, explicit project `tocaregalo-startup` and [storage/address override](../compose.startup-verification.yaml). Only MySQL storage (tmpfs), loopback ports (8083/8028), development APP_ENV and matching public URL/frontend port differ. Model parity and effective DB target are checked privately before startup. Existing development/startup containers, networks or volumes, occupied ports and an active ignored `backend/var/startup-verification.lock` cause refusal. Inspection errors fail closed. This never starts workers, installs/builds/pulls, provisions keys or applies migrations.
+
+Runtime checks assert MySQL health/tmpfs/internal ports, exact web/UI loopback bindings, main PHP read-only SELECT 1/UTC, bounded HTTP readiness and Chromium desktop/mobile cases. Scoped traps remove owned resources/lock without volume deletion; SIGKILL cannot be trapped. Persistent development-volume initialization is not claimed. The database name/credentials remain the supplied development values inside a separate temporary MySQL instance; model guards reject external/ambiguous targets. No private resolved model or environment snapshot is printed.
+
+Current foundation services no longer mount/read unused assignment keys. The approved 005:T2 task must restore mandatory read-only key wiring and validate/fail closed before any encryption consumer is enabled. Existing key derivation/custody/backup/rotation requirements remain unchanged; no ring schema/material is introduced by T10.
