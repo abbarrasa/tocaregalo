@@ -4,7 +4,7 @@ Aplicación web para organizar grupos y eventos de intercambio de regalos. El de
 
 ## Estado actual
 
-Se han completado **002:T1–T5 y 002:T9**: configuración y dependencias, API JSON con conexión MySQL verificada, PHPStan y una base Vue/Bootstrap servida por Nginx. Se han comprobado escritorio y móvil, HMR y archivos compilados. T5 incorpora PHPUnit con MySQL aislado, tests de componentes y pruebas de navegador. Faltan las funciones de negocio, las migraciones, sus pruebas y los trabajadores. Esta entrega todavía no permite realizar sorteos.
+Se han completado **002:T1–T6 y 002:T9**: configuración y dependencias, API JSON con conexión MySQL verificada, PHPStan y una base Vue/Bootstrap servida por Nginx. Se han comprobado escritorio y móvil, HMR y archivos compilados. T5 incorpora PHPUnit con MySQL aislado, tests de componentes y pruebas de navegador. T6 añade captura local de correo y entradas de procesos verificadas. Faltan las funciones de negocio, las migraciones, sus pruebas y los trabajadores. Esta entrega todavía no permite realizar sorteos.
 
 Con autorización previa se han descargado las seis imágenes previstas y la imagen de verificación Playwright 1.65.1, construido las dos herramientas e instalado las dependencias dentro de contenedores. [.env.example](./.env.example) fija las imágenes de desarrollo por digest y mantiene los marcadores públicos de secretos. No se han generado claves de asignación. Los entornos temporales de comprobación se han retirado. El [registro técnico](./specs/002-development-foundation/verification.md) recoge resultados y límites; los avisos de dependencias registrados en T2/T9 siguen pendientes.
 
@@ -33,7 +33,7 @@ La sobreescritura de puertos de pruebas usa `!override`, que requiere Docker Com
 
 ## Preparación posterior, pendiente de autorización
 
-1. Preparar y presentar el plan de ejecución de **002:T6** cuando el usuario solicite continuar; esperar su aprobación antes de implementarla.
+1. Preparar y presentar el plan de ejecución de **002:T7** cuando el usuario solicite continuar; esperar su aprobación antes de implementarla.
 2. Conservar los digests y archivos de bloqueo revisados. Las instalaciones de dependencias nunca deben ejecutarse implícitamente al arrancar; futuras descargas fuera del alcance autorizado requieren aprobación.
 3. Completar las pruebas y funciones de Symfony y Vue en sus tareas correspondientes. El arranque nunca instalará sus dependencias automáticamente.
 4. Crear un archivo local ignorado a partir de [.env.example](./.env.example). Los valores `REVIEW_ONLY_*` son marcadores públicos para validar archivos: deben sustituirse antes de cualquier ejecución. No representan secretos de desarrollo utilizables.
@@ -134,3 +134,24 @@ docker compose --env-file .env --project-name tocaregalo-test -f compose.verific
 ```
 
 La configuración de [compose.verification.yaml](./compose.verification.yaml) es independiente del entorno completo: no necesita claves de asignación ni inicia correo o trabajadores. MySQL usa memoria temporal y no publica puertos. Las fixtures crean únicamente una tabla temporal y usan rollback, también ante errores; no se borran esquemas ni volúmenes. Las suites rechazan destinos inseguros antes de conectar. Ningún comando instala dependencias. Retira el entorno con el último comando incluso si alguna prueba falla; los informes ignorados quedan en `frontend/test-results`.
+
+## Correo local y entradas de trabajadores
+
+T6 configura Symfony Mailer y Messenger. El correo se envía de forma síncrona dentro del trabajador; no hay una segunda cola oculta de mensajes completos. El transporte de notificaciones conserva cinco reintentos, base configurable, multiplicador dos y sin variación aleatoria ni límite de demora. Las reglas de notificación de la aplicación se implementarán en sus bloques correspondientes.
+
+La comprobación temporal usa Mailpit y MySQL en memoria, con el mismo proyecto aislado `tocaregalo-test`. No la ejecutes simultáneamente con las suites anteriores. Verifica que el proyecto esté libre y que el puerto local de Mailpit (`TEST_MAILPIT_PORT`, 8026 por defecto) no esté ocupado.
+
+```bash
+docker compose --env-file .env --project-name tocaregalo-test -f compose.mail-smoke.yaml \
+  up --detach --no-build --pull never --wait --wait-timeout 120 tocaregalo-mysql tocaregalo-mailpit
+docker compose --env-file .env --project-name tocaregalo-test -f compose.mail-smoke.yaml \
+  run --rm --no-deps --pull never tocaregalo-php-tests
+docker compose --env-file .env --project-name tocaregalo-test -f compose.mail-smoke.yaml \
+  run --rm --no-deps --pull never tocaregalo-php-tests composer analyse
+docker compose --env-file .env --project-name tocaregalo-test -f compose.mail-smoke.yaml \
+  --profile checks down
+```
+
+La prueba crea explícitamente la tabla de transporte solo en la base temporal validada, encola un identificador de fixture y verifica el mensaje capturado, su remitente, destinatario y contenido. Fuerza SMTP a Mailpit, sin contactar servicios externos. La bandeja estará en `http://localhost:8026` mientras el entorno siga activo; SMTP no publica puertos. El entorno T5 sin correo excluye el grupo `mail`; esta suite T6 sí lo ejecuta completo.
+
+Los lanzadores de [notificaciones](./docker/worker/entrypoint.sh) y [cierre](./docker/scheduler/entrypoint.sh) comparten la imagen PHP, transmiten argumentos y señales, y conservan los códigos de error. Los trabajadores de consola usan `SIGTERM`; las pruebas comprobaron terminación con código 143, sin garantizar finalización de trabajos en curso. El comando real de cierre sigue pendiente de 004:T8: su invocación actualmente falla de forma visible. El probe de T6 es exclusivo de pruebas y no cierra eventos. No actives los trabajadores del entorno completo como si la funcionalidad de negocio estuviera terminada.

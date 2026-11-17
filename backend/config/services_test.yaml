@@ -1,0 +1,16 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\Tests\Fixtures\Mail\MailFixture:
+        public: true
+        arguments:
+            $transport: '@messenger.transport.notifications'
+
+    App\Tests\Fixtures\Mail\FixtureMailHandler: ~
+    App\Tests\Fixtures\Command\WorkerProbeCommand: ~
+
+    test.notifications_retry_strategy:
+        alias: messenger.retry.multiplier_retry_strategy.notifications
+        public: true

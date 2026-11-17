@@ -61,7 +61,7 @@ services:
   tocaregalo-php-tests:
     <<: *php
     profiles: ['checks']
-    command: ['vendor/bin/phpunit']
+    command: ['vendor/bin/phpunit', '--exclude-group', 'mail']
     depends_on:
       tocaregalo-mysql:
         condition: service_healthy

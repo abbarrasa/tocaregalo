@@ -119,9 +119,20 @@ services:
 
   tocaregalo-notification-worker:
     <<: *php-service
+    stop_signal: SIGTERM
+    volumes:
+      - ./backend:/workspace/backend
+      - ./docker/worker/entrypoint.sh:/runtime/worker.sh:ro
+      - type: bind
+        source: ./.env
+        target: /workspace/.env
+        read_only: true
+        bind:
+          create_host_path: false
+    entrypoint: ["sh", "/runtime/worker.sh"]
     profiles: [workers]
     restart: unless-stopped
-    command: ["php", "-d", "date.timezone=${APP_TIMEZONE}", "bin/console", "messenger:consume", "notifications", "--time-limit=3600", "--memory-limit=128M", "--no-interaction"]
+    command: ["messenger:consume", "notifications", "--time-limit=3600", "--memory-limit=128M", "--no-interaction"]
     depends_on:
       tocaregalo-mysql:
         condition: service_healthy
@@ -130,9 +141,20 @@ services:
 
   tocaregalo-closure-worker:
     <<: *php-service
+    stop_signal: SIGTERM
+    volumes:
+      - ./backend:/workspace/backend
+      - ./docker/scheduler/entrypoint.sh:/runtime/scheduler.sh:ro
+      - type: bind
+        source: ./.env
+        target: /workspace/.env
+        read_only: true
+        bind:
+          create_host_path: false
+    entrypoint: ["sh", "/runtime/scheduler.sh"]
     profiles: [workers]
     restart: unless-stopped
-    command: ["php", "-d", "date.timezone=${APP_TIMEZONE}", "bin/console", "app:events:close-due", "--interval=15", "--no-interaction"]
+    command: ["app:events:close-due", "--interval=15", "--no-interaction"]
 
 volumes:
   mysql_data:

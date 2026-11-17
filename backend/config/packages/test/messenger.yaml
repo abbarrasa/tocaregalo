@@ -1,0 +1,4 @@
+framework:
+    messenger:
+        routing:
+            App\Tests\Fixtures\Mail\FixtureMail: notifications

@@ -68,6 +68,9 @@
 /backend/var/
 /backend/.phpunit.cache/
 /backend/.phpunit.result.cache
+# Native crash dumps can contain private runtime environment data.
+/backend/core
+/backend/core.[0-9]*
 /frontend/node_modules/
 /frontend/dist/
 /frontend/coverage/
