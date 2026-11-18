@@ -10,3 +10,7 @@ services:
     App\Infrastructure\Doctrine\DoctrineUserRepository: ~
     App\Application\Port\PasswordService: '@App\Infrastructure\Security\SymfonyPasswordService'
     App\Application\Port\UserRepository: '@App\Infrastructure\Doctrine\DoctrineUserRepository'
+    App\Command\CreateSuperAdminCommand: ~
+    App\Application\User\CreateSuperAdmin: ~
+    App\Infrastructure\Doctrine\DoctrineSuperAdminStore: ~
+    App\Application\Port\SuperAdminStore: '@App\Infrastructure\Doctrine\DoctrineSuperAdminStore'

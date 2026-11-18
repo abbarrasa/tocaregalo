@@ -27,12 +27,12 @@ No dependency installation, image pull/build requiring packages, or browser down
   - Done when: Missing/duplicate/case/format tests pass against real MySQL; passwords retain exact entered characters and policy accepts six-character category variants.
   - Evidence: complete on feature/003_T01-user-values-persistence under approved execution plan v0.2 and “Apruebo las listas y autorizo reanudar 003:T1”. Backend 53 tests/191 assertions, real guarded MySQL migration reversal/schema/uniqueness checks, eight ASCII/multibyte password-boundary cases, 36 PHP syntax checks, container/11 YAML lint and PHPStan level 10 zero errors pass. Owned runtime removed; no development mutation or installation. See [T1 evidence](./verification.md#t1-completion). Stop before T2.
 
-- [ ] **T2. Adapt and verify the interactive SUPER ADMIN command.** FR-3, FR-4, FR-22, FR-30, NFR-10
+- [x] **T2. Adapt and verify the interactive SUPER ADMIN command.** FR-3, FR-4, FR-22, FR-30, NFR-10
   - Depends on: T1.
   - Work: Adapt supplied reference with required first name/phone, optional surnames, confirmed hidden password and role creation if missing; omit account verification.
   - Files/responsibility: backend/src/Command/; backend/tests/Functional/.
   - Done when: Interactive fixtures cover missing role, duplicates, validation, confirmation and failure exits; no existing user is overwritten or verified.
-  - Evidence: not executed; no completion or passing result claimed.
+  - Evidence: Complete under approved execution plan v0.1 on feature/003_T02_super-admin-command. Backend 59 tests/286 assertions including real MySQL atomic rollback/duplicate and real PTY hidden-input checks; PHPStan level 10 zero errors; syntax/container/11 YAML checks pass. Owned runtime removed; no real account/DDL or installation. See [T2 evidence](./verification.md#t2--interactive-super-admin-completion). Stop before T3.
 
 - [ ] **T3. Implement session authentication and logout JSON contracts.** FR-15, FR-22, FR-35, NFR-4, NFR-10
   - Depends on: T2.
@@ -85,7 +85,7 @@ No dependency installation, image pull/build requiring packages, or browser down
 
 ## Traceability and acceptance
 
-See [plan traceability](./plan.md#traceability). FR-N maps to parent AC-N; NFR acceptance conditions are inherited verbatim in [spec](./spec.md). T1 is complete; eight tasks remain pending. No later task checks have been executed.
+See [plan traceability](./plan.md#traceability). FR-N maps to parent AC-N; NFR acceptance conditions are inherited verbatim in [spec](./spec.md). T1 and T2 are complete; seven tasks remain pending. No later task checks have been executed.
 
 ## Phase boundary
 
@@ -121,3 +121,7 @@ Approved casing execution plan v0.1 with “aprueblo el plan y su implementació
 ### Approved T1 lastName SQL alignment — 2026-11-18
 
 Approved SQL execution plan v0.1 with “Apruebo el plan y la implementación”. Initial migration and ORM column now use lastName, superseding earlier retained surnames decisions. [Evidence](./verification.md#t1-lastname-sql-alignment--2026-11-18): backend 53/191, real migration/ORM parity, syntax/container/11 YAML and fixed level-10 analysis pass; temporary runtime removed. No persistent schema migration performed. T1 complete; no T2.
+
+## T2 completion — latest boundary
+
+T2 complete on feature/003_T02_super-admin-command; counts 12 complete/44 pending project-wide. No T3 authorization. On continuation prepare/present its execution plan and await explicit approval. Previous stop-before-T2 statements remain historical.
