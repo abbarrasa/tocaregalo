@@ -1,9 +1,10 @@
 # Plan 001 — Toca Regalo
 
-Status: approved v0.4; task-list revision authorized, implementation remains separately gated
+Status: approved v0.5; affected task-condition preparation authorized, implementation separately gated
+Approval (v0.5): “Apruebo las revisiones y autorizo actualizar las tareas afectadas”, 2026-11-18. Approves displayed revision and authorizes task updates only.
 Approval (v0.4): “Apruebo estos planes y autorizo actualizar las listas”, 2026-11-17. Approves the displayed plan; authorizes task-list preparation only.
 Approval (v0.3): “apruebo la revisiones y autorizo actualizar las listas de tareas”, 2026-11-17. Approves displayed plan revisions and authorizes task-list preparation only.
-Revision: v0.4
+Revision: v0.5
 Preparation authority: “Apruebo esta revisión y autorizo preparar el resto de revisiones afectadas”, 2026-11-17. No task-list or implementation approval inferred.
 Historical approval (v0.1): The user explicitly stated “Apruebo el plan” on 2026-11-16 in response to the request to approve v0.1 and proceed to task decomposition. Unchanged architecture and prior evidence retain that approval.
 Approval (v0.2): “Apruebo estas revisiones y autorizo actualizar las tareas”, 2026-11-17, approves the displayed PHPStan plan revision and authorizes task-list preparation, not implementation or installation.
@@ -320,3 +321,31 @@ Apply validation before password hashing and account/password persistence in all
 Verification: test ASCII and multibyte inputs at 4096 and 4097 bytes, five/six-character minimum boundaries, preserved whitespace, correct/incorrect hash verification and rejection before persistence. Future forms must use Spanish associated field errors; HTML character-count limits cannot replace backend UTF-8 byte validation. Run relevant regressions and final full-scope PHPStan level 10, zero errors without baseline. Existing 003:T1 45 tests/175 assertions do not yet cover this boundary; preserve their historical evidence and accepted block 002 Validation.
 
 No new task IDs, dependency installation, key operation, development DDL/account, commit or push is proposed. Revise affected task conditions only after plan approval. Existing unmodified plan sections retain their historical approved scope.
+
+## Recovery delivery secret revision — v0.5 proposed
+
+Preparation/decision authority, 2026-11-18: user proposed storing the recovery key in the private root dotenv and approved with “Apruebo la propuesto y actualizar los planes afectados”. This approves the direction and authorizes these revisions, not their unseen detail, task-list changes, implementation or key generation. Existing approved v0.4 architecture and completed evidence remain valid for unchanged scope. Implements existing FR-28/AC-28, supporting recovery portions of FR-13/34 and NFR-7/10; no product requirement or identifier change.
+
+### Durable bearer protection
+
+Keep password_reset_requests digest-only. Add an authenticated encrypted bearer envelope only to the recovery-delivery work record, containing ciphertext, fresh nonce and explicit envelope version. Use installed Sodium XChaCha20-Poly1305 with a random 32-byte key and bind request ID, delivery ID and envelope version as authenticated associated data. Decrypt only for an authoritative, current, unused, unexpired request immediately before synchronous SMTP handoff. Message queue payloads contain delivery IDs only; never persist raw token/link content in work, queue, failure payloads, logs or status DTOs. Retries use the same token and stable Message-ID, without changing credentials. Issuance, supersession, encrypted delivery work and Messenger enqueue commit on the same MySQL connection/transaction; failure rolls all of them back.
+
+On success, terminal retry exhaustion or stale cancellation, clear ciphertext/nonce from the delivery record and retain sanitized status only. New issuance and successful consumption cancel/purge affected pending delivery work transactionally. Expired/deleted/stale requests are guarded and purged when processing/cleanup observes them; no claim of instantaneous external email recall or a new cleanup deadline. A retryable failure retains encrypted material until a terminal transition. Do not introduce a second retry scheduler or hidden Mailer queue.
+
+### Environment key policy
+
+Use RECOVERY_DELIVERY_KEY, a standard Base64 encoding of exactly 32 random bytes, independent from APP_SECRET and all assignment keys. Load it from the existing ignored project-root .env shared by Symfony and the notification worker. Do not create a separate recovery-key file or mount. Keep .env mode 0600 and untracked; committed templates contain an empty placeholder only. No fallback/demo/default key. Resolve and validate the required key only in recovery consumers, before credential supersession/issuance/enqueue or decrypt/send; missing/invalid/wrong keys or authentication failure fail closed with sanitized errors. Unrelated foundation commands must remain usable without this recovery key.
+
+Use one active key for envelope version 1. The envelope version identifies the format; it is not an implemented historical key ring. Do not overwrite/rotate the key while recoverable pending work exists. First drain delivery or explicitly cancel/purge that work, then replace the key through an authorized operational action. Seamless multiple-key rotation is outside this revision. Keep an encrypted backup of the secret separately from database backups, restricted to authorized operators; restoration must preserve the key needed by pending ciphertext. Never print the key in generated configuration, commands or diagnostics. Real key generation or dotenv mutation requires separate explicit authorization; preparation grants neither. Disposable synthetic keys are limited to later explicitly authorized tests.
+
+### Files, checks and downstream impact
+
+003:T6 will update recovery application ports/transactional handoff, delivery persistence/migrations/mapping, ID-only Messenger handler/retry-status adapter, API JSON integration, services/environment template and technical security/operations documentation. Runtime/wrapper changes may pass the existing shared dotenv to recovery consumers; no dependency, new service family or prerequisite in accepted block 002 is introduced. Assignment encryption remains 005:T2 and keeps its approved file-based policy unchanged.
+
+Verify real MySQL rollback across token/work/queue; restart/retry of the same usable token; absence of plaintext in database/queue/failure/log output; fresh nonces, identity binding, tampering/wrong/missing-key failure; terminal purging; stale suppression and stable Message-ID; local Mailpit capture/reset/login; existing retry progression and final PHPStan level 10. Use isolated synthetic keys only under approved runtime scope. No claim that T5's completed lifecycle proves delivery.
+
+Next: approve parent v0.5 and derived 003 v0.4, then authorize updating affected task conditions/index (primarily 003:T6 and its T9 regression evidence). Preserve task IDs/counts. Present finalized task-specific T6 execution plan after task-condition approval; implementation remains separately gated.
+
+### v0.5 approval boundary
+
+On 2026-11-18 user stated “Apruebo las revisiones y autorizo actualizar las tareas afectadas”, approving the displayed parent v0.5 / derived 003 v0.4 revisions and authorizing affected task-condition preparation. Earlier proposed/pending-approval statements above are historical. Task-list approval, finalized T6 execution planning and explicit implementation/runtime authorization remain separate. No key generation, dotenv mutation, installation or runtime authorized.

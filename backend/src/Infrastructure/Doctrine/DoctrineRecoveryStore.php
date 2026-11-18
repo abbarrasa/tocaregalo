@@ -14,13 +14,17 @@ final readonly class DoctrineRecoveryStore implements RecoveryStore
     {
     }
 
-    public function issue(int $userId, callable $issue): void
+    public function issue(int $userId, callable $issue, ?callable $handoff = null): void
     {
-        $this->connection->transactional(function (Connection $db) use ($userId, $issue): void {
+        $this->connection->transactional(function (Connection $db) use ($userId, $issue, $handoff): void {
             self::lockUser($db, $userId);
             $values = $issue();
             $db->executeStatement('UPDATE password_reset_requests SET superseded_at = ? WHERE user_id = ? AND superseded_at IS NULL', [self::format($values['issued']), $userId]);
+            $db->executeStatement("UPDATE recovery_deliveries SET state = 'cancelled', ciphertext = NULL, nonce = NULL, next_due_at = NULL WHERE user_id = ? AND state IN ('pending', 'retrying')", [$userId]);
             $db->insert('password_reset_requests', ['user_id' => $userId, 'token_hash' => $values['hash'], 'issued_at' => self::format($values['issued']), 'expires_at' => self::format($values['expires'])]);
+            if ($handoff !== null) {
+                $handoff((int) $db->lastInsertId());
+            }
         });
     }
 
@@ -40,6 +44,7 @@ final readonly class DoctrineRecoveryStore implements RecoveryStore
             $result = $consume(self::date($row['expires_at']) ?? throw new \LogicException('Missing expiry.'), self::date($row['consumed_at']), self::date($row['superseded_at']));
             $db->update('users', ['password_hash' => $result['hash']], ['id' => $userId]);
             $db->executeStatement('UPDATE password_reset_requests SET consumed_at = ? WHERE token_hash = ?', [self::format($result['at']), $digest]);
+            $db->executeStatement("UPDATE recovery_deliveries SET state = 'cancelled', ciphertext = NULL, nonce = NULL, next_due_at = NULL WHERE user_id = ? AND state IN ('pending', 'retrying')", [$userId]);
         });
     }
 

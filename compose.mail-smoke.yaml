@@ -10,6 +10,7 @@ x-php: &php
   stop_signal: SIGTERM
   environment:
     APP_ENV: test
+    RECOVERY_TEST_KEYS: "1"
     APP_DEBUG: '0'
     MAILER_DSN: smtp://tocaregalo-mailpit:1025
     MESSENGER_TRANSPORT_DSN: doctrine://default?queue_name=notifications&auto_setup=false

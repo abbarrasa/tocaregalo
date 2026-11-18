@@ -1,8 +1,9 @@
 # Plan 003 — Identity and account access
 
-Status: approved v0.3; task-list revision authorized, implementation remains separately gated
+Status: approved v0.4; affected task-condition preparation authorized, implementation separately gated
+Approval (v0.4): “Apruebo las revisiones y autorizo actualizar las tareas afectadas”, 2026-11-18. Approves displayed revision and authorizes task updates only.
 Approval (v0.3): “Apruebo estos planes y autorizo actualizar las listas”, 2026-11-17. Approves the displayed plan; authorizes task-list preparation only.
-Revision: v0.3
+Revision: v0.4
 Preparation authority: “Apruebo esta revisión y autorizo preparar el resto de revisiones afectadas”, 2026-11-17. No task-list or implementation approval inferred.
 Historical approval (v0.1): The user stated “Apruebo y autorizo iniciar la T1 de spec 002”, approving the derived-document/task package and authorizing only 002:T1 on 2026-11-16. No installation is authorized.
 Derived specification: [003 v0.3](./spec.md), synchronized from approved parent v1.2
@@ -98,3 +99,19 @@ Apply validation before password hashing and account/password persistence in all
 Verification: test ASCII and multibyte inputs at 4096 and 4097 bytes, five/six-character minimum boundaries, preserved whitespace, correct/incorrect hash verification and rejection before persistence. Future forms must use Spanish associated field errors; HTML character-count limits cannot replace backend UTF-8 byte validation. Run relevant regressions and final full-scope PHPStan level 10, zero errors without baseline. Existing 003:T1 45 tests/175 assertions do not yet cover this boundary; preserve their historical evidence and accepted block 002 Validation.
 
 No new task IDs, dependency installation, key operation, development DDL/account, commit or push is proposed. Revise affected task conditions only after plan approval. Existing unmodified plan sections retain their historical approved scope.
+
+## Recovery delivery secret revision — v0.4 proposed
+
+Preparation/decision authority: “Apruebo la propuesto y actualizar los planes afectados”, 2026-11-18, approves environment-based key direction and authorizes preparation only. Inherit the proposed [parent v0.5 recovery delivery policy](../001-toca-regalo/plan.md#recovery-delivery-secret-revision--v05-proposed) for FR-28/AC-28, recovery portions of FR-13/34 and NFR-7/10. Approved v0.3 remains the unchanged execution baseline until revision approval. No specification change or T5 reopening.
+
+T6 will retain hash-only reset validation and store only an authenticated Sodium-encrypted token envelope in its delivery work record. Messenger carries IDs; synchronous handler decrypts only after current-request checks, retries the same token and stable Message-ID, and purges the envelope at successful/terminal/stale transitions. Token issuance/supersession, work creation and transport enqueue are atomic; consumption/supersession also cancel affected pending delivery material. No independent retry loop, plaintext mail queue or token JSON response.
+
+RECOVERY_DELIVERY_KEY is a distinct Base64-encoded 32-byte key loaded from the ignored root dotenv, mode 0600. Templates have an empty placeholder. No separate key file/mount, APP_SECRET reuse, assignment-key dependency or global foundation startup prerequisite. Version-1 envelopes use the single active key; drain or explicitly cancel/purge pending work before an authorized replacement. This revision does not add a historical key ring or seamless rotation. Missing/invalid key and tampering fail closed before credential mutation/delivery, without exposing secrets. Backup/restoration and test policy are defined in the parent. No generation or dotenv modification is authorized now.
+
+Affected work: Application/Recovery and Port handoff; Infrastructure/Mail, Doctrine and mappings/new explicit migrations; API routes/controllers; services/Messenger/environment templates; verification harness and unit/integration/native HTTP fixtures; English operations/security documentation and Spanish README. T6 checks include actual transaction rollback, same-token retry/restart, local captured-link reset/login, stale/tamper/key failures, terminal purging, ID-only payloads and final full-scope PHPStan level 10. T9 consolidates this evidence without claiming assignment delivery or UI acceptance prematurely. No new task or package is proposed; existing counts stay 56 total, 15 complete/41 pending.
+
+Next: obtain approval of parent v0.5 / this v0.4 and authorization to revise affected task conditions/index. Then obtain task-condition approval, finalize/present T6 execution plan, and await its explicit implementation/runtime authorization. No T6 implementation, service startup, key generation or T7 under this document-preparation authority.
+
+### v0.4 approval boundary
+
+On 2026-11-18 user stated “Apruebo las revisiones y autorizo actualizar las tareas afectadas”, approving parent v0.5 and this v0.4 and authorizing affected task-condition preparation. Earlier proposed/pending-approval statements above are historical. Next obtain approval of revised tasks/index, then finalize/present T6 execution plan for its separate authorization. No implementation or key generation authorized.
