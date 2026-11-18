@@ -91,3 +91,35 @@ Date: 2026-11-18. [Execution plan v0.1](./t2-execution-plan.md) approved with �
 - Backend wrapper removed owned MySQL/container network. Independent Docker project-label queries returned no test resources; wrapper lock absent.
 
 T2 is complete for this approved scope. Counts: 56 tasks, 12 complete, 44 pending. Stop before T3; on continuation prepare/present its task-specific execution plan and wait for explicit approval/implementation authorization. No actual development bootstrap, authentication flow or block Validation is claimed.
+
+## T3 — Session authentication execution record
+
+Date: 2026-11-18. [Execution plan v0.1](./t3-execution-plan.md) approved with “Apruebo el plan y su implementación”, including bounded temporary-MySQL checks. Branch feature/003_T03_session-authentication created from current local dev, preserving plan/MEMORY edits. No installation or persistent development mutation.
+
+### Scope and implementation
+
+FR-15/22/35 and AC-15/35 backend portions: email/cleaned-phone JSON login, own actor projection, logout/session invalidation and server-sourced roles. NFR-1/4/5/10: existing Symfony/API/MySQL boundaries, Spanish JSON responses and fixed analysis gate. Vue dashboard navigation, account changes/recovery, group/assignment authorization and final slice Validation remain later work.
+
+Symfony SecurityBundle and lazy stateful firewall use infrastructure-only principal/provider/authenticator plus existing PasswordService verification. SessionUser serializes only stable ID; password/hash/profile are not persisted through that principal. Provider refreshes from DB per request; role changes or missing users invalidate prior access. Explicit DTOs expose only own approved fields/roles. The existing high-priority JSON exception subscriber now delegates security exceptions to Symfony and gives malformed input a stable invalid_input key instead of intercepting authentication failures as 500s.
+
+Native PDO sessions use a new explicit reversible migration matching the installed handler schema. No identity migration change or automatic schema creation. Cookie/CSRF/endpoints match the approved concrete plan. Real native HTTP fixture requests prove MySQL storage and independent request lifetimes; simulated HTTPS is supported only by the private test router, not by production request headers.
+
+### Findings and corrections during execution
+
+- Initial network-disabled functional test: one test/one assertion failed with 404 instead of 401, establishing absent /api/me authentication behavior.
+- Initial analysis: five errors (unnecessary nullable return types, unused integer helper and resource|false property assignment). Added covariant return types, real session-count assertion and explicit resource narrowing, without baseline/exclusions.
+- Initial backend snapshot: 63 tests/315 assertions, two errors/two failures. New HTTP fixture incorrectly entered Symfony Runtime through its router script, producing non-JSON responses; the router now points SCRIPT_FILENAME/SCRIPT_NAME to the actual production front controller. An anonymous BrowserKit test attempted native session saving after table teardown; native HTTP assertions now cover that behavior, and the no-service principal serialization test covers the isolated credential boundary.
+- Focused run: four tests/35 assertions, three errors because a built-in is_string callback was passed to a two-argument array_all call in the fixture. Replaced it with an explicit JSON-object shape check.
+- Next focused run: four tests/60 assertions, two failures in fixture assumptions: existing cookies are not repeated on every response, and Symfony CSRF tokens use different HTTP/HTTPS namespaces. Cookie flags are asserted on the response issuing the cookie; simulated HTTPS is retained consistently. Production protections were not weakened.
+- Focused session contracts subsequently passed four tests/82 assertions. Added explicit log leakage and role-change invalidation checks before the final full regression run.
+
+### T3 completion and final actual results
+
+- `scripts/check backend`: exit 0, **63 tests/374 assertions**, PHPUnit 12.5.44/PHP 8.5.12, no notices/warnings. Includes T1/T2 regressions, real PTY bootstrap and native HTTP session tests. Existing migration helpers apply/reverse the new sessions migration as well as identity schema; identity ORM/table parity remains intact.
+- Session tests prove normalized email and cleaned-phone login, generic wrong/unknown credentials, CSRF absence/mismatch/other-session rejection, malformed/unsupported JSON input and forged privilege fields, method restrictions, own-only DTO, ID rotation, native MySQL session rows, no credentials/hash in session/response/private fixture log, cookie flags, logout cookie expiry/replay refusal and subsequent login. Independent anonymous sessions cannot inherit authentication. Persisted role change rejects old authentication; re-login reads the new role; deleted account loses access.
+- Real loopback HTTP requests create fresh native request/kernel lifetimes; PDO session data is inspected in the guarded test MySQL instance. This is not BrowserKit file/mock session evidence. HTTPS cookie behavior is simulated only at the test router; no live production TLS or browser navigation claimed.
+- `scripts/check phpstan`: exit 0, fixed level 10 **zero errors**, all owned PHP including new tests/router/helper/migration, no baseline/scope exclusion.
+- Installed network-disabled PHP tool: **53 syntax checks**, successful `lint:container --env=test`, **12 YAML files** valid. Editor diagnostics clear for backend source/tests/migrations. `git diff --check` passed; manifests/locks unchanged, root dotenv ignored/untracked/mode 600.
+- Backend wrapper removed owned MySQL containers/network. Independent Docker project-label queries returned empty; wrapper lock absent. HTTP fixtures terminate their child processes and close private temporary logs in teardown. No installation, image pull/build, persistent development DDL/account/session, key, SMTP, commit or push.
+
+T3 is complete for the approved backend-support scope. Counts: 56 tasks, **13 complete/43 pending**. Authentication UI/dashboard navigation, account changes/recovery and downstream authorization remain pending. Stop before T4; continuation prepares/presents its execution plan for explicit approval/implementation authorization, not automatic execution. Spec 003 and parent remain short of implemented/accepted Validation.

@@ -14,3 +14,10 @@ services:
     App\Application\User\CreateSuperAdmin: ~
     App\Infrastructure\Doctrine\DoctrineSuperAdminStore: ~
     App\Application\Port\SuperAdminStore: '@App\Infrastructure\Doctrine\DoctrineSuperAdminStore'
+    App\Infrastructure\Security\SessionUserProvider: ~
+    App\Infrastructure\Security\SessionAuthenticator: ~
+    App\Api\SessionController:
+        tags: ['controller.service_arguments']
+    Symfony\Component\HttpFoundation\Session\Storage\Handler\PdoSessionHandler:
+        arguments:
+            $pdoOrDsn: '%env(resolve:DATABASE_URL)%'

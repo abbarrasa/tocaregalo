@@ -1,0 +1,13 @@
+security:
+    providers:
+        identity:
+            id: App\Infrastructure\Security\SessionUserProvider
+    firewalls:
+        main:
+            lazy: true
+            provider: identity
+            custom_authenticators:
+                - App\Infrastructure\Security\SessionAuthenticator
+            entry_point: App\Infrastructure\Security\SessionAuthenticator
+    access_control:
+        - { path: '^/api/(me|logout)$', roles: IS_AUTHENTICATED_FULLY }

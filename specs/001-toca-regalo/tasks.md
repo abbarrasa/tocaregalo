@@ -22,7 +22,7 @@ The original 54 tasks and their IDs are preserved. T1/T2/T3/T4/T5/T6/T7/T8/T9 ar
 | Block | Specification | Plan | Tasks | Count | Dependency |
 | --- | --- | --- | --- | --- | --- |
 | 002 — Development foundation | [spec v0.2](../002-development-foundation/spec.md) | [plan v0.3](../002-development-foundation/plan.md) | [tasks v0.3 proposed](../002-development-foundation/tasks.md) | 10 complete, 0 pending | None |
-| 003 — Identity and account access | [spec v0.3](../003-identity-access/spec.md) | [plan v0.3](../003-identity-access/plan.md) | [tasks v0.3 approved](../003-identity-access/tasks.md) | 2 complete, 7 pending | 002 |
+| 003 — Identity and account access | [spec v0.3](../003-identity-access/spec.md) | [plan v0.3](../003-identity-access/plan.md) | [tasks v0.3 approved](../003-identity-access/tasks.md) | 3 complete, 6 pending | 002 |
 | 004 — Groups and events | [spec v0.2](../004-groups-events/spec.md) | [plan v0.3](../004-groups-events/plan.md) | [tasks v0.2 approved](../004-groups-events/tasks.md) | 10 pending | 003 |
 | 005 — Confidential draw lifecycle | [spec v0.2](../005-confidential-draws/spec.md) | [plan v0.3](../005-confidential-draws/plan.md) | [tasks v0.3 proposed](../005-confidential-draws/tasks.md) | 10 pending | 004 |
 | 006 — Notifications and private dashboard | [spec v0.2](../006-notifications-dashboard/spec.md) | [plan v0.3](../006-notifications-dashboard/plan.md) | [tasks v0.2 approved](../006-notifications-dashboard/tasks.md) | 9 pending | 005 |
@@ -128,3 +128,7 @@ Approved revised lists and resumption: “Apruebo las listas y autorizo reanudar
 ## 003:T2 completion — latest boundary
 
 User approved T2 plan/implementation on 2026-11-18. [T2 evidence](../003-identity-access/verification.md#t2--interactive-super-admin-completion): backend 59/286, real guarded MySQL and PTY checks, fixed level-10 PHPStan zero errors, syntax/configuration checks pass; test runtime removed. Total 56 tasks: 12 complete, 44 pending. Stop before T3 and require its execution plan approval. No installation, real account/database changes, commit or push.
+
+## 003:T3 completion — latest boundary
+
+User approved T3 plan/implementation on 2026-11-18. [Evidence](../003-identity-access/verification.md#t3-completion-and-final-actual-results): backend 63/374, real native HTTP/MySQL session persistence, fixed level-10 analysis zero errors and syntax/configuration checks pass. Test runtime removed. Total 56 tasks: 13 complete, 43 pending. Stop before T4 and require its execution-plan approval. No installation, real development data/session changes, commit or push.
