@@ -145,3 +145,32 @@ Backend portions of FR-3/4/5/22/29 and AC-3/4/5/29 are covered here, supporting 
 Disposable guarded tmpfs MySQL only; native HTTP children and race barrier files are closed/removed by fixture teardown. No dependency/image installation/build/pull, schema change, persistent development DDL/account/session, secrets, SMTP, commit or push. Owned test containers/network and wrapper lock removed. Manifests/locks/migrations unchanged; root dotenv remains ignored/untracked with mode 600. Final diff whitespace check passed.
 
 T4 complete; project total 56 tasks, 14 complete and 42 pending. Stop before T5. On continuation prepare and present T5's execution plan and await explicit approval/implementation/runtime authorization. Specification 003 remains approved pending its complete implementation and separate Validation.
+
+## T5 completion
+
+Date: 2026-11-18. Branch: feature/003_T05_recovery-token-lifecycle. [Execution plan v0.1](./t5-execution-plan.md) approved with “Apruebo el plan y autorizo su implementación”, including bounded temporary-MySQL/native HTTP/concurrency checks. Started from local dev 7be25d5a21c7d4c77217b96520cada05ee675457 preserving the planning documents.
+
+### Implementation and traceability
+
+FR-28/AC-28 backend lifecycle: RecoveryTokens generates 32 random bytes encoded as URL-safe text; only SHA-256 digests enter persistence. IssuedRecovery is an in-memory sensitive handoff, with redacted debug output and refused PHP/JSON serialization. An injectable clock and configured positive-integer PASSWORD_RESET_TTL_SECONDS provide the 3600-second default and captured per-request expiry. Exactly at expiry, a token is invalid. A new issue supersedes earlier requests; successful reset consumes the current request once. Consumed/superseded/unknown/malformed/expired requests cannot reset a password.
+
+A new explicit reversible migration and external Doctrine mapping describe password_reset_requests, its unique digest, user FK with cascade and UTC microsecond timestamps. DBAL transactions lock the account before reset records, then recheck request state. Password write plus consumption and supersession plus issuance each commit atomically. No stale profile/role overwrite. FR-4/AC-4 uses the shared exact-whitespace six-character/4096-byte policy and Symfony hasher. NFR-10 passes below. Full emailed-link acceptance remains T6/T7; this task exposes no recovery API or UI and claims no delivery evidence.
+
+### Actual commands and results
+
+- Test first: scripts/check backend RecoveryClock failed because RecoveryLifetime did not exist (1 test, 0 assertions, one missing-class error). Runtime removed afterward.
+- Initial focused lifecycle run: 3 tests/81 assertions, one failure from comparing the entire ORM schema against independently managed session/migration/transport tables. Corrected the test to compare the recovery-owned table, retaining schema parity checks rather than modifying unrelated infrastructure.
+- Expanded focused run revealed a duplicate data-provider key, denied global trigger privileges and denied performance_schema access. Corrected unique provider labels; rollback tests now use temporary CHECK constraints on the guarded reset table, with no global privilege/configuration changes. Real concurrency fixtures use independent connected processes and barriers around the actual user-row lock, not mocked locking. A subsequent run overlapped a callback-result contract edit and reported array-to-string/password failures; fixed the adapter contract and discarded that intermediate run as final evidence.
+- Final scripts/check backend: exit 0, 88 tests/812 assertions, no warnings. Includes all T1–T4 regressions, default/configured TTL, expiry before/at/after boundary, supersession/reuse, malformed/unknown/deleted-account rejection, hash-only persistence and migration/mapping parity. Invalid five-character and oversized ASCII/multibyte passwords leave password/token unchanged; six-character and 4096-byte values hash and verify. Ordinary and SUPER ADMIN reset preserve profile/roles and permit real native HTTP login with the new password while rejecting the old one.
+- Four real independent-connection races pass: consume/consume, issue/old-consume, consume/issue and issue/issue. The first operation holds the account lock; the competing process remains unfinished until release. Outcomes prove one consumption success and one current request after competing issuance. This uses the disposable database; no claim of performance_schema lock instrumentation is made.
+- Real CHECK-constraint failures after the password write and after supersession prove transaction rollback; the previous token remains usable. Cascade deletion removes reset requests. Private HTTP output excludes raw tokens/password hashes; token-bearing issuance refuses serialization and redacts debug output. No raw token is supplied in process command arguments.
+- Final scripts/check phpstan: PHPStan 2.3.6, fixed level 10, full owned PHP/tests/migrations, exit 0 and zero errors, no baseline/exclusions. Earlier analysis flagged an always-true assertion; replaced it with explicit exception assertion accounting.
+- Installed PHP image, --network none and --pull never: all 80 PHP syntax checks (79 source/test/config/public/migration files plus bin/console), lint:container and 12 YAML files passed. Editor diagnostics on the affected paths reported no errors. git diff --check passed.
+
+### Limits and cleanup
+
+Only guarded tmpfs MySQL and synthetic accounts/reset records/native loopback HTTP were used. Test teardown reverses migrations and removes owned HTTP children, private outputs and race barrier files; wrapper removes its containers/network/lock. No dependency/image installation/build/pull, development database migration/account/session changes, secrets/key generation, SMTP/Mailpit/workers/browser startup, commit or push. Existing dependency manifests/locks and prior migrations are unchanged. Root dotenv remains ignored/untracked with mode 600.
+
+Recovery issuance is internal by trusted account ID; public identifier handling and durable mail integration remain T6, including transactional handoff without raw bearer persistence or another queue. No changed global session-invalidation policy, public registration or account verification. Separate slice Validation remains pending.
+
+T5 complete. Total 56 tasks: 15 complete, 41 pending. Stop before T6; continuation prepares/presents its execution plan and awaits explicit approval/implementation/runtime authorization.

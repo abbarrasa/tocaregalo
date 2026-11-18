@@ -22,7 +22,7 @@ The original 54 tasks and their IDs are preserved. T1/T2/T3/T4/T5/T6/T7/T8/T9 ar
 | Block | Specification | Plan | Tasks | Count | Dependency |
 | --- | --- | --- | --- | --- | --- |
 | 002 — Development foundation | [spec v0.2](../002-development-foundation/spec.md) | [plan v0.3](../002-development-foundation/plan.md) | [tasks v0.3 proposed](../002-development-foundation/tasks.md) | 10 complete, 0 pending | None |
-| 003 — Identity and account access | [spec v0.3](../003-identity-access/spec.md) | [plan v0.3](../003-identity-access/plan.md) | [tasks v0.3 approved](../003-identity-access/tasks.md) | 4 complete, 5 pending | 002 |
+| 003 — Identity and account access | [spec v0.3](../003-identity-access/spec.md) | [plan v0.3](../003-identity-access/plan.md) | [tasks v0.3 approved](../003-identity-access/tasks.md) | 5 complete, 4 pending | 002 |
 | 004 — Groups and events | [spec v0.2](../004-groups-events/spec.md) | [plan v0.3](../004-groups-events/plan.md) | [tasks v0.2 approved](../004-groups-events/tasks.md) | 10 pending | 003 |
 | 005 — Confidential draw lifecycle | [spec v0.2](../005-confidential-draws/spec.md) | [plan v0.3](../005-confidential-draws/plan.md) | [tasks v0.3 proposed](../005-confidential-draws/tasks.md) | 10 pending | 004 |
 | 006 — Notifications and private dashboard | [spec v0.2](../006-notifications-dashboard/spec.md) | [plan v0.3](../006-notifications-dashboard/plan.md) | [tasks v0.2 approved](../006-notifications-dashboard/tasks.md) | 9 pending | 005 |
@@ -136,3 +136,7 @@ User approved T3 plan/implementation on 2026-11-18. [Evidence](../003-identity-a
 ## 003:T4 completion — latest boundary
 
 User approved T4 plan/implementation on 2026-11-18. [Evidence](../003-identity-access/verification.md#t4-completion): backend 73/621, four real MySQL uniqueness races, native HTTP regressions, PHPStan level 10 zero errors and syntax/configuration checks pass. Temporary runtime removed. Total 56 tasks: 14 complete, 42 pending. Stop before T5 and require its execution-plan approval. No installation, real development data/session changes, commit or push; owner/group creation and identity UI remain pending.
+
+## 003:T5 completion — latest boundary
+
+User approved T5 plan/implementation on 2026-11-18. [Evidence](../003-identity-access/verification.md#t5-completion): backend 88/812 including expiry/supersession/one-use, real races/rollback and native login, PHPStan level 10 zero errors and syntax/configuration checks pass. Temporary runtime removed. Total 56 tasks: 15 complete, 41 pending. Stop before T6; public recovery HTTP/email integration and UI remain pending. No installation, development data/session changes, commit or push.
