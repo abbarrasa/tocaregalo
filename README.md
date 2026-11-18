@@ -193,6 +193,18 @@ Comprueba conexión MySQL de solo lectura, API JSON y navegación Chromium de es
 
 Las claves serán obligatorias en los consumidores de cifrado cuando se implemente 005:T2, con validación y rechazo de operaciones si faltan o son inválidas. Los valores de claves de [.env.example](./.env.example) quedan reservados para ese trabajo futuro.
 
-## Identidad: trabajo en 003:T1
+## Base de identidad
 
-La primera migración de identidad y sus mappings están en preparación. Las comprobaciones de esta tarea aplican y revierten esa migración únicamente en el MySQL temporal de pruebas; no se ha migrado la base de desarrollo ni creado cuentas reales. El comando de migraciones ya está registrado, pero no se ejecuta automáticamente al arrancar. El comando SUPERADMIN, la autenticación y las pantallas de cuenta corresponden a tareas posteriores.
+La primera migración de identidad y sus mappings están implementados y comprobados en el entorno temporal. Las comprobaciones de esta tarea aplican y revierten esa migración únicamente en el MySQL temporal de pruebas; no se ha migrado la base de desarrollo ni creado cuentas reales. El comando de migraciones ya está registrado, pero no se ejecuta automáticamente al arrancar. El comando SUPERADMIN se describe a continuación; la autenticación y las pantallas de cuenta siguen pendientes.
+
+## Crear una cuenta SUPER ADMIN
+
+El comando `app:user:create-super-admin` solicita correo, nombre, apellidos opcionales, teléfono con prefijo `+` y una contraseña confirmada. La contraseña no se muestra y admite un mínimo de seis caracteres y un máximo de 4096 bytes UTF-8. Si el correo o teléfono ya existe, la cuenta existente no se modifica.
+
+Con el servicio PHP iniciado y las migraciones aplicadas en el entorno elegido, se ejecuta manualmente en una terminal:
+
+```sh
+docker compose --env-file .env exec tocaregalo-php php bin/console app:user:create-super-admin
+```
+
+No admite ejecución con `--no-interaction`. El rol se crea si falta, junto con la cuenta en una única transacción. No verifica cuentas ni envía correos. Esta tarea solo usa cuentas sintéticas en una base temporal para sus comprobaciones; no ha aplicado migraciones ni creado una cuenta real en desarrollo. La autenticación y sus pantallas siguen pendientes.

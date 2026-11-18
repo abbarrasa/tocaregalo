@@ -62,3 +62,32 @@ Casing revision checks: `scripts/check backend` exit 0, **53 tests/191 assertion
 User approved [SQL alignment execution plan v0.1](./last-name-sql-execution-plan.md) with “Apruebo el plan y la implementación”. Updated initial users-table migration column and explicit external XML mapping to exactly lastName, superseding the earlier decision to retain SQL surnames. Current owned source/tests/config/migration search has no old surnames/lastname identifiers. Current development guidance records the naming; historical English prose, approval evidence and earlier execution records remain unchanged. Optionality, VARCHAR(255), normalization and other migration behavior unchanged. No persistent database upgrade is claimed or executed.
 
 SQL alignment results: `scripts/check backend` exit 0, **53 tests/191 assertions**, PHPUnit 12.5.44/PHP 8.5.12. Actual migration up/down/up and zero-ALTER identity ORM/schema comparisons pass with the lastName column; nullable persistence, normalized uniqueness and password-boundary regressions pass. `scripts/check phpstan` exit 0, fixed level 10 **zero errors** including migrations/tests, no baseline. Installed network-disabled PHP container: **36 syntax checks**, container lint success and **11 YAML files** valid. Editor diagnostics clear, `git diff --check` passes. Root dotenv ignored/untracked/mode 600; manifests/locks unchanged. Wrapper removed test containers/network; independent label queries empty and wrapper lock absent. No installations, real development DDL/accounts, keys, SMTP, commit or push. T1 remains complete; counts 11 complete/45 pending. No T2 authorization. Any independently migrated persistent schema requires separately authorized upgrade work; this task changes only initial schema definition and disposable verification.
+
+## T2 — Interactive SUPER ADMIN completion
+
+Date: 2026-11-18. [Execution plan v0.1](./t2-execution-plan.md) approved with “Apruebo el plan y su implementación”, including bounded temporary-MySQL and real PTY checks. Branch `feature/003_T02_super-admin-command` created from then-current local dev, preserving plan/MEMORY edits. Supports FR-3/4/22/30, AC-3/4/30 and NFR-5/10 within bootstrap scope; later login/session/API authorization remains unimplemented.
+
+### Implementation and traceability
+
+- Console `app:user:create-super-admin`: Spanish interactive prompts, required email/first name/phone, optional lastName, hidden confirmed password, no visible fallback and three attempts per question. Noninteractive execution returns INVALID before DB access; exhausted invalid input/EOF returns FAILURE. Exact password whitespace/UTF-8 policy and Symfony auto hashing are reused.
+- Application bootstrap service and narrow atomic store port keep console and persistence responsibilities separate. The Doctrine adapter checks normalized duplicates, reuses or creates ROLE_SUPER_ADMIN and persists role/user/join in one transaction/flush. Database uniqueness races and storage failures are sanitized; no existing account is updated or promoted. No verification field, role-management API or public registration added.
+- Current committed baseline maps PHP lastName to SQL last_name; this task preserves the existing migration/mapping rather than the older historical naming record.
+
+### Executed findings and corrections
+
+- Test-first network-disabled functional invocation: one expected missing-command error, zero assertions, because the app:user namespace was absent. This established missing implementation, not an environment failure.
+- Initial backend run: 57 tests/243 assertions, one error because the new fixture queried lastName as a SQL column. Inspected committed dev and corrected fixture queries to its last_name column; no schema change.
+- Initial PHPStan: 11 errors at mixed Console question/validator boundaries, nullable kernel and fixture list typing. Added runtime narrowing and mixed-input validators; two subsequent redundant array_values findings were removed without changing analysis scope.
+- Expanded backend run: 59 tests/281 assertions, one terminal timeout and one boundary failure caused by malformed synthetic email literals introduced while preparing fixtures. Corrected the fixture emails; application validation remained unchanged.
+- Focused SuperAdmin runs: six tests/95 assertions passed, with a notice on Linux PTY stream closure. A diagnostic run with --display-notices/--display-phpunit-notices identified stream_get_contents errno=5 on normal slave closure. The fixture now handles only that PTY EOF in a local restored error handler; other notices remain visible. No PHPUnit failure/notice configuration or PHPStan baseline was relaxed.
+
+### Final actual results
+
+- `scripts/check backend`: exit 0, **59 tests/286 assertions**, PHPUnit 12.5.44/PHP 8.5.12, no warnings/notices. Includes existing T1 regressions and six bootstrap cases: noninteractive refusal, missing/reused role and normalized duplicate no-mutation, invalid/EOF/confirmation exhaustion without account/role creation, forced real MySQL insert failure with role rollback, real PTY hidden-input/exact-space/optional-lastName persistence, and 4097-byte rejection/4096-byte multibyte acceptance.
+- Actual PTY fixture launches the real console in the guarded test environment, responds to prompts, asserts the password is absent from captured terminal output, and verifies its hash preserves spaces. No buffered-input substitute or real account is used.
+- `scripts/check phpstan`: exit 0, fixed level 10 **zero errors**, all owned PHP including new tests/helper and migrations, no baseline or scope exclusion.
+- Installed network-disabled PHP tool: **43 PHP syntax checks**, successful `lint:container --env=test`, **11 YAML files** valid. Editor diagnostics show no errors in source/tests.
+- `git diff --check` passes. Dependency manifests/locks and migrations unchanged. Root dotenv ignored/untracked/mode 600 and never overwritten/printed. No installations, image pulls/builds, keys, real SMTP, development DDL/accounts, commit or push.
+- Backend wrapper removed owned MySQL/container network. Independent Docker project-label queries returned no test resources; wrapper lock absent.
+
+T2 is complete for this approved scope. Counts: 56 tasks, 12 complete, 44 pending. Stop before T3; on continuation prepare/present its task-specific execution plan and wait for explicit approval/implementation authorization. No actual development bootstrap, authentication flow or block Validation is claimed.

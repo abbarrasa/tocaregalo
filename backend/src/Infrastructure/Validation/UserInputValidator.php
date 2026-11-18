@@ -18,11 +18,18 @@ final readonly class UserInputValidator
     public function validate(string $firstName, ?string $lastName, string $email, string $phone): UserProfile
     {
         $firstName = UserValues::required($firstName);
-        $email = UserValues::required($email);
-        if (count($this->validator->validate($email, new Email())) !== 0) {
-            throw new \InvalidArgumentException('El correo electrónico no es válido.');
-        }
+        $email = $this->email($email);
 
         return new UserProfile($firstName, $lastName, $email, $phone);
+    }
+
+    public function email(string $email): string
+    {
+        $email = UserValues::required($email);
+        if (count($this->validator->validate($email, new Email())) !== 0) {
+            throw new \InvalidArgumentException("El correo electrónico no es válido.");
+        }
+
+        return $email;
     }
 }
