@@ -48,12 +48,12 @@ No dependency installation, image pull/build requiring packages, or browser down
   - Done when: Own updates and password verification pass; unauthorized other-member edits fail; normal creation produces USER only; duplicate races produce field errors.
   - Evidence: not executed; no completion or passing result claimed.
 
-- [ ] **T5. Implement recovery token lifecycle.** FR-28, FR-4, NFR-10
+- [x] **T5. Implement recovery token lifecycle.** FR-28, FR-4, NFR-10
   - Depends on: T4.
   - Work: Generate random single-use tokens stored as hashes; configurable one-hour default, latest-link supersession, consumption and password reset.
   - Files/responsibility: backend/src/Application/; backend/src/Infrastructure/Doctrine/; backend/tests/Unit/; backend/tests/Integration/.
   - Done when: Controlled-clock tests prove expiry, supersession and reuse rejection; valid reset changes the password and permits login; raw tokens never appear in persistence/logs.
-  - Evidence: not executed; no completion or passing result claimed.
+  - Evidence: Complete under approved execution plan v0.1: backend 88 tests/812 assertions, four real races, rollback/native login, PHPStan level 10 zero errors and 80 syntax/container/12 YAML checks pass. See [T5 evidence](./verification.md#t5-completion). Stop before T6.
 
 - [ ] **T6. Deliver recovery email through durable mail infrastructure.** FR-13, FR-28, FR-34, NFR-7, NFR-10
   - Depends on: T5.
@@ -133,3 +133,7 @@ T3 complete; project total 13 complete/43 pending. No T4 authorization. On conti
 ## T4 completion — latest boundary
 
 T4 complete under approved execution plan v0.1 and “apruebo el plan y autorizo su implementación”, 2026-11-18. [Evidence](./verification.md#t4-completion): backend 73/621 including real unique races/native HTTP, PHPStan level 10 zero errors, 66 syntax/container/12 YAML checks pass. Internal ordinary creation only; owner/group and UI flows remain pending. Project total 14 complete/42 pending. Stop before T5; continuation prepares/presents its execution plan for explicit approval and implementation/runtime authorization.
+
+## T5 completion — latest boundary
+
+T5 complete under [execution plan v0.1](./t5-execution-plan.md), approved with “Apruebo el plan y autorizo su implementación”, 2026-11-18. [Evidence](./verification.md#t5-completion): backend 88/812 including controlled-clock boundaries, four real connection races, actual SQL rollback and native login; PHPStan level 10 zero errors, 80 syntax/container/12 YAML checks pass. Lifecycle only; HTTP/email integration remains T6 and UI T7. Project total 15 complete/41 pending. Stop before T6 and require its execution-plan approval and implementation/runtime authorization.

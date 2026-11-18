@@ -1,3 +1,6 @@
+parameters:
+    recovery_default_ttl: 3600
+
 services:
     _defaults:
         autowire: true
@@ -30,3 +33,11 @@ services:
     App\Application\Port\ProfileValidator: '@App\Infrastructure\Validation\UserInputValidator'
     App\Api\OwnAccountController:
         tags: ['controller.service_arguments']
+    App\Infrastructure\Time\SystemClock: ~
+    App\Application\Port\Clock: '@App\Infrastructure\Time\SystemClock'
+    App\Infrastructure\Doctrine\DoctrineRecoveryStore: ~
+    App\Application\Port\RecoveryStore: '@App\Infrastructure\Doctrine\DoctrineRecoveryStore'
+    App\Application\Recovery\RecoveryLifetime:
+        arguments:
+            $seconds: '%env(default:recovery_default_ttl:PASSWORD_RESET_TTL_SECONDS)%'
+    App\Application\Recovery\RecoveryTokens: ~
