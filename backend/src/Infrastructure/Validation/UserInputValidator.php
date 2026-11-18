@@ -9,7 +9,7 @@ use App\Domain\User\UserValues;
 use Symfony\Component\Validator\Constraints\Email;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
-final readonly class UserInputValidator
+final readonly class UserInputValidator implements \App\Application\Port\ProfileValidator
 {
     public function __construct(private ValidatorInterface $validator)
     {

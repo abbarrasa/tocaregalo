@@ -20,3 +20,8 @@ session_logout:
     path: /api/logout
     controller: App\Api\SessionController::logout
     methods: [POST]
+
+account_update:
+    path: /api/me
+    controller: App\Api\OwnAccountController::update
+    methods: [PATCH]

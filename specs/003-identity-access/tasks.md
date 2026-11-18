@@ -41,7 +41,7 @@ No dependency installation, image pull/build requiring packages, or browser down
   - Done when: Email and cleaned-phone login succeed, invalid credentials fail, logout invalidates old-session access, and forged role/owner input grants no privilege.
   - Evidence: Complete under approved T3 execution plan v0.1 on feature/003_T03_session-authentication: backend 63 tests/374 assertions with real HTTP/MySQL session persistence, CSRF, rotation/logout replay, persisted role/user refresh and T1/T2 regressions; PHPStan level 10 zero errors; 53 syntax/container/12 YAML checks pass. Owned resources removed. [Evidence](./verification.md#t3-completion-and-final-actual-results). Stop before T4.
 
-- [ ] **T4. Implement authenticated own-account changes and creation boundary.** FR-3, FR-4, FR-5, FR-22, FR-29, NFR-10
+- [x] **T4. Implement authenticated own-account changes and creation boundary.** FR-3, FR-4, FR-5, FR-22, FR-29, NFR-10
   - Depends on: T3.
   - Work: Implement ordinary-user creation service and own-data/password updates with actor policies and validation. Do not expose owner-dependent account creation before group authorization exists.
   - Files/responsibility: backend/src/Application/; backend/src/Api/; backend/tests/Functional/.
@@ -129,3 +129,7 @@ T2 complete on feature/003_T02_super-admin-command; counts 12 complete/44 pendin
 ## T3 completion — latest boundary
 
 T3 complete; project total 13 complete/43 pending. No T4 authorization. On continuation prepare/present its task-specific execution plan and await explicit approval. Historical stop-before-T3 entries are superseded.
+
+## T4 completion — latest boundary
+
+T4 complete under approved execution plan v0.1 and “apruebo el plan y autorizo su implementación”, 2026-11-18. [Evidence](./verification.md#t4-completion): backend 73/621 including real unique races/native HTTP, PHPStan level 10 zero errors, 66 syntax/container/12 YAML checks pass. Internal ordinary creation only; owner/group and UI flows remain pending. Project total 14 complete/42 pending. Stop before T5; continuation prepares/presents its execution plan for explicit approval and implementation/runtime authorization.
