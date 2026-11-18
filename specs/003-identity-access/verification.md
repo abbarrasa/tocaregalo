@@ -123,3 +123,25 @@ Native PDO sessions use a new explicit reversible migration matching the install
 - Backend wrapper removed owned MySQL containers/network. Independent Docker project-label queries returned empty; wrapper lock absent. HTTP fixtures terminate their child processes and close private temporary logs in teardown. No installation, image pull/build, persistent development DDL/account/session, key, SMTP, commit or push.
 
 T3 is complete for the approved backend-support scope. Counts: 56 tasks, **13 complete/43 pending**. Authentication UI/dashboard navigation, account changes/recovery and downstream authorization remain pending. Stop before T4; continuation prepares/presents its execution plan for explicit approval/implementation authorization, not automatic execution. Spec 003 and parent remain short of implemented/accepted Validation.
+
+## T4 completion
+
+Date: 2026-11-18. Branch: feature/003_T04_own-account-updates. [Execution plan v0.1](./t4-execution-plan.md) approved with “apruebo el plan y autorizo su implementación”, including bounded temporary MySQL/native HTTP/race checks.
+
+Implemented PATCH /api/me and internal fixed-ROLE_USER creation. Application input/uniqueness/update/create boundaries use shared normalization and password policy, with Symfony email validation and hashing adapters. Persistence transactionally locks and merges the current account, preserves roles/identity, and atomically provisions missing USER role/account/association. Only known database email/phone constraints translate to field errors; unexpected failures are sanitized. No public creation or other-account edit route was added.
+
+### Actual checks
+
+- Test first: scripts/check backend OwnAccount failed as expected with HTTP 405 instead of 200 (1 test/11 assertions), before implementing PATCH. Initial green run: 1 test/25 assertions.
+- Focused scripts/check backend Account: 9 tests/159 assertions passed before expanding HTTP coverage. Real independent-connection barrier tests exercise create/update × email/phone races after successful prechecks, verify field errors and unchanged losing accounts. These are actual MySQL unique violations, not stubbed exceptions.
+- Final scripts/check backend: exit 0, 73 tests/621 assertions. Includes T1–T3 regressions, native loopback HTTP/MySQL session tests, real PTY bootstrap, own ordinary/SUPER ADMIN edits, CSRF/anonymous/forged IDs/roles rejection, partial preservation, optional surname clearing, canonical duplicates, exact password whitespace and 4096/4097 UTF-8 byte boundaries, new/old login identifiers/passwords, missing-role creation and rollback, and sanitized storage-failure rollback. Direct application policy rejects another target before writes. Existing accounts remain unchanged on rejected ordinary creation.
+- scripts/check phpstan: exit 0, PHPStan 2.3.6 fixed level 10, full owned scope including tests/migrations, zero errors, no baseline/exclusions. Intermediate analysis caught a partially written test parse error, insufficient ManagerRegistry type narrowing, redundant nullsafe access and an unused helper; corrected before the final successful analysis. No gates weakened.
+- Installed PHP image with --network none/--pull never: 66 PHP syntax checks, lint:container and all 12 configuration YAML files passed. Editor diagnostics reported no errors in affected source/tests.
+
+### Coverage and limits
+
+Backend portions of FR-3/4/5/22/29 and AC-3/4/5/29 are covered here, supporting NFR-1/4/5/10. FR-5 owner/group authorization and UI acceptance remain in block 004 and later identity UI tasks; internal fixture creation does not prove that unfinished flow. No recovery, deletion, email, browser/UI or production TLS validation is claimed. The existing session refresh policy is retained; no additional global logout rule is inferred.
+
+Disposable guarded tmpfs MySQL only; native HTTP children and race barrier files are closed/removed by fixture teardown. No dependency/image installation/build/pull, schema change, persistent development DDL/account/session, secrets, SMTP, commit or push. Owned test containers/network and wrapper lock removed. Manifests/locks/migrations unchanged; root dotenv remains ignored/untracked with mode 600. Final diff whitespace check passed.
+
+T4 complete; project total 56 tasks, 14 complete and 42 pending. Stop before T5. On continuation prepare and present T5's execution plan and await explicit approval/implementation/runtime authorization. Specification 003 remains approved pending its complete implementation and separate Validation.

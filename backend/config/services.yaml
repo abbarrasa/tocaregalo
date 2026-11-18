@@ -21,3 +21,12 @@ services:
     Symfony\Component\HttpFoundation\Session\Storage\Handler\PdoSessionHandler:
         arguments:
             $pdoOrDsn: '%env(resolve:DATABASE_URL)%'
+    App\Application\User\AccountInput: ~
+    App\Application\User\AccountUniqueness: ~
+    App\Application\User\CreateOrdinaryUser: ~
+    App\Application\User\UpdateOwnAccount: ~
+    App\Infrastructure\Doctrine\DoctrineAccountStore: ~
+    App\Application\Port\AccountStore: '@App\Infrastructure\Doctrine\DoctrineAccountStore'
+    App\Application\Port\ProfileValidator: '@App\Infrastructure\Validation\UserInputValidator'
+    App\Api\OwnAccountController:
+        tags: ['controller.service_arguments']

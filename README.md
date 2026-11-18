@@ -216,3 +216,9 @@ La API permite iniciar sesión con correo o teléfono y contraseña. Primero sol
 `GET /api/me` devuelve únicamente los datos y roles de la cuenta autenticada. `POST /api/logout`, con el token CSRF de esa sesión, la cierra e invalida su acceso anterior. Las respuestas no se deben guardar en caché. La cookie es HttpOnly, usa SameSite=Lax y se marca Secure en HTTPS; el despliegue requiere HTTPS.
 
 Se necesita aplicar las migraciones del entorno elegido, incluida la tabla de sesiones, antes de usar estos endpoints. Las comprobaciones del proyecto solo migran y crean usuarios sintéticos en MySQL temporal; no han preparado la base de desarrollo. Las pantallas de login, recuperación y cuenta siguen pendientes.
+
+### Modificar la cuenta propia
+
+Con una sesión iniciada, `PATCH /api/me` acepta un objeto JSON no vacío con los campos que se quieren modificar: `firstName`, `lastName`, `email`, `phone` y `password`. Requiere el encabezado `X-CSRF-Token` de la sesión. Los campos omitidos conservan su valor; `lastName` admite `null` o un texto en blanco para eliminar los apellidos. La contraseña mantiene exactamente los caracteres introducidos y exige al menos seis caracteres y como máximo 4096 bytes UTF-8.
+
+La respuesta correcta devuelve los datos propios, sin contraseña. Los errores de validación devuelven estado 422 y mensajes en español asociados a cada campo mediante `fields`. El email y el teléfono deben ser únicos; una petición inválida no modifica la cuenta. Los cambios de email, teléfono o contraseña se aplican a los siguientes inicios de sesión. Esta operación no permite cambiar roles ni otras cuentas. La creación de miembros por el propietario y los formularios siguen pendientes de sus tareas correspondientes.
