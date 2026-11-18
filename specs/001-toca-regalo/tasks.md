@@ -1,6 +1,6 @@
 # Application Task Index — Toca Regalo
 
-Status: approved v0.5; 003:T7 complete; next execution-plan gate is 003:T8
+Status: approved v0.5; 003:T8 complete; next execution-plan gate is 003:T9
 Approval (v0.5): “Apruebo estas listas y autorizo finalizar y el presentar el plan”, 2026-11-18.
 Preparation authority (v0.5): “Apruebo las revisiones y autorizo actualizar las tareas afectadas”, 2026-11-18. No implementation authorization.
 Approval (v0.4): “Apruebo las listas y autorizo reanudar 003:T1”, 2026-11-17. Authorizes revised 003:T1 implementation and its approved bounded temporary-MySQL checks; no later task or installation.
@@ -24,7 +24,7 @@ The original 54 tasks and their IDs are preserved. T1/T2/T3/T4/T5/T6/T7/T8/T9 ar
 | Block | Specification | Plan | Tasks | Count | Dependency |
 | --- | --- | --- | --- | --- | --- |
 | 002 — Development foundation | [spec v0.2](../002-development-foundation/spec.md) | [plan v0.3](../002-development-foundation/plan.md) | [tasks v0.3 proposed](../002-development-foundation/tasks.md) | 10 complete, 0 pending | None |
-| 003 — Identity and account access | [spec v0.3](../003-identity-access/spec.md) | [plan v0.4](../003-identity-access/plan.md) | [tasks v0.4 approved](../003-identity-access/tasks.md) | 6 complete, 3 pending | 002 |
+| 003 — Identity and account access | [spec v0.3](../003-identity-access/spec.md) | [plan v0.4](../003-identity-access/plan.md) | [tasks v0.4 approved](../003-identity-access/tasks.md) | 8 complete, 1 pending | 002 |
 | 004 — Groups and events | [spec v0.2](../004-groups-events/spec.md) | [plan v0.3](../004-groups-events/plan.md) | [tasks v0.2 approved](../004-groups-events/tasks.md) | 10 pending | 003 |
 | 005 — Confidential draw lifecycle | [spec v0.2](../005-confidential-draws/spec.md) | [plan v0.3](../005-confidential-draws/plan.md) | [tasks v0.3 proposed](../005-confidential-draws/tasks.md) | 10 pending | 004 |
 | 006 — Notifications and private dashboard | [spec v0.2](../006-notifications-dashboard/spec.md) | [plan v0.3](../006-notifications-dashboard/plan.md) | [tasks v0.2 approved](../006-notifications-dashboard/tasks.md) | 9 pending | 005 |
@@ -160,3 +160,7 @@ User approved execution plan v0.3 and implementation on 2026-11-18. [Final evide
 ## 003:T7 complete — latest boundary
 
 Completed under approved execution plan v0.1 and “Apruebo el plan y la implementación”, 2026-11-18. [Evidence](../003-identity-access/verification.md#t7-completion): frontend 28 tests, identity E2E 24/four profiles, foundation E2E eight/four profiles, backend/mail 105/1084 and fixed PHPStan level 10 zero errors plus build/static/lint pass. Total 56 tasks: 17 complete/39 pending. Identity login/recovery/reset and dashboard shell are implemented; own-account UI, full product dashboard and Validation remain pending. Stop before 003:T8; continuation prepares/presents its task execution plan for explicit approval. No real provisioning, installation, commit or push authorized by completion.
+
+## 003:T8 completion — latest boundary
+
+Completed under execution plan v0.1 approved with “Apruebo el plan y su implementación”, 2026-11-18. [Evidence](../003-identity-access/verification.md#t8-completion): frontend 39 tests, real identity E2E 40 cases/four profiles, backend 91/829, build/static/changed PHP syntax and fixed-level-10 analysis zero errors pass. Editor diagnostics unavailable, no passing claim. Owned resources/private material removed; no installation, real provisioning, commit or push. Total 56: 18 complete/38 pending; block 003 eight complete/one pending. Stop before 003:T9 and require its task-specific plan approval and execution authorization; formal Validation remains separate.

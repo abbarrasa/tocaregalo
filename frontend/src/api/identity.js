@@ -6,17 +6,18 @@ export function passwordError(value) {
   return ''
 }
 
-async function mutate(path, values, errorFields = []) {
+async function mutate(path, values, errorFields = [], method = 'POST') {
   const result = await requestJson('/api/csrf')
   if (typeof result?.csrfToken !== 'string') throw new ApiError('La sesión no es válida. Vuelve a intentarlo.')
   return requestJson(path, {
-    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': result.csrfToken },
+    method, headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': result.csrfToken },
     body: JSON.stringify(values), errorFields,
   })
 }
 
 export const identity = {
   me: () => requestJson('/api/me'),
+  update: values => mutate('/api/me', values, ['firstName', 'lastName', 'email', 'phone', 'password', '_form'], 'PATCH'),
   login: (identifier, password) => mutate('/api/login', { identifier, password }),
   logout: () => mutate('/api/logout', {}),
   recover: (identifier) => mutate('/api/password-recovery', { identifier }, ['identifier', '_form']),

@@ -195,7 +195,7 @@ Las claves serán obligatorias en los consumidores de cifrado cuando se implemen
 
 ## Base de identidad
 
-La primera migración de identidad y sus mappings están implementados y comprobados en el entorno temporal. Las comprobaciones de esta tarea aplican y revierten esa migración únicamente en el MySQL temporal de pruebas; no se ha migrado la base de desarrollo ni creado cuentas reales. El comando de migraciones ya está registrado, pero no se ejecuta automáticamente al arrancar. El comando SUPERADMIN se describe a continuación; la autenticación y las pantallas de cuenta siguen pendientes.
+La primera migración de identidad y sus mappings están implementados y comprobados en el entorno temporal. Las comprobaciones de esta tarea aplican y revierten esa migración únicamente en el MySQL temporal de pruebas; no se ha migrado la base de desarrollo ni creado cuentas reales. El comando de migraciones ya está registrado, pero no se ejecuta automáticamente al arrancar. El comando SUPERADMIN se describe a continuación; las pantallas de acceso y cuenta se describen más adelante.
 
 ## Crear una cuenta SUPER ADMIN
 
@@ -207,7 +207,7 @@ Con el servicio PHP iniciado y las migraciones aplicadas en el entorno elegido, 
 docker compose --env-file .env exec tocaregalo-php php bin/console app:user:create-super-admin
 ```
 
-No admite ejecución con `--no-interaction`. El rol se crea si falta, junto con la cuenta en una única transacción. No verifica cuentas ni envía correos. Esta tarea solo usa cuentas sintéticas en una base temporal para sus comprobaciones; no ha aplicado migraciones ni creado una cuenta real en desarrollo. Las pantallas de acceso y recuperación se describen más adelante; editar la cuenta sigue pendiente.
+No admite ejecución con `--no-interaction`. El rol se crea si falta, junto con la cuenta en una única transacción. No verifica cuentas ni envía correos. Esta tarea solo usa cuentas sintéticas en una base temporal para sus comprobaciones; no ha aplicado migraciones ni creado una cuenta real en desarrollo. Las pantallas de acceso y recuperación se describen más adelante; la edición de cuenta se describe más adelante.
 
 ## API de sesión
 
@@ -215,13 +215,13 @@ La API permite iniciar sesión con correo o teléfono y contraseña. Primero sol
 
 `GET /api/me` devuelve únicamente los datos y roles de la cuenta autenticada. `POST /api/logout`, con el token CSRF de esa sesión, la cierra e invalida su acceso anterior. Las respuestas no se deben guardar en caché. La cookie es HttpOnly, usa SameSite=Lax y se marca Secure en HTTPS; el despliegue requiere HTTPS.
 
-Se necesita aplicar las migraciones del entorno elegido, incluida la tabla de sesiones, antes de usar estos endpoints. Las comprobaciones del proyecto solo migran y crean usuarios sintéticos en MySQL temporal; no han preparado la base de desarrollo. Las pantallas de login y recuperación están disponibles; editar la cuenta sigue pendiente.
+Se necesita aplicar las migraciones del entorno elegido, incluida la tabla de sesiones, antes de usar estos endpoints. Las comprobaciones del proyecto solo migran y crean usuarios sintéticos en MySQL temporal; no han preparado la base de desarrollo. Las pantallas de login y recuperación están disponibles; la edición de cuenta se describe más adelante.
 
 ### Modificar la cuenta propia
 
 Con una sesión iniciada, `PATCH /api/me` acepta un objeto JSON no vacío con los campos que se quieren modificar: `firstName`, `lastName`, `email`, `phone` y `password`. Requiere el encabezado `X-CSRF-Token` de la sesión. Los campos omitidos conservan su valor; `lastName` admite `null` o un texto en blanco para eliminar los apellidos. La contraseña mantiene exactamente los caracteres introducidos y exige al menos seis caracteres y como máximo 4096 bytes UTF-8.
 
-La respuesta correcta devuelve los datos propios, sin contraseña. Los errores de validación devuelven estado 422 y mensajes en español asociados a cada campo mediante `fields`. El email y el teléfono deben ser únicos; una petición inválida no modifica la cuenta. Los cambios de email, teléfono o contraseña se aplican a los siguientes inicios de sesión. Esta operación no permite cambiar roles ni otras cuentas. La creación de miembros por el propietario y los formularios siguen pendientes de sus tareas correspondientes.
+La respuesta correcta devuelve los datos propios, sin contraseña. Los errores de validación devuelven estado 422 y mensajes en español asociados a cada campo mediante `fields`. El email y el teléfono deben ser únicos; una petición inválida no modifica la cuenta. Los cambios de email, teléfono o contraseña se aplican a los siguientes inicios de sesión. Esta operación no permite cambiar roles ni otras cuentas. La creación de miembros por el propietario sigue pendiente de su tarea correspondiente.
 
 ### Recuperación de contraseña: estado del desarrollo
 
@@ -237,4 +237,10 @@ El correo utiliza un enlace con el token en el fragmento de la URL. Las pantalla
 
 La aplicación muestra el inicio de sesión con email o teléfono internacional y contraseña. El enlace «¿Has olvidado tu contraseña?» solicita un correo de recuperación; el mensaje es el mismo exista o no la cuenta. El enlace del correo permite establecer una contraseña nueva una sola vez, sin iniciar sesión automáticamente. Los espacios cuentan como parte de la contraseña. El teléfono requiere `+` y prefijo de país; el formulario elimina los signos y espacios de formato.
 
-Tras acceder se muestra la identidad propia y la opción de cerrar sesión. El panel de grupos y eventos y el formulario de edición de cuenta quedan pendientes. Para probar los flujos completos con cuentas sintéticas y Mailpit, ejecuta `scripts/check identity`; admite un perfil como `chromium-desktop`. Usa MySQL temporal y una clave desechable y retira sus recursos al terminar. No prepara la base ni la clave real de desarrollo.
+Tras acceder se muestra la identidad propia y la opción de cerrar sesión. El panel de grupos y eventos queda pendiente; la edición de cuenta se describe a continuación. Para probar los flujos completos con cuentas sintéticas y Mailpit, ejecuta `scripts/check identity`; admite un perfil como `chromium-desktop`. Usa MySQL temporal y una clave desechable y retira sus recursos al terminar. No prepara la base ni la clave real de desarrollo.
+
+### Mi cuenta
+
+Desde el panel, «Mi cuenta» permite editar nombre, apellidos opcionales, email y teléfono. «Guardar datos» envía únicamente los campos modificados; dejar los apellidos vacíos los elimina. El email y el teléfono deben ser únicos. Los errores aparecen junto a cada campo y una petición inválida no guarda los cambios.
+
+La contraseña se cambia por separado con «Cambiar contraseña»: admite al menos seis caracteres y hasta 4096 bytes UTF-8, conservando los espacios exactamente. Guardar los datos personales no cambia la contraseña. Tras cambiarla se mantiene la sesión actual y los próximos accesos requieren la contraseña nueva. La pantalla no permite cambiar roles, editar otras cuentas ni eliminar la cuenta. Los borradores no se conservan al salir; si caduca la sesión, vuelve a iniciar sesión y realiza de nuevo el cambio.

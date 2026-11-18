@@ -32,8 +32,23 @@ export function createSession(api = identity) {
     ++generation
     state.actor = null; state.status = 'anonymous'; state.error = ''; state.notice = ''
   }
+  async function update(values) {
+    const current = ++generation
+    const id = state.actor?.id
+    try {
+      const result = actor(await api.update(values))
+      if (current !== generation) return null
+      if (result.id !== id) throw new Error('La respuesta del servidor no es válida.')
+      state.actor = result; state.status = 'authenticated'; state.error = ''
+      return result
+    } catch (error) {
+      if (current !== generation) return null
+      if (error.status === 401) clear()
+      throw error
+    }
+  }
   function clear() { ++generation; state.actor = null; state.status = 'anonymous'; state.error = '' }
   function notice(value) { state.notice = value }
-  return { state: readonly(state), restore, login, logout, clear, notice }
+  return { state: readonly(state), restore, login, logout, update, clear, notice }
 }
 export const session = createSession()

@@ -57,6 +57,14 @@ try {
         if ($directory !== '/runtime/identity-control' || !is_dir($directory)) {
             throw new \LogicException('Unexpected browser control directory.');
         }
+        $fixtures = [];
+        foreach ([['Ana', 'ana@example.test', '+34600123456'], ['Super', 'super@example.test', '+34600123457']] as [$name, $email, $phone]) {
+            $id = $connection->fetchOne('SELECT id FROM users WHERE email_comparison = ?', [$email]);
+            if (!is_int($id) && !is_string($id)) {
+                throw new \LogicException('Missing isolated browser account.');
+            }
+            $fixtures[] = [(int) $id, $name, $email, $phone];
+        }
         $deadline = time() + 1800;
         while (time() < $deadline) {
             foreach (glob($directory.'/*.request.json') ?: [] as $file) {
@@ -69,12 +77,16 @@ try {
                     }
                     if ($data['action'] === 'reset') {
                         $hash = (new SymfonyPasswordService())->hash(' initial password ');
-                        $connection->transactional(static function (\Doctrine\DBAL\Connection $db) use ($hash): void {
+                        $connection->transactional(static function (\Doctrine\DBAL\Connection $db) use ($hash, $fixtures): void {
                             $db->fetchAllAssociative('SELECT id FROM users ORDER BY id FOR UPDATE');
                             $db->executeStatement('DELETE FROM messenger_messages');
                             $db->executeStatement('DELETE FROM password_reset_requests');
                             $db->executeStatement('DELETE FROM sessions');
                             $db->executeStatement('UPDATE users SET password_hash = ?', [$hash]);
+                            // Use stable seeded IDs even when a test changes login identifiers.
+                            foreach ($fixtures as [$id, $name, $email, $phone]) {
+                                $db->executeStatement('UPDATE users SET first_name = ?, last_name = NULL, email = ?, email_comparison = ?, phone = ? WHERE id = ?', [$name, $email, $email, $phone, $id]);
+                            }
                         });
                     } else {
                         $connection->transactional(static function (\Doctrine\DBAL\Connection $db): void {

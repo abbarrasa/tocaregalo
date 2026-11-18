@@ -6,6 +6,7 @@ import RecoveryView from '../views/RecoveryView.vue'
 import ResetPasswordView from '../views/ResetPasswordView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
+import AccountView from '../views/AccountView.vue'
 
 export function installSessionGuard(router, currentSession = session) {
   router.beforeEach(async (to) => {
@@ -21,6 +22,7 @@ export const routes = [
   { path: '/password-recovery', name: 'recovery', component: RecoveryView },
   { path: '/password-reset', name: 'reset', component: ResetPasswordView },
   { path: '/dashboard', name: 'dashboard', component: DashboardView, meta: { requiresSession: true } },
+  { path: '/account', name: 'account', component: AccountView, meta: { requiresSession: true } },
   { path: '/:pathMatch(.*)*', component: NotFoundView },
 ]
 const router = createRouter({ history: createWebHistory(), routes })

@@ -1,5 +1,5 @@
 import { nextTick, ref } from 'vue'
-export function useForm() {
+export function useForm(scope = 'main') {
   const busy = ref(false)
   const error = ref('')
   const fields = ref({})
@@ -7,7 +7,8 @@ export function useForm() {
     fields.value = problem.fields ?? {}
     error.value = fallback ?? problem.message ?? 'No se pudo completar la solicitud.'
     await nextTick()
-    const invalid = document.querySelector('main [aria-invalid="true"]') ?? document.querySelector('main [role="alert"]')
+    const root = document.querySelector(scope)
+    const invalid = root?.querySelector('[aria-invalid="true"]') ?? root?.querySelector('[role="alert"]')
     if (invalid) {
       if (invalid.getAttribute('role') === 'alert') invalid.setAttribute('tabindex', '-1')
       invalid.focus()
