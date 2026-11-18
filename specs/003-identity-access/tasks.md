@@ -1,6 +1,6 @@
 # Tasks 003 — Identity and account access
 
-Status: approved v0.4; T6 execution-plan preparation authorized, implementation separately gated
+Status: approved v0.4; T1–T7 complete; T8 execution plan and implementation separately gated
 Approval (v0.4): “Apruebo estas listas y autorizo finalizar y el presentar el plan”, 2026-11-18.
 Preparation authority (v0.4): “Apruebo las revisiones y autorizo actualizar las tareas afectadas”, 2026-11-18. No implementation authorization.
 Approval (v0.3): “Apruebo las listas y autorizo reanudar 003:T1”, 2026-11-17. Authorizes revised 003:T1 implementation and its approved bounded temporary-MySQL checks; no later task or installation.
@@ -64,12 +64,12 @@ No dependency installation, image pull/build requiring packages, or browser down
   - Done when: Mailpit captures a usable link and native reset/login succeeds; retry/restart preserves the same token; real MySQL failures roll back token/work/queue together; superseded, consumed, expired and deleted-account work cannot send after its authoritative stale check. Queue/failure/log/status output contains no raw token/key/link. Fresh nonces, request/delivery identity binding, tampering/wrong/missing-key failure and successful/terminal/stale envelope purging are verified. Existing credential/profile/role policy remains unchanged; no second queue or scheduler, no exactly-once SMTP claim. Document single-active-key backup and drain/cancel/purge-before-replacement procedure, without generating real keys under planning approval. Full relevant regressions and fixed PHPStan level 10 pass. Exact JSON/URL contracts and bounded runtime operations require finalized T6 execution-plan approval.
   - Evidence: Complete under approved execution plan v0.3: final mail suite 105 tests/1084 assertions, PHPStan level 10 zero errors, 96 syntax/container/12 YAML and static checks pass. See [T6 evidence](./verification.md#t6-completion). Stop before T7.
 
-- [ ] **T7. Implement login and recovery/reset screens.** FR-3, FR-4, FR-15, FR-28, FR-35, NFR-2, NFR-5, NFR-6, NFR-8, NFR-10
+- [x] **T7. Implement login and recovery/reset screens.** FR-3, FR-4, FR-15, FR-28, FR-35, NFR-2, NFR-5, NFR-6, NFR-8, NFR-10
   - Depends on: T6.
   - Work: Create Vue forms, phone wrapper with restricted input, session route guards and logout; successful login enters the dashboard route shell.
   - Files/responsibility: frontend/src/views/; frontend/src/plugins/phone.js; frontend/src/composables/; frontend/tests/.
   - Done when: Typing/paste, loading/errors and keyboard component tests pass; browser login/logout/reset succeeds on desktop/mobile; no registration/verification link.
-  - Evidence: not executed; no completion or passing result claimed.
+  - Evidence: Complete under approved execution plan v0.1: frontend 28 tests, real identity E2E 24 tests/four profiles, foundation E2E 8 tests, full backend/mail 105 tests/1084 assertions, build/static/97 PHP syntax/container/12 YAML and PHPStan level 10 zero errors pass. See [T7 evidence](./verification.md#t7-completion). Stop before T8.
 
 - [ ] **T8. Implement responsive own-account editing.** FR-3, FR-4, FR-29, NFR-5, NFR-6, NFR-8, NFR-10
   - Depends on: T7.
@@ -155,3 +155,7 @@ User stated “Apruebo estas listas y autorizo finalizar y el presentar el plan�
 ## T6 completion — latest boundary
 
 T6 complete under execution plan v0.3 approved with “apruebo el plan y su implementación”, 2026-11-18. [Evidence](./verification.md#t6-completion): final mail suite 105/1084 including current backend, real worker/SMTP races, durable same-token retry and crash-window count recovery, SQL rollback/key/privacy/schema checks; PHPStan level 10 zero errors, 96 syntax/container/12 YAML and static checks pass. Six local tasks complete, three pending. Project total 16 complete/40 pending. Stop before T7; prepare/present its execution plan on continuation and await explicit approval/implementation/runtime authorization. No real key provisioned or main development recovery readiness claim; no installation, external mail, commit or push.
+
+## T7 completion — latest boundary
+
+User approved [execution plan v0.1](./t7-execution-plan.md) and implementation with “Apruebo el plan y la implementación”, 2026-11-18. [Evidence](./verification.md#t7-completion): Vue 28 tests, real identity browser 24 cases/four profiles, foundation browser eight cases/four profiles, full backend/mail 105/1084, build/static/97 syntax/container/12 YAML/editor and PHPStan fixed level 10 zero errors pass. Local phone fallback preserves the approved phone policy; no package added. Temporary graph/private test env material removed; real development provisioning remains pending. Seven local tasks complete/two pending; project 17 complete/39 pending. Stop before T8 and require its execution-plan approval and implementation/runtime authorization. No automatic slice Validation, installation, commit or push.

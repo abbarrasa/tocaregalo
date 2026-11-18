@@ -13,6 +13,11 @@ cat > "$work/bin/docker" <<'MOCK'
 #!/bin/sh
 printf '<%s>' "$@" >> "$RECORDER"
 printf '\n' >> "$RECORDER"
+if [ -n "${IDENTITY_SECRET_FILE:-}" ]; then
+  printf 'IDENTITY_TEMP=%s\n' "${IDENTITY_SECRET_FILE%/*}" >> "$RECORDER"
+  [ "$(stat -c %a "${IDENTITY_SECRET_FILE%/*}")" = 700 ] || exit 98
+  [ "$(stat -c %a "$IDENTITY_SECRET_FILE")" = 600 ] || exit 98
+fi
 case "$*" in
   'ps '*| 'network ls '*| 'volume ls '*)
     [ "${INSPECT_EXIT:-0}" = 0 ] || exit "$INSPECT_EXIT"
@@ -72,6 +77,20 @@ grep -F '<down><--remove-orphans>' "$RECORDER" >/dev/null
 "$root/scripts/check" e2e chromium-desktop 'sample test.js'
 grep -F '<--project=chromium-desktop><sample test.js>' "$RECORDER" >/dev/null
 printf 'Mail failure cleanup and browser routing checks passed.\n'
+: > "$RECORDER"
+if UP_EXIT=19 "$root/scripts/check" identity 2>/dev/null; then exit 1; else [ "$?" = 19 ]; fi
+grep -F 'compose.identity-verification.yaml>' "$RECORDER" >/dev/null
+grep -F '<down><--remove-orphans>' "$RECORDER" >/dev/null
+owned=$(sed -n 's/^IDENTITY_TEMP=//p' "$RECORDER" | head -1)
+[ -n "$owned" ] && [ ! -e "$owned" ]
+[ ! -d "$root/backend/var/wrapper-test.lock" ]
+printf 'Identity failure cleanup routing passed.\n'
+: > "$RECORDER"
+if SIGNAL_UP=1 "$root/scripts/check" identity 2>/dev/null; then exit 1; else [ "$?" = 143 ]; fi
+owned=$(sed -n 's/^IDENTITY_TEMP=//p' "$RECORDER" | head -1)
+[ -n "$owned" ] && [ ! -e "$owned" ]
+[ ! -d "$root/backend/var/wrapper-test.lock" ]
+printf 'Identity SIGTERM private-material cleanup passed.\n'
 : > "$RECORDER"
 "$root/scripts/dev" up
 grep -F '<up><-d><--no-build><--pull><never>' "$RECORDER" >/dev/null

@@ -1,6 +1,7 @@
 const { test, expect } = require('../../frontend/node_modules/@playwright/test')
 
 test('Spanish shell, responsive Bootstrap and keyboard navigation', async ({ page }) => {
+  test.setTimeout(60000)
   await page.goto('/')
   await expect(page).toHaveTitle('Toca Regalo')
   await expect(page.locator('html')).toHaveAttribute('lang', 'es')
@@ -13,7 +14,15 @@ test('Spanish shell, responsive Bootstrap and keyboard navigation', async ({ pag
   await page.keyboard.press('Tab')
   await expect(page.getByRole('link', { name: 'Volver al inicio' })).toBeFocused()
   await page.keyboard.press('Enter')
-  await expect(page.getByText('Estamos preparando la aplicación.')).toBeVisible()
+  if (process.env.IDENTITY_E2E === '1') {
+    await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible()
+  } else {
+    // The foundation graph deliberately has no identity/session schema.
+    await expect(page.getByRole('heading', { name: 'Tu panel' })).toBeVisible({ timeout: 30000 })
+    await expect(page.getByRole('alert')).toContainText('No se pudo comprobar la sesión')
+    await expect(page.getByRole('button', { name: 'Volver a comprobar la sesión' })).toBeVisible()
+    await expect(page.getByText('Hola,')).toHaveCount(0)
+  }
 })
 
 test('same-origin API returns JSON and private paths stay protected', async ({ page }) => {

@@ -1,6 +1,6 @@
 # Application Task Index — Toca Regalo
 
-Status: approved v0.5; T6 execution-plan preparation authorized, implementation separately gated
+Status: approved v0.5; 003:T7 complete; next execution-plan gate is 003:T8
 Approval (v0.5): “Apruebo estas listas y autorizo finalizar y el presentar el plan”, 2026-11-18.
 Preparation authority (v0.5): “Apruebo las revisiones y autorizo actualizar las tareas afectadas”, 2026-11-18. No implementation authorization.
 Approval (v0.4): “Apruebo las listas y autorizo reanudar 003:T1”, 2026-11-17. Authorizes revised 003:T1 implementation and its approved bounded temporary-MySQL checks; no later task or installation.
@@ -156,3 +156,7 @@ User stated “Apruebo estas listas y autorizo finalizar y el presentar el plan�
 ## 003:T6 completion — latest boundary
 
 User approved execution plan v0.3 and implementation on 2026-11-18. [Final evidence](../003-identity-access/verification.md#t6-completion): mail suite 105 tests/1084 assertions including current backend, captured usable links, real worker/SMTP/SQL failure and crash recovery; PHPStan level 10 zero errors, 96 syntax/container/12 YAML and static checks pass. Owned resources removed; no real key provisioned, development data mutation, installation, external SMTP, commit or push. Total 56: 16 complete/40 pending. Stop before 003:T7 and require its execution-plan approval. UI, assignment delivery and separate final slice Validation remain pending.
+
+## 003:T7 complete — latest boundary
+
+Completed under approved execution plan v0.1 and “Apruebo el plan y la implementación”, 2026-11-18. [Evidence](../003-identity-access/verification.md#t7-completion): frontend 28 tests, identity E2E 24/four profiles, foundation E2E eight/four profiles, backend/mail 105/1084 and fixed PHPStan level 10 zero errors plus build/static/lint pass. Total 56 tasks: 17 complete/39 pending. Identity login/recovery/reset and dashboard shell are implemented; own-account UI, full product dashboard and Validation remain pending. Stop before 003:T8; continuation prepares/presents its task execution plan for explicit approval. No real provisioning, installation, commit or push authorized by completion.

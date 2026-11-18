@@ -5,10 +5,10 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 selection=${1:-all}
 [ "$#" -eq 0 ] || shift
 case "$selection" in
-    --help|-h) printf 'Uso: scripts/check [static|phpstan|backend [filtro]|mail [filtro]|frontend [archivo]|build|e2e [proyecto [archivo]]|all]\nNo instala dependencias. Las pruebas con servicios usan un entorno temporal exclusivo.\n'; exit 0 ;;
+    --help|-h) printf 'Uso: scripts/check [static|phpstan|backend [filtro]|mail [filtro]|frontend [archivo]|build|e2e [proyecto [archivo]]|identity [proyecto [archivo]]|all]\nNo instala dependencias. Las pruebas con servicios usan un entorno temporal exclusivo.\n'; exit 0 ;;
     static|phpstan|build|all) [ "$#" -eq 0 ] || fail 'Esta selección no admite argumentos.' ;;
     backend|mail|frontend) [ "$#" -le 1 ] || fail 'Se admite un único filtro o archivo.' ;;
-    e2e) [ "$#" -le 2 ] || fail 'Se admite proyecto y archivo.'
+    e2e|identity) [ "$#" -le 2 ] || fail 'Se admite proyecto y archivo.'
         case "${1:-chromium-desktop}" in chromium-desktop|chromium-mobile|firefox-desktop|webkit-desktop) ;; *) fail 'Proyecto de navegador desconocido.' ;; esac ;;
     *) fail 'Comprobación desconocida; consulta --help.' ;;
 esac
@@ -36,8 +36,9 @@ case "$selection" in
     phpstan) analyse ;;
     frontend) node_run npm test -- "$@" ;;
     build) node_run npm run build ;;
-    backend|mail|e2e)
+    backend|mail|e2e|identity)
         [ "$selection" != mail ] || MODEL=compose.mail-smoke.yaml
+        [ "$selection" != identity ] || EXTRA_MODEL=compose.identity-verification.yaml
         claim_test_stack
         case "$selection" in
             backend|mail)
@@ -50,8 +51,16 @@ case "$selection" in
                 if [ "$selection" = backend ]; then set -- --exclude-group mail "$@"; fi
                 php_run vendor/bin/phpunit "$@"
                 ;;
-            e2e)
+            e2e|identity)
+                if [ "$selection" = identity ]; then
+                    compose up -d --no-build --pull never --wait tocaregalo-mysql tocaregalo-mailpit
+                    php_run php tests/Fixtures/Browser/identity.php init
+                    compose up -d --no-build --pull never --wait tocaregalo-identity-worker tocaregalo-identity-control
+                fi
                 compose up -d --no-build --pull never --wait tocaregalo-nginx
+                if [ "$selection" = identity ]; then
+                    compose run --rm --no-deps -T tocaregalo-browser node -e 'const end=Date.now()+90000; (async()=>{while(Date.now()<end){try{const r=await fetch("http://localhost/api/me",{signal:AbortSignal.timeout(60000)}); if(r.status===401){console.log("Identity HTTP ready");return}}catch{} await new Promise(r=>setTimeout(r,500))}process.exit(1)})()'
+                fi
                 if [ "$#" -gt 0 ]; then
                     project=$1; shift
                     compose run --rm --no-deps -T tocaregalo-browser npm run test:e2e -- "--project=$project" "$@"

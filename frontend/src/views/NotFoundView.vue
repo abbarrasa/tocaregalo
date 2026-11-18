@@ -4,7 +4,7 @@ import { RouterLink } from 'vue-router'
 
 <template>
   <section class="mx-auto shell-panel p-4 p-md-5">
-    <h1 class="h2">Página no encontrada</h1>
+    <h2>Página no encontrada</h2>
     <p>La página que buscas no existe.</p>
     <RouterLink class="btn btn-primary" to="/">Volver al inicio</RouterLink>
   </section>

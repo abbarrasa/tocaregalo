@@ -1,0 +1,76 @@
+# Overlay for scripts/check identity only; owned tmpfs graph, never development data.
+services:
+  tocaregalo-php:
+    env_file: ['${IDENTITY_SECRET_FILE:?Owned synthetic env file required}']
+    environment:
+      APP_PUBLIC_URL: http://localhost
+      APP_CACHE_DIR: /tmp/tocaregalo-identity-http
+      MAILER_DSN: smtp://tocaregalo-mailpit:1025
+      MESSENGER_TRANSPORT_DSN: doctrine://default?queue_name=notifications&auto_setup=false
+    volumes:
+      - ./backend/tests/Fixtures/Browser/php-fpm.conf:/usr/local/etc/php-fpm.d/zz-identity.conf:ro
+
+  tocaregalo-php-tests:
+    env_file: ['${IDENTITY_SECRET_FILE:?Owned synthetic env file required}']
+    environment:
+      APP_PUBLIC_URL: http://localhost
+      RECOVERY_BROWSER_FIXTURE: '1'
+
+  tocaregalo-mailpit:
+    image: ${MAILPIT_IMAGE:?Set the pinned MAILPIT_IMAGE}
+    pull_policy: never
+    environment:
+      MP_DISABLE_VERSION_CHECK: 'true'
+
+  tocaregalo-identity-worker:
+    image: ${PHP_LOCAL_IMAGE:-tocaregalo-php:dev}
+    pull_policy: never
+    user: '${LOCAL_UID:-1000}:${LOCAL_GID:-1000}'
+    working_dir: /workspace/backend
+    init: true
+    env_file: ['${IDENTITY_SECRET_FILE:?Owned synthetic env file required}']
+    environment: &identity-environment
+      APP_ENV: test
+      APP_DEBUG: '0'
+      APP_CACHE_DIR: /tmp/tocaregalo-identity-worker
+      APP_PUBLIC_URL: http://localhost
+      DATABASE_URL: ${TEST_DATABASE_URL:?Guarded test URL required}
+      TEST_DATABASE_URL: ${TEST_DATABASE_URL:?Guarded test URL required}
+      TEST_MYSQL_DATABASE: ${TEST_MYSQL_DATABASE:?Guarded test name required}
+      MAILER_DSN: smtp://tocaregalo-mailpit:1025
+      MESSENGER_TRANSPORT_DSN: doctrine://default?queue_name=notifications&auto_setup=false
+    volumes:
+      - ./backend:/workspace/backend
+      - type: bind
+        source: ./.env
+        target: /workspace/.env
+        read_only: true
+        bind: { create_host_path: false }
+    command: ['php', 'bin/console', 'messenger:consume', 'notifications', '--sleep=0.05', '--time-limit=1800', '--no-interaction', '--quiet']
+
+  tocaregalo-identity-control:
+    extends: { service: tocaregalo-identity-worker }
+    environment:
+      <<: *identity-environment
+      RECOVERY_BROWSER_FIXTURE: '1'
+      IDENTITY_CONTROL_DIR: /runtime/identity-control
+    volumes:
+      - type: bind
+        source: ${IDENTITY_CONTROL_DIR:?Owned control directory required}
+        target: /runtime/identity-control
+        bind: { create_host_path: false }
+    command: ['php', 'tests/Fixtures/Browser/identity.php', 'serve']
+
+  tocaregalo-browser:
+    # Share only the isolated Nginx network namespace so captured localhost links work verbatim.
+    network_mode: service:tocaregalo-nginx
+    environment:
+      PLAYWRIGHT_BASE_URL: http://localhost
+      IDENTITY_E2E: '1'
+      PLAYWRIGHT_NO_COPY_PROMPT: '1'
+      IDENTITY_CONTROL_DIR: /runtime/identity-control
+    volumes:
+      - type: bind
+        source: ${IDENTITY_CONTROL_DIR:?Owned control directory required}
+        target: /runtime/identity-control
+        bind: { create_host_path: false }
