@@ -1,0 +1,64 @@
+# Spec 003 verification evidence
+
+## T1 — In progress
+
+Date: 2026-11-17. [Execution plan v0.1](./t1-execution-plan.md) approved with “Apruebo el plan”; implementation/temp-MySQL checks separately authorized with “Autorizo implementar T1 y ejecutar las comprobaciones previstas con MySQL temporal”. Branch `feature/003_T01-user-values-persistence` created from current local dev, preserving proposed-plan/MEMORY edits. No installation, dependency/image update, keys, real user, development DDL, SMTP, commit or push.
+
+Scope supports backend FR-3/4 (AC-3/4), NFR-1/10, not complete block/product acceptance. Domain profile normalizes text/phone and derives email comparison without Doctrine/Symfony; framework email validation and password hashing are infrastructure adapters. External XML mappings target separate infrastructure records and repository ports. Initial migration owns only users/roles/user_roles; no verification flag, public endpoint, group/authentication/bootstrap/recovery behavior added.
+
+### Executed findings and corrections
+
+- Test-first `vendor/bin/phpunit tests/Unit/User` in installed network-disabled PHP container: initial 17 tests failed because the new classes were absent (8 errors/9 expected-exception failures), establishing the missing implementation. After implementation one test incorrectly assumed Symfony's default email constraint accepted an accented local part. Corrected that assumption: valid ASCII email exercises Symfony; pure comparison and binary DB collation tests preserve accent distinctions without changing email validation policy.
+- Initial full backend execution: 44 tests/144 assertions, three errors from reusing Doctrine's frozen migration instance across up/down commands; later duplicate fixture errors followed the failed teardown. Dedicated tmpfs runtime was removed. Integration migration commands now use a fresh kernel/factory, no changes to vendor code.
+- Initial analysis with new integration test: eight level-10 errors at service/mixed DB result boundaries and redundant nullsafe access. Added runtime service/result narrowing and explicit loaded-user assertion, without baseline/scope reduction. Subsequent level-10 run passed.
+- A stronger ORM/DDL comparison found identity index-name drift and infrastructure-owned schema differences. Migration index names now match the actual installed ORM; comparison explicitly targets only the three identity-owned tables. No Messenger/migration metadata is created/dropped through an ORM schema-update shortcut. DDL executes only through the real migration and guarded test target.
+
+### Pending clarification
+
+The minimum-only domain password policy and Symfony hashing must be reconciled for inputs beyond Symfony's inherited 4096-byte safety limit. A focused question has been sent; no new application maximum, custom hash or policy change is approved. Task completion remains pending that decision and final checks. The user-facing composition rule is otherwise unchanged, including exact whitespace/Unicode character preservation and no category combination requirement.
+
+### Latest successful checks and remaining decision
+
+- Final backend rerun `scripts/check backend`: **45 tests / 175 assertions passed**, PHPUnit 12.5.44 / PHP 8.5.12. Actual migration up/down/up succeeded in guarded tmpfs MySQL; identity-owned ORM/table comparisons have zero ALTER statements; persisted user/role roundtrip, nullable surnames, Symfony hash verification, normalized unique email/phone, role/user-role uniqueness and existing JSON/database boundary regressions passed.
+- Actual information_schema assertions verify every mapped textual user column is VARCHAR(255), surnames nullable, email_comparison collation `utf8mb4_bin`; comparison preserves accent distinctions. Identity unique index names match installed ORM generation. No SQLite substitute or schema-update operation used.
+- Latest `scripts/check phpstan`: zero errors at fixed level 10, including `migrations` and all previous owned-PHP/test paths, no baseline. Dependency manifests/locks unchanged. No stronger password category policy, verification flag, public endpoint or real account introduced.
+- Installed network-disabled PHP tool: **35 PHP syntax checks**, successful `lint:container --env=test` and **11 YAML files** passed `lint:yaml config --env=test`. No database connection to development occurred in these checks.
+- A synthetic 4097-byte input passed the approved minimum-only domain rule but Symfony's current hasher threw InvalidPasswordException, confirming its built-in 4096-byte safety boundary. No password/hash was printed. A focused user question remains pending; task is **not complete** despite passing other checks. No user approval of that boundary or custom workaround is inferred.
+
+Next action: resolve the password-boundary clarification through the applicable SDD approval process before completing T1 or adding a new policy/algorithm adapter. Do not begin T2. Current implemented hashing uses Symfony auto as planned; its technical guard is documented, not silently recast as an approved product constraint.
+
+### Approved boundary resumption — 2026-11-17
+
+Supersedes the pending-decision statements above: user accepted Symfony's limit, approved parent Spec 001 v1.2, affected plans and task lists, then stated “Apruebo las listas y autorizo reanudar 003:T1”. Execution follows approved T1 plan v0.2 and unchanged temporary-MySQL limits.
+
+Test-first boundary check: initial standalone invocation lacked the private root dotenv mount and exited 2 in bootstrap, without running tests; corrected the invocation, not application configuration. The corrected network-disabled installed PHP run executed 8 boundary tests/16 assertions with four expected failures: the pure policy accepted 4097 bytes and Symfony raised its own exception instead of the shared policy's validation exception. ASCII/multibyte 4096-byte hashing and exact verification already passed. All inputs were synthetic fixtures.
+
+Implemented a framework-independent `strlen` byte guard after the existing UTF-8/six-character minimum validation. Inputs above 4096 bytes raise a Spanish validation error before invoking Symfony hashing; preserve exact bytes, whitespace and existing auto hashing. No truncation, custom hash, dependency or schema change. The new tests cover both ASCII and multibyte 4096/4097-byte inputs, whitespace preservation and correct/incorrect verification at the accepted boundary. Consumer account/API/command/recovery no-mutation behavior remains later-task scope; T1 adds no public operation.
+
+### T1 completion
+
+- `scripts/check backend`: exit 0, **53 tests/191 assertions**, PHPUnit 12.5.44 / PHP 8.5.12. Includes all eight boundary cases and existing guarded real-MySQL migration reversal/schema/uniqueness/roundtrip and JSON/database regressions. MySQL uses only owned tmpfs test storage; no development DDL/accounts.
+- `scripts/check phpstan`: exit 0, **zero errors at fixed level 10**, full owned PHP including tests and migrations, no baseline/exclusions added.
+- Network-disabled installed PHP container: **36 PHP syntax checks**, `lint:container --env=test` success and **11 YAML files** valid. Editor diagnostics report no errors for backend source/tests/migrations.
+- `git diff --check` passed. Manifests/locks unchanged. Private root dotenv remains ignored/untracked and mode 600; no credentials or hash output. No installation, image build/pull, keys, real SMTP, commit or push.
+- Backend wrapper exit 0 removed owned MySQL/container network. Independent `docker ps` and network label queries returned no owned test resources; wrapper lock absent.
+
+T1 is complete for its approved backend-support scope (FR-3/4, AC-3/4 backend portions, NFR-1/10). Full frontend prevention, account creation/changes/recovery/bootstrap/auth flows and block Validation remain pending their own tasks. Project: 56 tasks total, 11 complete, 45 pending. Stop before T2; on user continuation prepare/present T2 execution plan and await explicit approval/implementation authorization.
+
+## T1 naming revision — 2026-11-18
+
+Approved [lastname execution plan v0.1](./lastname-rename-execution-plan.md) with “apruebo el plan y autorizo la implementación”. Renamed PHP property/parameters/normalizer and all existing consumers from `surnames` to exactly `lastname`; updated existing unit/integration references. External UserRecord mapping explicitly retains SQL `column="surnames"`; migration unchanged. This is a behavior-preserving naming change under existing FR-3, not a new product requirement or T2 implementation. Per plan, reused existing behavioral tests instead of introducing a test for identifier spelling.
+
+Naming revision results: `scripts/check backend` exit 0, **53 tests/191 assertions** (PHPUnit 12.5.44/PHP 8.5.12), including real migration up/down/up, ORM/schema parity and nullable lastname roundtrip against guarded tmpfs MySQL. `scripts/check phpstan` exit 0, fixed level 10 **zero errors** including tests/migrations, no baseline. Network-disabled PHP checks: **36 syntax checks**, container lint success, **11 YAML files** valid. Editor diagnostics clear. No stale PHP `surnames` references; the sole remaining source/mapping occurrence is intentional SQL column mapping. No migration/manifests/locks changed by this refactor. Private dotenv remains ignored/untracked/mode 600. Wrapper removed owned containers/network and lock; independent labelled-resource queries returned empty. No installation, real database/account mutation, key, SMTP, commit or push. T1 remains complete for this checked naming revision; T2 unauthorized.
+
+## T1 lastName casing revision — 2026-11-18
+
+User approved [casing execution plan v0.1](./last-name-camelcase-execution-plan.md) with “aprueblo el plan y su implementación”. Renamed PHP properties/parameters/normalizer, repository consumers, existing tests and XML field from lastname to exactly lastName. External mapping retains SQL surnames; migration unchanged. No product requirement or behavior change; existing behavioral tests reused as planned. No stale lowercase lastname identifiers remain in source/tests/mapping. Previous naming evidence remains historical for its own snapshot.
+
+Casing revision checks: `scripts/check backend` exit 0, **53 tests/191 assertions**, including real guarded tmpfs MySQL migration up/down/up, ORM/schema parity, uniqueness and nullable lastName roundtrip. `scripts/check phpstan` exit 0, fixed level 10 **zero errors**, full owned scope including tests/migrations, no baseline. Network-disabled installed PHP container: **36 syntax checks**, container lint success and **11 YAML files** valid. Editor diagnostics clear; `git diff --check` passes. Manifests/locks and migration unchanged by this refactor; private dotenv ignored/untracked/mode 600. Wrapper cleaned its test runtime; independent container/network label queries returned empty and wrapper lock absent. No installation, keys, real account/development DDL, SMTP, commit or push. T1 remains complete; no T2 execution. Counts unchanged (11 complete/45 pending).
+
+## T1 lastName SQL alignment — 2026-11-18
+
+User approved [SQL alignment execution plan v0.1](./last-name-sql-execution-plan.md) with “Apruebo el plan y la implementación”. Updated initial users-table migration column and explicit external XML mapping to exactly lastName, superseding the earlier decision to retain SQL surnames. Current owned source/tests/config/migration search has no old surnames/lastname identifiers. Current development guidance records the naming; historical English prose, approval evidence and earlier execution records remain unchanged. Optionality, VARCHAR(255), normalization and other migration behavior unchanged. No persistent database upgrade is claimed or executed.
+
+SQL alignment results: `scripts/check backend` exit 0, **53 tests/191 assertions**, PHPUnit 12.5.44/PHP 8.5.12. Actual migration up/down/up and zero-ALTER identity ORM/schema comparisons pass with the lastName column; nullable persistence, normalized uniqueness and password-boundary regressions pass. `scripts/check phpstan` exit 0, fixed level 10 **zero errors** including migrations/tests, no baseline. Installed network-disabled PHP container: **36 syntax checks**, container lint success and **11 YAML files** valid. Editor diagnostics clear, `git diff --check` passes. Root dotenv ignored/untracked/mode 600; manifests/locks unchanged. Wrapper removed test containers/network; independent label queries empty and wrapper lock absent. No installations, real development DDL/accounts, keys, SMTP, commit or push. T1 remains complete; counts 11 complete/45 pending. No T2 authorization. Any independently migrated persistent schema requires separately authorized upgrade work; this task changes only initial schema definition and disposable verification.

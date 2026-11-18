@@ -1,16 +1,18 @@
 # Tasks 007 — Account deletion and application verification
 
-Status: approved; task execution remains separately gated
-Revision: v0.2
+Status: approved v0.3; only 003:T1 resumption authorized
+Approval (v0.3): “Apruebo las listas y autorizo reanudar 003:T1”, 2026-11-17. Authorizes revised 003:T1 implementation and its approved bounded temporary-MySQL checks; no later task or installation.
+Revision: v0.3
+Preparation authority (v0.3): “Apruebo estos planes y autorizo actualizar las listas”, 2026-11-17. Proposed lists are not approved by this preparation authorization.
 Approval (v0.2): “Apruebo las listas de tareas y autorizo el inicio de 002:T9 y las instalaciones”, 2026-11-17. Approves all revised task lists and authorizes only 002:T9 and its concrete four-package installation scope.
 Historical approval (v0.1): The user stated “Apruebo y autorizo iniciar la T1 de spec 002”, approving the derived-document/task package and authorizing only 002:T1 on 2026-11-16. No installation is authorized.
-Derived documents: [spec](./spec.md), synchronized from approved parent v1.1; [plan v0.2](./plan.md), approved.
-Approved sources: [Spec 001 v1.1](../001-toca-regalo/spec.md), [Plan 001 v0.2](../001-toca-regalo/plan.md)
+Derived documents: [spec](./spec.md), v0.3 synchronized from approved parent v1.2; [plan v0.3](./plan.md), approved.
+Approved sources: [Spec 001 v1.2](../001-toca-regalo/spec.md), [Plan 001 v0.4](../001-toca-regalo/plan.md)
 Execution authorization: no task in this block is authorized. Upstream 002:T9 and its installation were authorized separately; follow prerequisite and per-task approval gates.
 
 ## Execution rules
 
-Revision preparation authorized by “Apruebo estas revisiones y autorizo actualizar las tareas” on 2026-11-17. This v0.2 task list is approved under the approval evidence above. Every pending task carries NFR-10: before completion, run fixed PHPStan level 10 on all project-owned PHP including tests, with zero errors and no concealing baseline; record command/configuration/version/result. Failed or unavailable analysis blocks completion. Earlier checked tasks retain historical evidence under their original scope.
+Revision preparation authorized by “Apruebo estas revisiones y autorizo actualizar las tareas” on 2026-11-17. Historical v0.2 approval is preserved; changed v0.3 conditions await approval. Every pending task carries NFR-10: before completion, run fixed PHPStan level 10 on all project-owned PHP including tests, with zero errors and no concealing baseline; record command/configuration/version/result. Failed or unavailable analysis blocks completion. Earlier checked tasks retain historical evidence under their original scope.
 
 Task IDs are qualified as 007:Tn across blocks; unqualified Tn references are local. Execute one explicitly authorized task at a time, with its prerequisite checks satisfied. Each task includes its applicable tests/checks and actual evidence when run. Do not mark product requirements fulfilled based on partial supporting work; Direct implementation focuses on FR-2/12/14/22/23/24/25/26/27/32; other FR/NFR are complete-regression scope, not new implementation. No automatic corrective work, final acceptance or validation approval is implied.
 
@@ -60,7 +62,7 @@ No dependency installation, image pull/build requiring packages, or browser down
   - Done when: Every backend-applicable parent AC/NFR has actual results and references; failures remain explicit and block completion rather than being marked passed.
   - Evidence: not executed; no completion or passing result claimed.
 
-- [ ] **T7. Complete frontend/build/browser and documentation verification.** FR-1, FR-2, FR-3, FR-5, FR-6, FR-7, FR-8, FR-9, FR-13, FR-15, FR-16, FR-17, FR-18, FR-19, FR-20, FR-21, FR-22, FR-23, FR-24, FR-27, FR-28, FR-29, FR-31, FR-35, NFR-2, NFR-3, NFR-5, NFR-6, NFR-7, NFR-8, NFR-10
+- [ ] **T7. Complete frontend/build/browser and documentation verification.** FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, FR-13, FR-15, FR-16, FR-17, FR-18, FR-19, FR-20, FR-21, FR-22, FR-23, FR-24, FR-27, FR-28, FR-29, FR-31, FR-35, NFR-2, NFR-3, NFR-5, NFR-6, NFR-7, NFR-8, NFR-10
   - Depends on: T6.
   - Work: Run approved component/build/browser profiles and Spanish user/English technical documentation checks; verify reproducible local setup/capture without production credentials.
   - Files/responsibility: frontend/tests/; tests/e2e/; README.md; docs/; specs/001-toca-regalo/verification.md.
@@ -82,3 +84,13 @@ See [plan traceability](./plan.md#traceability). FR-N maps to parent AC-N; NFR a
 
 After the last task, report evidence/limitations and request authorization for the next task/block as applicable. Final read-only application Validation requires its own authorization and the installed sdd-code-review workflow. Do not mark the parent specification implemented before accepted fulfilled Validation.
 
+
+## Password boundary revision (v0.3) — proposed
+
+Implements approved parent Spec 001 v1.2 FR-4/AC-4 and approved parent plan v0.4. Preserve existing IDs, dependencies and completion evidence; no new task or installation. Project total remains 56 tasks: ten complete, 46 incomplete (including in-progress 003:T1). Changed conditions below supplement the existing task definitions and require approval before execution.
+
+| Task | Additional work and done condition |
+| --- | --- |
+| T6 | Include ASCII/multibyte 4096/4097-byte regressions across password-setting backend/command paths; verify rejection without account/password mutation. Record actual results, not inherited assertions. |
+| T7 | Include password-setting form errors, accessibility and existing mobile/desktop profiles under FR-4; backend bytes remain authoritative. |
+| T8 | Handoff explicitly maps revised AC-4 to current boundary/consumer evidence and preserves historical evidence scope. |

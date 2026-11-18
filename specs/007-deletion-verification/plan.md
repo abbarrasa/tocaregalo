@@ -1,11 +1,13 @@
 # Plan 007 — Account deletion and application verification
 
-Status: approved; task execution and installation remain separately gated
-Revision: v0.2
+Status: approved v0.3; task-list revision authorized, implementation remains separately gated
+Approval (v0.3): “Apruebo estos planes y autorizo actualizar las listas”, 2026-11-17. Approves the displayed plan; authorizes task-list preparation only.
+Revision: v0.3
+Preparation authority: “Apruebo esta revisión y autorizo preparar el resto de revisiones afectadas”, 2026-11-17. No task-list or implementation approval inferred.
 Historical approval (v0.1): The user stated “Apruebo y autorizo iniciar la T1 de spec 002”, approving the derived-document/task package and authorizing only 002:T1 on 2026-11-16. No installation is authorized.
-Derived specification: [007 v0.2](./spec.md), synchronized from approved parent v1.1
-Approved parent specification: [001 v1.1](../001-toca-regalo/spec.md)
-Architecture: [001 v0.2 proposed; unchanged v0.1 baseline historically approved](../001-toca-regalo/plan.md)
+Derived specification: [007 v0.3](./spec.md), synchronized from approved parent v1.2
+Approved parent specification: [001 v1.2](../001-toca-regalo/spec.md)
+Architecture: [001 v0.4 proposed; unchanged v0.3 scope historically approved](../001-toca-regalo/plan.md)
 Approval (v0.2): “Apruebo estas revisiones y autorizo actualizar las tareas”, 2026-11-17, approves the displayed PHPStan plan revision and authorizes task-list preparation, not implementation or installation.
 
 ## Approach and approved design
@@ -111,3 +113,13 @@ The [task list](./tasks.md) supplies concrete work and done conditions. Parent A
 
 The original derived-document/task package remains historical approval for unchanged scope. This v0.2 revision is approved; the proposed task-list v0.2 update now awaits its own approval. Preserve T4 v0.1 and Playwright approvals for their unchanged scope; present the expanded PHPStan gate and enabling work separately. No installation or implementation is authorized by preparing this revision.
 
+
+## Password boundary revision — proposed
+
+Implements approved parent Spec 001 v1.2 FR-4/AC-4 (S15). Keep the shared policy framework-independent: validate UTF-8, count at least six characters with `mb_strlen`, reject more than 4096 bytes with `strlen`, and preserve exact whitespace. Delegate hashing and verification to the existing Symfony auto adapter. No custom prehash, truncation, new package or schema change. The rejected alternative of bypassing the framework guard would introduce custom hashing behavior despite the accepted Symfony limit.
+
+Apply validation before password hashing and account/password persistence in all password-setting consumers: owner creation, bootstrap command, authenticated changes and recovery. Later consumer tasks must prove invalid input leaves accounts/passwords unchanged. Existing reset-token validity/single-use rules remain unchanged. Do not infer implemented consumer flows from shared-policy tests.
+
+Verification: test ASCII and multibyte inputs at 4096 and 4097 bytes, five/six-character minimum boundaries, preserved whitespace, correct/incorrect hash verification and rejection before persistence. Future forms must use Spanish associated field errors; HTML character-count limits cannot replace backend UTF-8 byte validation. Run relevant regressions and final full-scope PHPStan level 10, zero errors without baseline. Existing 003:T1 45 tests/175 assertions do not yet cover this boundary; preserve their historical evidence and accepted block 002 Validation.
+
+No new task IDs, dependency installation, key operation, development DDL/account, commit or push is proposed. Revise affected task conditions only after plan approval. Existing unmodified plan sections retain their historical approved scope.
