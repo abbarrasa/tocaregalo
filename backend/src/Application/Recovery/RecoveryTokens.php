@@ -15,16 +15,23 @@ final readonly class RecoveryTokens
     {
     }
 
-    public function issue(int $userId): IssuedRecovery
+    /** @param (callable(int, IssuedRecovery): void)|null $handoff */
+    public function issue(int $userId, ?callable $handoff = null): IssuedRecovery
     {
         $token = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
-        $issued = null;
-        $this->store->issue($userId, function () use ($token, &$issued): array {
+        $result = new class {
+            public ?IssuedRecovery $issued = null;
+        };
+        $this->store->issue($userId, function () use ($token, $result): array {
             $now = $this->clock->now();
-            $issued = new IssuedRecovery($token, $this->lifetime->expires($now));
+            $issued = $result->issued = new IssuedRecovery($token, $this->lifetime->expires($now));
             return ['hash' => hash('sha256', $token), 'issued' => $now, 'expires' => $issued->expiresAt];
+        }, function (int $requestId) use ($handoff, $result): void {
+            if ($handoff !== null) {
+                $handoff($requestId, $result->issued ?? throw new \LogicException('Missing issuance.'));
+            }
         });
-        return $issued ?? throw new \LogicException('Issuance did not complete.');
+        return $result->issued ?? throw new \LogicException('Issuance did not complete.');
     }
 
     public function reset(#[\SensitiveParameter] string $token, #[\SensitiveParameter] string $password): void

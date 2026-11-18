@@ -1,4 +1,5 @@
 parameters:
+    recovery_empty_key: ""
     recovery_default_ttl: 3600
 
 services:
@@ -41,3 +42,18 @@ services:
         arguments:
             $seconds: '%env(default:recovery_default_ttl:PASSWORD_RESET_TTL_SECONDS)%'
     App\Application\Recovery\RecoveryTokens: ~
+    App\Application\Recovery\RequestRecovery: ~
+    App\Infrastructure\Mail\RecoveryEnvelope:
+        arguments:
+            $encodedKey: '%env(default:recovery_empty_key:RECOVERY_DELIVERY_KEY)%'
+    App\Infrastructure\Mail\RecoveryLink:
+        arguments:
+            $publicUrl: '%env(APP_PUBLIC_URL)%'
+            $environment: '%kernel.environment%'
+    App\Infrastructure\Mail\RecoveryDeliveryStore: ~
+    App\Application\Port\RecoveryDelivery: '@App\Infrastructure\Mail\RecoveryDeliveryStore'
+    App\Infrastructure\Mail\RecoveryMailHandler: ~
+    App\Infrastructure\Mail\RecoveryWorkerEvents: ~
+    App\Api\RecoveryController:
+        tags: ['controller.service_arguments']
+    App\Infrastructure\Mail\RecoveryRetryContext: ~

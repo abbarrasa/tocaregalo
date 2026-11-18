@@ -225,4 +225,10 @@ La respuesta correcta devuelve los datos propios, sin contraseña. Los errores d
 
 ### Recuperación de contraseña: estado del desarrollo
 
-El ciclo interno de recuperación ya permite emitir un token, sustituir los anteriores y cambiar la contraseña una sola vez antes de su caducidad. `PASSWORD_RESET_TTL_SECONDS` configura la duración de los nuevos enlaces; el valor predeterminado es `3600` segundos. La base de datos guarda únicamente el hash del token. El envío del enlace por correo, las rutas públicas y los formularios se completarán en las siguientes tareas; todavía no hay un flujo de recuperación utilizable desde la aplicación.
+El ciclo interno de recuperación ya permite emitir un token, sustituir los anteriores y cambiar la contraseña una sola vez antes de su caducidad. `PASSWORD_RESET_TTL_SECONDS` configura la duración de los nuevos enlaces; el valor predeterminado es `3600` segundos. La base de datos guarda únicamente el hash del token. El backend de correo y sus rutas se describen en el siguiente apartado; los formularios siguen pendientes.
+
+### API y correo de recuperación
+
+`POST /api/password-recovery` recibe `identifier` (email o teléfono internacional). `POST /api/password-reset` recibe `token` y `password`. Ambas operaciones requieren JSON y el encabezado `X-CSRF-Token` obtenido de la sesión. La solicitud de recuperación devuelve el mismo mensaje para cuentas existentes y desconocidas; el cambio válido devuelve estado 204 y permite iniciar sesión con la nueva contraseña.
+
+El correo utiliza un enlace con el token en el fragmento de la URL. Los formularios se implementarán en T7. Antes de usar el correo en desarrollo deben aplicarse las migraciones y aprovisionarse, con autorización, `RECOVERY_DELIVERY_KEY` en el entorno privado. La clave real no se genera con esta tarea; las comprobaciones de correo usan claves desechables y Mailpit. Los errores de configuración no deben resolverse copiando secretos al repositorio.

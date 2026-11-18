@@ -25,3 +25,12 @@ account_update:
     path: /api/me
     controller: App\Api\OwnAccountController::update
     methods: [PATCH]
+
+password_recovery:
+    path: /api/password-recovery
+    controller: App\Api\RecoveryController::request
+    methods: [POST]
+password_reset:
+    path: /api/password-reset
+    controller: App\Api\RecoveryController::reset
+    methods: [POST]

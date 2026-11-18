@@ -1,16 +1,18 @@
 # Application Task Index — Toca Regalo
 
-Status: approved v0.4; only 003:T1 resumption authorized
+Status: approved v0.5; T6 execution-plan preparation authorized, implementation separately gated
+Approval (v0.5): “Apruebo estas listas y autorizo finalizar y el presentar el plan”, 2026-11-18.
+Preparation authority (v0.5): “Apruebo las revisiones y autorizo actualizar las tareas afectadas”, 2026-11-18. No implementation authorization.
 Approval (v0.4): “Apruebo las listas y autorizo reanudar 003:T1”, 2026-11-17. Authorizes revised 003:T1 implementation and its approved bounded temporary-MySQL checks; no later task or installation.
 Approval (v0.3): “apruebo las listas y autorizo a preparar el plan de ejecución”, 2026-11-17. Authorizes T10 execution-plan preparation only.
 Preparation authorization (v0.3): “apruebo la revisiones y autorizo actualizar las listas de tareas”, 2026-11-17. Proposed lists require approval; no implementation authorized.
-Revision: v0.4
+Revision: v0.5
 Preparation authority (v0.4): “Apruebo estos planes y autorizo actualizar las listas”, 2026-11-17. Proposed lists are not approved by this preparation authorization.
 Approval (v0.2): “Apruebo las listas de tareas y autorizo el inicio de 002:T9 y las instalaciones”, 2026-11-17. Approves all revised task lists and authorizes only 002:T9 and its concrete four-package installation scope.
 Historical approval (v0.1): The user stated “Apruebo y autorizo iniciar la T1 de spec 002” on 2026-11-16. Subsequent task/install approvals remain valid for their recorded scope.
 Revision preparation authorized: “Apruebo estas revisiones y autorizo actualizar las tareas”, 2026-11-17. Subsequent task-list/T9/installation approval is recorded above.
 Approved parent specification: [001 v1.2](./spec.md)
-Approved parent plan: [001 v0.4](./plan.md)
+Approved parent plan: [001 v0.5](./plan.md)
 Approved split: [six-block decomposition v0.1](./decomposition-proposal.md)
 
 ## Approval and execution state
@@ -22,7 +24,7 @@ The original 54 tasks and their IDs are preserved. T1/T2/T3/T4/T5/T6/T7/T8/T9 ar
 | Block | Specification | Plan | Tasks | Count | Dependency |
 | --- | --- | --- | --- | --- | --- |
 | 002 — Development foundation | [spec v0.2](../002-development-foundation/spec.md) | [plan v0.3](../002-development-foundation/plan.md) | [tasks v0.3 proposed](../002-development-foundation/tasks.md) | 10 complete, 0 pending | None |
-| 003 — Identity and account access | [spec v0.3](../003-identity-access/spec.md) | [plan v0.3](../003-identity-access/plan.md) | [tasks v0.3 approved](../003-identity-access/tasks.md) | 5 complete, 4 pending | 002 |
+| 003 — Identity and account access | [spec v0.3](../003-identity-access/spec.md) | [plan v0.4](../003-identity-access/plan.md) | [tasks v0.4 approved](../003-identity-access/tasks.md) | 6 complete, 3 pending | 002 |
 | 004 — Groups and events | [spec v0.2](../004-groups-events/spec.md) | [plan v0.3](../004-groups-events/plan.md) | [tasks v0.2 approved](../004-groups-events/tasks.md) | 10 pending | 003 |
 | 005 — Confidential draw lifecycle | [spec v0.2](../005-confidential-draws/spec.md) | [plan v0.3](../005-confidential-draws/plan.md) | [tasks v0.3 proposed](../005-confidential-draws/tasks.md) | 10 pending | 004 |
 | 006 — Notifications and private dashboard | [spec v0.2](../006-notifications-dashboard/spec.md) | [plan v0.3](../006-notifications-dashboard/plan.md) | [tasks v0.2 approved](../006-notifications-dashboard/tasks.md) | 9 pending | 005 |
@@ -140,3 +142,17 @@ User approved T4 plan/implementation on 2026-11-18. [Evidence](../003-identity-a
 ## 003:T5 completion — latest boundary
 
 User approved T5 plan/implementation on 2026-11-18. [Evidence](../003-identity-access/verification.md#t5-completion): backend 88/812 including expiry/supersession/one-use, real races/rollback and native login, PHPStan level 10 zero errors and syntax/configuration checks pass. Temporary runtime removed. Total 56 tasks: 15 complete, 41 pending. Stop before T6; public recovery HTTP/email integration and UI remain pending. No installation, development data/session changes, commit or push.
+
+## Recovery delivery task revision — v0.5 proposed
+
+Prepared under “Apruebo las revisiones y autorizo actualizar las tareas afectadas”, 2026-11-18, following approval of parent plan v0.5 / derived 003 plan v0.4. [003 task list v0.4](../003-identity-access/tasks.md#recovery-delivery-task-revision--v04-proposed) revises only pending 003:T6 and 003:T9: environment-based dedicated key, authenticated encrypted delivery envelope, ID-only queue, atomic token/work/enqueue, same-token retry, stale/terminal purging and consolidated privacy/regression evidence. Public recovery/reset integration was already deferred to T6 by approved T5; finalized contracts remain gated by execution-plan approval. No requirement IDs, task IDs/dependencies or counts change: 56 total, 15 complete/41 pending. All five completed 003 tasks and accepted block 002 evidence retain their scope; assignment-key policy remains 005:T2.
+
+Approve index v0.5 and 003 tasks v0.4, then authorize finalizing/presenting the task-specific T6 execution plan. Task-list preparation/approval does not authorize implementation or key generation; no installation, runtime, persistent data/secret mutation, commit/push or T7 under this revision.
+
+### v0.5 approval — latest boundary
+
+User stated “Apruebo estas listas y autorizo finalizar y el presentar el plan”, 2026-11-18, approving displayed index v0.5 / 003 tasks v0.4 and authorizing final T6 execution-plan preparation/presentation only. Earlier pending-approval statements are historical. No implementation, runtime or real secret generation authorized.
+
+## 003:T6 completion — latest boundary
+
+User approved execution plan v0.3 and implementation on 2026-11-18. [Final evidence](../003-identity-access/verification.md#t6-completion): mail suite 105 tests/1084 assertions including current backend, captured usable links, real worker/SMTP/SQL failure and crash recovery; PHPStan level 10 zero errors, 96 syntax/container/12 YAML and static checks pass. Owned resources removed; no real key provisioned, development data mutation, installation, external SMTP, commit or push. Total 56: 16 complete/40 pending. Stop before 003:T7 and require its execution-plan approval. UI, assignment delivery and separate final slice Validation remain pending.

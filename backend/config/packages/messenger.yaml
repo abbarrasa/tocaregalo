@@ -11,3 +11,9 @@ framework:
                     multiplier: 2
                     max_delay: 0
                     jitter: 0
+        routing:
+            App\Infrastructure\Mail\RecoveryMail: notifications
+        buses:
+            messenger.bus.default:
+                middleware:
+                    - App\Infrastructure\Mail\RecoveryRetryContext

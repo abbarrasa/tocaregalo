@@ -1,13 +1,15 @@
 # Tasks 003 — Identity and account access
 
-Status: approved v0.3; only 003:T1 resumption authorized
+Status: approved v0.4; T6 execution-plan preparation authorized, implementation separately gated
+Approval (v0.4): “Apruebo estas listas y autorizo finalizar y el presentar el plan”, 2026-11-18.
+Preparation authority (v0.4): “Apruebo las revisiones y autorizo actualizar las tareas afectadas”, 2026-11-18. No implementation authorization.
 Approval (v0.3): “Apruebo las listas y autorizo reanudar 003:T1”, 2026-11-17. Authorizes revised 003:T1 implementation and its approved bounded temporary-MySQL checks; no later task or installation.
-Revision: v0.3
+Revision: v0.4
 Preparation authority (v0.3): “Apruebo estos planes y autorizo actualizar las listas”, 2026-11-17. Proposed lists are not approved by this preparation authorization.
 Approval (v0.2): “Apruebo las listas de tareas y autorizo el inicio de 002:T9 y las instalaciones”, 2026-11-17. Approves all revised task lists and authorizes only 002:T9 and its concrete four-package installation scope.
 Historical approval (v0.1): The user stated “Apruebo y autorizo iniciar la T1 de spec 002”, approving the derived-document/task package and authorizing only 002:T1 on 2026-11-16. No installation is authorized.
-Derived documents: [spec](./spec.md), v0.3 synchronized from approved parent v1.2; [plan v0.3](./plan.md), approved.
-Approved sources: [Spec 001 v1.2](../001-toca-regalo/spec.md), [Plan 001 v0.4](../001-toca-regalo/plan.md)
+Derived documents: [spec](./spec.md), v0.3 synchronized from approved parent v1.2; [plan v0.4](./plan.md), approved.
+Approved sources: [Spec 001 v1.2](../001-toca-regalo/spec.md), [Plan 001 v0.5](../001-toca-regalo/plan.md)
 Execution authorization: T1 v0.1 implementation was authorized and remains incomplete. Approved execution plan v0.2 and these proposed task conditions require explicit task approval and T1 resumption authorization. No T2 authorization.
 
 ## Execution rules
@@ -46,7 +48,7 @@ No dependency installation, image pull/build requiring packages, or browser down
   - Work: Implement ordinary-user creation service and own-data/password updates with actor policies and validation. Do not expose owner-dependent account creation before group authorization exists.
   - Files/responsibility: backend/src/Application/; backend/src/Api/; backend/tests/Functional/.
   - Done when: Own updates and password verification pass; unauthorized other-member edits fail; normal creation produces USER only; duplicate races produce field errors.
-  - Evidence: not executed; no completion or passing result claimed.
+  - Evidence: Complete with backend 73 tests/621 assertions, PHPStan level 10 zero errors and recorded checks; see [T4 evidence](./verification.md#t4-completion). Historical details are retained there.
 
 - [x] **T5. Implement recovery token lifecycle.** FR-28, FR-4, NFR-10
   - Depends on: T4.
@@ -55,12 +57,12 @@ No dependency installation, image pull/build requiring packages, or browser down
   - Done when: Controlled-clock tests prove expiry, supersession and reuse rejection; valid reset changes the password and permits login; raw tokens never appear in persistence/logs.
   - Evidence: Complete under approved execution plan v0.1: backend 88 tests/812 assertions, four real races, rollback/native login, PHPStan level 10 zero errors and 80 syntax/container/12 YAML checks pass. See [T5 evidence](./verification.md#t5-completion). Stop before T6.
 
-- [ ] **T6. Deliver recovery email through durable mail infrastructure.** FR-13, FR-28, FR-34, NFR-7, NFR-10
+- [x] **T6. Deliver recovery email through durable mail infrastructure.** FR-13, FR-28, FR-34, NFR-7, NFR-10
   - Depends on: T5.
-  - Work: Implement foundational transactional message-ID transport/retry status needed for recovery, guarding expiry/supersession before handoff; assignment rendering remains 006.
-  - Files/responsibility: backend/src/Infrastructure/Mail/; backend/config/packages/messenger.yaml; backend/tests/Integration/.
-  - Done when: Mailpit captures a usable link; transport failure does not regenerate credentials, guards suppress stale reset delivery, and no second hidden mail queue is introduced.
-  - Evidence: not executed; no completion or passing result claimed.
+  - Work: Integrate recovery/reset JSON adapters and atomic issuance/supersession, authenticated encrypted delivery work and ID-only Messenger enqueue on one MySQL connection. Use approved RECOVERY_DELIVERY_KEY from the private shared dotenv, independent of assignment keys/APP_SECRET; validate before credential mutation. Implement authoritative stale guards, stable Message-ID, synchronous Mailer handoff, sanitized retry status and terminal envelope purging. Messenger alone owns five retries; assignment rendering remains 006.
+  - Files/responsibility: backend/src/Application/Recovery/ and Port/; backend/src/Api/; backend/src/Infrastructure/Mail/ and Doctrine/; backend/config/routes.yaml, services.yaml, doctrine/ and packages/messenger.yaml; new explicit migrations; environment templates and existing runtime/test wrappers where needed; backend/tests/; README.md and technical operations/security documentation.
+  - Done when: Mailpit captures a usable link and native reset/login succeeds; retry/restart preserves the same token; real MySQL failures roll back token/work/queue together; superseded, consumed, expired and deleted-account work cannot send after its authoritative stale check. Queue/failure/log/status output contains no raw token/key/link. Fresh nonces, request/delivery identity binding, tampering/wrong/missing-key failure and successful/terminal/stale envelope purging are verified. Existing credential/profile/role policy remains unchanged; no second queue or scheduler, no exactly-once SMTP claim. Document single-active-key backup and drain/cancel/purge-before-replacement procedure, without generating real keys under planning approval. Full relevant regressions and fixed PHPStan level 10 pass. Exact JSON/URL contracts and bounded runtime operations require finalized T6 execution-plan approval.
+  - Evidence: Complete under approved execution plan v0.3: final mail suite 105 tests/1084 assertions, PHPStan level 10 zero errors, 96 syntax/container/12 YAML and static checks pass. See [T6 evidence](./verification.md#t6-completion). Stop before T7.
 
 - [ ] **T7. Implement login and recovery/reset screens.** FR-3, FR-4, FR-15, FR-28, FR-35, NFR-2, NFR-5, NFR-6, NFR-8, NFR-10
   - Depends on: T6.
@@ -78,9 +80,9 @@ No dependency installation, image pull/build requiring packages, or browser down
 
 - [ ] **T9. Verify identity privacy and record slice evidence.** FR-3, FR-4, FR-5, FR-13, FR-15, FR-22, FR-28, FR-29, FR-30, FR-34, FR-35, NFR-1, NFR-2, NFR-4, NFR-5, NFR-6, NFR-7, NFR-8, NFR-10
   - Depends on: T8.
-  - Work: Run focused account/API/command/browser regressions, inspect DTOs/logs for credentials, and record partial owner/draw coverage explicitly.
+  - Work: Run focused account/API/command/browser regressions, inspect DTOs/logs for credentials, and record partial owner/draw coverage explicitly. Consolidate T6's environment-key/encrypted-delivery, atomic enqueue, same-token retry, stale cancellation, terminal purging and non-disclosure evidence against approved parent plan v0.5 / derived plan v0.4; verify current combined recovery/browser behavior without claiming unfinished assignment delivery.
   - Files/responsibility: specs/003-identity-access/verification.md; backend/tests/; tests/e2e/.
-  - Done when: Identity acceptance cases pass with evidence; group-owner creation, assignment notifications/dashboard and deletion remain labelled downstream rather than fulfilled.
+  - Done when: Identity acceptance cases pass with evidence, including usable captured recovery links and secret/token privacy under the approved delivery design; group-owner creation, assignment notifications/dashboard and deletion remain labelled downstream rather than fulfilled. Preserve T1–T5 historical evidence and distinguish internal lifecycle checks from current full recovery-flow verification; fixed PHPStan level 10 remains required.
   - Evidence: not executed; no completion or passing result claimed.
 
 ## Traceability and acceptance
@@ -137,3 +139,19 @@ T4 complete under approved execution plan v0.1 and “apruebo el plan y autorizo
 ## T5 completion — latest boundary
 
 T5 complete under [execution plan v0.1](./t5-execution-plan.md), approved with “Apruebo el plan y autorizo su implementación”, 2026-11-18. [Evidence](./verification.md#t5-completion): backend 88/812 including controlled-clock boundaries, four real connection races, actual SQL rollback and native login; PHPStan level 10 zero errors, 80 syntax/container/12 YAML checks pass. Lifecycle only; HTTP/email integration remains T6 and UI T7. Project total 15 complete/41 pending. Stop before T6 and require its execution-plan approval and implementation/runtime authorization.
+
+## Recovery delivery task revision — v0.4 proposed
+
+Preparation authority: “Apruebo las revisiones y autorizo actualizar las tareas afectadas”, 2026-11-18. Implements approved parent plan v0.5 / derived plan v0.4 under unchanged Spec 001 v1.2 / derived spec v0.3. Changed pending tasks: T6 delivery/JSON/secret/atomicity scope and done conditions; T9 consolidated regression/privacy evidence. T1–T5 remain complete with their recorded evidence; T7/T8 behavior, IDs and dependencies remain unchanged. Nine local tasks: five complete, four pending. Project total remains 56, 15 complete/41 pending.
+
+No block 002 task reopened and no assignment-key/file policy change in 005:T2. No task or package added. Existing requirements retain their traceability: T6 recovery portions of FR-13/28/34 and NFR-7/10; T9 consolidates all listed identity acceptance, including FR-4 password consumers. These changed task conditions are proposals, not approved by document-preparation authority. No implementation/check has been executed for T6.
+
+Next: obtain approval of task list v0.4 and parent index v0.5 and authorization to finalize/present T6 execution plan. Its exact API/link details, concrete files, runtime/test-secret operations and limits require that later explicit approval before implementation. No key generation, dotenv mutation, installation, real database/account changes, runtime, commit/push or T7 authorized.
+
+### v0.4 approval — latest boundary
+
+User stated “Apruebo estas listas y autorizo finalizar y el presentar el plan”, 2026-11-18, approving displayed tasks v0.4 / parent index v0.5 and authorizing final T6 execution-plan preparation/presentation only. Earlier pending-task-approval statements are historical. Await approval and explicit implementation/runtime authorization for finalized T6 execution plan; no key generation or installation inferred.
+
+## T6 completion — latest boundary
+
+T6 complete under execution plan v0.3 approved with “apruebo el plan y su implementación”, 2026-11-18. [Evidence](./verification.md#t6-completion): final mail suite 105/1084 including current backend, real worker/SMTP races, durable same-token retry and crash-window count recovery, SQL rollback/key/privacy/schema checks; PHPStan level 10 zero errors, 96 syntax/container/12 YAML and static checks pass. Six local tasks complete, three pending. Project total 16 complete/40 pending. Stop before T7; prepare/present its execution plan on continuation and await explicit approval/implementation/runtime authorization. No real key provisioned or main development recovery readiness claim; no installation, external mail, commit or push.
