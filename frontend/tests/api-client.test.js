@@ -47,3 +47,8 @@ describe('same-origin JSON boundary', () => {
     await expect(requestJson('/api')).rejects.toMatchObject({ message: 'No se pudo conectar con el servidor.' })
   })
 })
+
+it('only exposes requested structured field errors', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ fields: { password: 'Revisa la contraseña.', secret: 'private' }, message: 'private' }), { status: 422, headers: { 'Content-Type': 'application/json' } })))
+  await expect(requestJson('/api/password-reset', { errorFields: ['password'] })).rejects.toMatchObject({ fields: { password: 'Revisa la contraseña.' }, message: 'No se pudo completar la solicitud.' })
+})

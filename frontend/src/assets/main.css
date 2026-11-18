@@ -15,3 +15,7 @@ body {
   outline: 3px solid #24313b;
   outline-offset: 4px;
 }
+
+.identity-panel { max-width: 32rem; }
+.form-control, .btn { min-height: 2.75rem; }
+fieldset { min-width: 0; }

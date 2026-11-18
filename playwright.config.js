@@ -6,6 +6,7 @@ module.exports = defineConfig({
   forbidOnly: true,
   workers: 1,
   retries: 0,
+  ...(process.env.IDENTITY_E2E === '1' ? { timeout: 120000, expect: { timeout: 30000 }, maxFailures: 1 } : {}),
   reporter: 'list',
   use: { baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://tocaregalo-nginx' },
   projects: [

@@ -23,3 +23,9 @@ Recovery/reset require JSON and a session-bound CSRF token, including anonymous 
 scripts/check mail uses an owned tmpfs test database, local Mailpit and disposable keys generated inside test processes. Real root dotenv secrets are not modified. Worker/native HTTP children inherit the synthetic key only for that invocation; teardown removes test resources. Tests must never send recovery mail to external SMTP. Passing local capture evidence is not production SMTP/TLS/browser acceptance.
 
 A retry can be durably queued just before a worker exits without recording its status projection. On receiving a recovery retry, middleware restores the observed retry count from Messenger's RedeliveryStamp before handling; it never schedules another retry. Older events cannot lower the recorded count or reopen terminal work. This covers projection recovery without claiming an atomic transaction across SMTP acceptance and database commit.
+
+## Browser recovery boundary (003:T7)
+
+Reset fragments are moved into Vue memory and removed from URL/history before asynchronous work. Password/token references are cleared after success or route exit; no local/session storage or automatic login is used. Protected navigation revalidates the own actor, distinguishes 401 from network failures, and ignores stale restoration responses. Logout claims success only after server acknowledgement. Backend authorization remains authoritative.
+
+The isolated identity selector uses private disposable env-file propagation only for synthetic tests; it does not change the approved root-dotenv real-key policy. Browser access excludes that env file. Captured bearer navigation has sanitized navigation failure reporting with traces/video/screenshots disabled. Real recovery provisioning and production HTTPS/proxy checks remain separate acceptance work.

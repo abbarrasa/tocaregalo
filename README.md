@@ -207,7 +207,7 @@ Con el servicio PHP iniciado y las migraciones aplicadas en el entorno elegido, 
 docker compose --env-file .env exec tocaregalo-php php bin/console app:user:create-super-admin
 ```
 
-No admite ejecución con `--no-interaction`. El rol se crea si falta, junto con la cuenta en una única transacción. No verifica cuentas ni envía correos. Esta tarea solo usa cuentas sintéticas en una base temporal para sus comprobaciones; no ha aplicado migraciones ni creado una cuenta real en desarrollo. La autenticación y sus pantallas siguen pendientes.
+No admite ejecución con `--no-interaction`. El rol se crea si falta, junto con la cuenta en una única transacción. No verifica cuentas ni envía correos. Esta tarea solo usa cuentas sintéticas en una base temporal para sus comprobaciones; no ha aplicado migraciones ni creado una cuenta real en desarrollo. Las pantallas de acceso y recuperación se describen más adelante; editar la cuenta sigue pendiente.
 
 ## API de sesión
 
@@ -215,7 +215,7 @@ La API permite iniciar sesión con correo o teléfono y contraseña. Primero sol
 
 `GET /api/me` devuelve únicamente los datos y roles de la cuenta autenticada. `POST /api/logout`, con el token CSRF de esa sesión, la cierra e invalida su acceso anterior. Las respuestas no se deben guardar en caché. La cookie es HttpOnly, usa SameSite=Lax y se marca Secure en HTTPS; el despliegue requiere HTTPS.
 
-Se necesita aplicar las migraciones del entorno elegido, incluida la tabla de sesiones, antes de usar estos endpoints. Las comprobaciones del proyecto solo migran y crean usuarios sintéticos en MySQL temporal; no han preparado la base de desarrollo. Las pantallas de login, recuperación y cuenta siguen pendientes.
+Se necesita aplicar las migraciones del entorno elegido, incluida la tabla de sesiones, antes de usar estos endpoints. Las comprobaciones del proyecto solo migran y crean usuarios sintéticos en MySQL temporal; no han preparado la base de desarrollo. Las pantallas de login y recuperación están disponibles; editar la cuenta sigue pendiente.
 
 ### Modificar la cuenta propia
 
@@ -225,10 +225,16 @@ La respuesta correcta devuelve los datos propios, sin contraseña. Los errores d
 
 ### Recuperación de contraseña: estado del desarrollo
 
-El ciclo interno de recuperación ya permite emitir un token, sustituir los anteriores y cambiar la contraseña una sola vez antes de su caducidad. `PASSWORD_RESET_TTL_SECONDS` configura la duración de los nuevos enlaces; el valor predeterminado es `3600` segundos. La base de datos guarda únicamente el hash del token. El backend de correo y sus rutas se describen en el siguiente apartado; los formularios siguen pendientes.
+El ciclo interno de recuperación ya permite emitir un token, sustituir los anteriores y cambiar la contraseña una sola vez antes de su caducidad. `PASSWORD_RESET_TTL_SECONDS` configura la duración de los nuevos enlaces; el valor predeterminado es `3600` segundos. La base de datos guarda únicamente el hash del token. El backend de correo y sus rutas se describen en el siguiente apartado; los formularios de recuperación se describen más adelante.
 
 ### API y correo de recuperación
 
 `POST /api/password-recovery` recibe `identifier` (email o teléfono internacional). `POST /api/password-reset` recibe `token` y `password`. Ambas operaciones requieren JSON y el encabezado `X-CSRF-Token` obtenido de la sesión. La solicitud de recuperación devuelve el mismo mensaje para cuentas existentes y desconocidas; el cambio válido devuelve estado 204 y permite iniciar sesión con la nueva contraseña.
 
-El correo utiliza un enlace con el token en el fragmento de la URL. Los formularios se implementarán en T7. Antes de usar el correo en desarrollo deben aplicarse las migraciones y aprovisionarse, con autorización, `RECOVERY_DELIVERY_KEY` en el entorno privado. La clave real no se genera con esta tarea; las comprobaciones de correo usan claves desechables y Mailpit. Los errores de configuración no deben resolverse copiando secretos al repositorio.
+El correo utiliza un enlace con el token en el fragmento de la URL. Las pantallas de recuperación están disponibles. Antes de usar el correo en desarrollo deben aplicarse las migraciones y aprovisionarse, con autorización, `RECOVERY_DELIVERY_KEY` en el entorno privado. La clave real no se genera con esta tarea; las comprobaciones de correo usan claves desechables y Mailpit. Los errores de configuración no deben resolverse copiando secretos al repositorio.
+
+### Pantallas de acceso y recuperación
+
+La aplicación muestra el inicio de sesión con email o teléfono internacional y contraseña. El enlace «¿Has olvidado tu contraseña?» solicita un correo de recuperación; el mensaje es el mismo exista o no la cuenta. El enlace del correo permite establecer una contraseña nueva una sola vez, sin iniciar sesión automáticamente. Los espacios cuentan como parte de la contraseña. El teléfono requiere `+` y prefijo de país; el formulario elimina los signos y espacios de formato.
+
+Tras acceder se muestra la identidad propia y la opción de cerrar sesión. El panel de grupos y eventos y el formulario de edición de cuenta quedan pendientes. Para probar los flujos completos con cuentas sintéticas y Mailpit, ejecuta `scripts/check identity`; admite un perfil como `chromium-desktop`. Usa MySQL temporal y una clave desechable y retira sus recursos al terminar. No prepara la base ni la clave real de desarrollo.
