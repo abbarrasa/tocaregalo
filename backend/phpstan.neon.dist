@@ -6,9 +6,12 @@ includes:
 parameters:
     level: 10
     paths:
+        - migrations
         - src
         - tests
         - config
         - public
         - bin/console
+    scanDirectories:
+        - migrations
     tmpDir: var/phpstan

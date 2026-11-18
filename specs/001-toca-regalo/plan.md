@@ -1,11 +1,13 @@
 # Plan 001 — Toca Regalo
 
-Status: approved v0.3; task execution and installation remain separately gated
+Status: approved v0.4; task-list revision authorized, implementation remains separately gated
+Approval (v0.4): “Apruebo estos planes y autorizo actualizar las listas”, 2026-11-17. Approves the displayed plan; authorizes task-list preparation only.
 Approval (v0.3): “apruebo la revisiones y autorizo actualizar las listas de tareas”, 2026-11-17. Approves displayed plan revisions and authorizes task-list preparation only.
-Revision: v0.3
+Revision: v0.4
+Preparation authority: “Apruebo esta revisión y autorizo preparar el resto de revisiones afectadas”, 2026-11-17. No task-list or implementation approval inferred.
 Historical approval (v0.1): The user explicitly stated “Apruebo el plan” on 2026-11-16 in response to the request to approve v0.1 and proceed to task decomposition. Unchanged architecture and prior evidence retain that approval.
 Approval (v0.2): “Apruebo estas revisiones y autorizo actualizar las tareas”, 2026-11-17, approves the displayed PHPStan plan revision and authorizes task-list preparation, not implementation or installation.
-Approved specification: [v1.1](./spec.md)
+Approved specification: [v1.2](./spec.md)
 Constitution: [v1](../../docs/constitution.md)
 Scope: v0.1 remains the approved application architecture; proposed v0.2 adds the NFR-10 tooling/completion gate. Task-list preparation is authorized; installation and task execution still require explicit approval.
 
@@ -308,3 +310,13 @@ Before block 005 enables any encrypted assignment or destructive operation requi
 No FR/NFR/AC changes. NFR-3 maps additionally to proposed 002:T10; NFR-1/4/5/7/10 support its verification/documentation. Historical T7/T8 evidence remains valid for unchanged paths, but does not verify corrected startup. NFR-6/7/8 product flows and NFR-9 real closure retain downstream ownership.
 
 After plan approval, revise the parent task index and child 002/005 tasks as proposed below. Keep existing IDs; add only 002:T10, producing 56 total tasks (nine previously complete, 47 pending), ten tasks in block 002 and ten unchanged IDs in block 005. Final Validation must reassess the corrected main startup; specifications cannot be marked implemented on this amendment.
+
+## Password boundary revision — proposed
+
+Implements approved parent Spec 001 v1.2 FR-4/AC-4 (S15). Keep the shared policy framework-independent: validate UTF-8, count at least six characters with `mb_strlen`, reject more than 4096 bytes with `strlen`, and preserve exact whitespace. Delegate hashing and verification to the existing Symfony auto adapter. No custom prehash, truncation, new package or schema change. The rejected alternative of bypassing the framework guard would introduce custom hashing behavior despite the accepted Symfony limit.
+
+Apply validation before password hashing and account/password persistence in all password-setting consumers: owner creation, bootstrap command, authenticated changes and recovery. Later consumer tasks must prove invalid input leaves accounts/passwords unchanged. Existing reset-token validity/single-use rules remain unchanged. Do not infer implemented consumer flows from shared-policy tests.
+
+Verification: test ASCII and multibyte inputs at 4096 and 4097 bytes, five/six-character minimum boundaries, preserved whitespace, correct/incorrect hash verification and rejection before persistence. Future forms must use Spanish associated field errors; HTML character-count limits cannot replace backend UTF-8 byte validation. Run relevant regressions and final full-scope PHPStan level 10, zero errors without baseline. Existing 003:T1 45 tests/175 assertions do not yet cover this boundary; preserve their historical evidence and accepted block 002 Validation.
+
+No new task IDs, dependency installation, key operation, development DDL/account, commit or push is proposed. Revise affected task conditions only after plan approval. Existing unmodified plan sections retain their historical approved scope.

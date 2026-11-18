@@ -4,3 +4,9 @@ services:
         autoconfigure: true
 
     App\Api\JsonResponseSubscriber: ~
+
+    App\Infrastructure\Validation\UserInputValidator: ~
+    App\Infrastructure\Security\SymfonyPasswordService: ~
+    App\Infrastructure\Doctrine\DoctrineUserRepository: ~
+    App\Application\Port\PasswordService: '@App\Infrastructure\Security\SymfonyPasswordService'
+    App\Application\Port\UserRepository: '@App\Infrastructure\Doctrine\DoctrineUserRepository'

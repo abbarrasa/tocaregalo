@@ -70,3 +70,31 @@ Use one optional completion field: scheduled closure is end-of-day in system tim
 ### Block 002 accepted — latest authority
 
 On 2026-11-17 the user stated “Acepto la validación”, accepting the renewed scoped PASS. Spec 002 v0.2 is implemented for the reviewed foundation-only scope, with ten completed tasks and evidence in verification.md/MEMORY.md. Parent Spec 001 remains approved; product behavior in blocks 003–007 remains pending. No block 003 task is authorized. On user continuation prepare and present 003:T1's task-specific execution plan and await explicit approval/implementation authorization. No implicit installation, commit, merge or push.
+
+### 003:T1 in progress — latest authority
+
+Execution plan v0.1 approved, implementation/temp-MySQL explicitly authorized with “Autorizo implementar T1 y ejecutar las comprobaciones previstas con MySQL temporal”. Branch feature/003_T01-user-values-persistence. Latest 45 tests/175 assertions, real guarded migration reversal/schema checks, 35 syntax/11 YAML/container lint and PHPStan level 10 (including migrations) pass. T1 is not complete: synthetic >4096-byte input meets minimum-only policy but Symfony's hasher rejects it; user clarification requested, pending. No maximum/custom workaround approval inferred. See specs/003-identity-access/verification.md. No T2, installation, development DDL/account, keys, commit or push authorized.
+
+### Password Change plans proposed — latest authority
+
+On 2026-11-17 user approved parent Spec 001 v1.2 with “Apruebo esta revisión y autorizo preparar el resto de revisiones afectadas”. FR-4/AC-4 now enforce minimum six characters and maximum 4096 UTF-8 bytes with exact whitespace; reject oversized input without account/password mutation. Derived 003/007 specs v0.3 inherit this verbatim. Parent plan v0.4, 003/007 plans v0.3 and 003:T1 execution plan v0.2 are proposed, not approved. Next: obtain plan approval and authorization to revise task lists/index; then revised task approval and explicit T1 resumption authorization. T1 remains incomplete; earlier checks do not cover this boundary. No T2, installs or runtime authorized by this document-preparation approval. Preserve historical evidence and accepted block 002 scope.
+
+### Password task lists proposed — latest authority
+
+On 2026-11-17 user stated “Apruebo estos planes y autorizo actualizar las listas”. Parent plan v0.4, 003/007 plans v0.3 and 003:T1 execution plan v0.2 are approved. Application task index v0.4 and 003/007 task lists v0.3 are proposed with revised FR-4/AC-4 boundary/consumer checks; no new tasks, counts unchanged. Next: obtain approval of lists and explicit authorization to resume only 003:T1 and its bounded temporary-MySQL checks. Do not implement the byte guard or run runtime checks under document-preparation authorization. T1 incomplete; T2/installations/real database changes/commit/push unauthorized.
+
+### 003:T1 complete — latest authority
+
+User approved revised lists and resumed T1 with “Apruebo las listas y autorizo reanudar 003:T1”, 2026-11-17. T1 complete on feature/003_T01-user-values-persistence under execution plan v0.2: backend 53 tests/191 assertions, real guarded MySQL migration/schema/uniqueness, ASCII/multibyte 4096/4097-byte boundaries, 36 syntax checks, container/11 YAML lint and PHPStan level 10 zero errors pass. See specs/003-identity-access/verification.md#t1-completion. Owned runtime/network/lock removed; no installation, development DDL/accounts, keys, SMTP, commit/push. Counts 56 total: 11 complete, 45 pending. Stop before 003:T2; on continuation prepare/present its execution plan and await explicit approval/implementation authorization. Previous pending clarification/plan/task statements are historical and superseded.
+
+### T1 lastname refactor complete — latest authority
+
+On 2026-11-18 user approved naming plan v0.1 with “apruebo el plan y autorizo la implementación”. PHP identifiers use lastname; Doctrine explicitly retains SQL surnames column, no migration change. Backend 53/191, real tmpfs MySQL ORM/migration checks, syntax/container/11 YAML and PHPStan level 10 zero errors pass. Evidence: specs/003-identity-access/verification.md naming revision. Owned test runtime/lock removed. No installs, real data mutation, commit/push. T1 remains complete; counts 11 complete/45 pending. Stop before T2 and retain its execution-plan approval gate.
+
+### T1 lastName casing complete — latest authority
+
+On 2026-11-18 user approved casing plan v0.1 with “aprueblo el plan y su implementación”. Identifiers now use lastName (superseding lowercase lastname), with unchanged SQL surnames column/migration. Backend 53/191, real tmpfs MySQL migration/ORM checks, 36 syntax/container/11 YAML checks and PHPStan level 10 zero errors pass. Evidence: specs/003-identity-access/verification.md casing revision. Temporary runtime/lock removed; no installs, real data mutation, commit/push. T1 remains complete (11 complete/45 pending); stop before T2 and preserve its execution-plan gate.
+
+### T1 lastName SQL alignment complete — latest authority
+
+On 2026-11-18 user approved SQL plan v0.1 with “Apruebo el plan y la implementación”. Initial migration and ORM SQL column now use lastName, superseding prior instructions retaining surnames. No persistent schema upgrade performed. Backend 53/191, real tmpfs MySQL migration/ORM parity/nullable persistence, 36 syntax/container/11 YAML and PHPStan level 10 zero errors pass; evidence in specs/003-identity-access/verification.md SQL alignment record. Temporary runtime/lock removed; no installs, real development DDL/accounts, keys, SMTP, commit/push. T1 complete; counts 11 complete/45 pending. Stop before T2 and preserve its execution-plan approval gate.
