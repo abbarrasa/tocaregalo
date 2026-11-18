@@ -34,12 +34,12 @@ No dependency installation, image pull/build requiring packages, or browser down
   - Done when: Interactive fixtures cover missing role, duplicates, validation, confirmation and failure exits; no existing user is overwritten or verified.
   - Evidence: Complete under approved execution plan v0.1 on feature/003_T02_super-admin-command. Backend 59 tests/286 assertions including real MySQL atomic rollback/duplicate and real PTY hidden-input checks; PHPStan level 10 zero errors; syntax/container/11 YAML checks pass. Owned runtime removed; no real account/DDL or installation. See [T2 evidence](./verification.md#t2--interactive-super-admin-completion). Stop before T3.
 
-- [ ] **T3. Implement session authentication and logout JSON contracts.** FR-15, FR-22, FR-35, NFR-4, NFR-10
+- [x] **T3. Implement session authentication and logout JSON contracts.** FR-15, FR-22, FR-35, NFR-4, NFR-10
   - Depends on: T2.
   - Work: Implement identifier login, session actor projection, CSRF and explicit logout with same-origin cookies; no public registration.
   - Files/responsibility: backend/src/Infrastructure/Security/; backend/src/Api/; backend/config/packages/.
   - Done when: Email and cleaned-phone login succeed, invalid credentials fail, logout invalidates old-session access, and forged role/owner input grants no privilege.
-  - Evidence: not executed; no completion or passing result claimed.
+  - Evidence: Complete under approved T3 execution plan v0.1 on feature/003_T03_session-authentication: backend 63 tests/374 assertions with real HTTP/MySQL session persistence, CSRF, rotation/logout replay, persisted role/user refresh and T1/T2 regressions; PHPStan level 10 zero errors; 53 syntax/container/12 YAML checks pass. Owned resources removed. [Evidence](./verification.md#t3-completion-and-final-actual-results). Stop before T4.
 
 - [ ] **T4. Implement authenticated own-account changes and creation boundary.** FR-3, FR-4, FR-5, FR-22, FR-29, NFR-10
   - Depends on: T3.
@@ -85,7 +85,7 @@ No dependency installation, image pull/build requiring packages, or browser down
 
 ## Traceability and acceptance
 
-See [plan traceability](./plan.md#traceability). FR-N maps to parent AC-N; NFR acceptance conditions are inherited verbatim in [spec](./spec.md). T1 and T2 are complete; seven tasks remain pending. No later task checks have been executed.
+See [plan traceability](./plan.md#traceability). FR-N maps to parent AC-N; NFR acceptance conditions are inherited verbatim in [spec](./spec.md). T1–T3 are complete; six tasks remain pending. No later task checks have been executed.
 
 ## Phase boundary
 
@@ -125,3 +125,7 @@ Approved SQL execution plan v0.1 with “Apruebo el plan y la implementación”
 ## T2 completion — latest boundary
 
 T2 complete on feature/003_T02_super-admin-command; counts 12 complete/44 pending project-wide. No T3 authorization. On continuation prepare/present its execution plan and await explicit approval. Previous stop-before-T2 statements remain historical.
+
+## T3 completion — latest boundary
+
+T3 complete; project total 13 complete/43 pending. No T4 authorization. On continuation prepare/present its task-specific execution plan and await explicit approval. Historical stop-before-T3 entries are superseded.

@@ -3,3 +3,20 @@ api_platform:
     type: api_platform
     prefix: /api
     trailing_slash_on_root: false
+
+session_csrf:
+    path: /api/csrf
+    controller: App\Api\SessionController::csrf
+    methods: [GET]
+session_login:
+    path: /api/login
+    controller: App\Api\SessionController::login
+    methods: [POST]
+session_me:
+    path: /api/me
+    controller: App\Api\SessionController::me
+    methods: [GET]
+session_logout:
+    path: /api/logout
+    controller: App\Api\SessionController::logout
+    methods: [POST]

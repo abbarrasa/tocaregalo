@@ -208,3 +208,11 @@ docker compose --env-file .env exec tocaregalo-php php bin/console app:user:crea
 ```
 
 No admite ejecución con `--no-interaction`. El rol se crea si falta, junto con la cuenta en una única transacción. No verifica cuentas ni envía correos. Esta tarea solo usa cuentas sintéticas en una base temporal para sus comprobaciones; no ha aplicado migraciones ni creado una cuenta real en desarrollo. La autenticación y sus pantallas siguen pendientes.
+
+## API de sesión
+
+La API permite iniciar sesión con correo o teléfono y contraseña. Primero solicita `GET /api/csrf`, conservando la cookie `TOCAREGALO_SESSION`; envía el token recibido en `X-CSRF-Token` al hacer `POST /api/login` con los campos JSON `identifier` y `password`.
+
+`GET /api/me` devuelve únicamente los datos y roles de la cuenta autenticada. `POST /api/logout`, con el token CSRF de esa sesión, la cierra e invalida su acceso anterior. Las respuestas no se deben guardar en caché. La cookie es HttpOnly, usa SameSite=Lax y se marca Secure en HTTPS; el despliegue requiere HTTPS.
+
+Se necesita aplicar las migraciones del entorno elegido, incluida la tabla de sesiones, antes de usar estos endpoints. Las comprobaciones del proyecto solo migran y crean usuarios sintéticos en MySQL temporal; no han preparado la base de desarrollo. Las pantallas de login, recuperación y cuenta siguen pendientes.

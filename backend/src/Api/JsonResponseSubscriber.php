@@ -27,13 +27,21 @@ final class JsonResponseSubscriber implements EventSubscriberInterface
     public function handleException(ExceptionEvent $event): void
     {
         $exception = $event->getThrowable();
+        if ($exception instanceof \Symfony\Component\Security\Core\Exception\AuthenticationException || $exception instanceof \Symfony\Component\Security\Core\Exception\AccessDeniedException) {
+            return;
+        }
         $status = $exception instanceof HttpExceptionInterface ? $exception->getStatusCode() : 500;
         $headers = $exception instanceof HttpExceptionInterface ? $exception->getHeaders() : [];
         $title = match ($status) {
             404 => 'Recurso no encontrado',
             405 => 'Método no permitido',
+            422 => 'Los datos de la solicitud no son válidos',
             default => 'No se pudo completar la solicitud',
         };
-        $event->setResponse(new JsonResponse(['status' => $status, 'title' => $title], $status, $headers));
+        $data = ['status' => $status, 'title' => $title];
+        if ($status === 422) {
+            $data['error'] = 'invalid_input';
+        }
+        $event->setResponse(new JsonResponse($data, $status, $headers));
     }
 }
