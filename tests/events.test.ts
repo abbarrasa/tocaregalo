@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { EventInputError, eventCreationInput, eventPageInput, type GroupEvent } from '../src/domain/events.ts';
+import { EventInputError, eventCreationInput, eventPageInput, eventCursor, type GroupEvent } from '../src/domain/events.ts';
 import { EventService, type EventStore } from '../src/application/event-service.ts';
 import { GroupAccessError } from '../src/domain/groups.ts';
 
@@ -16,11 +16,16 @@ test('event input requires an explicit nullable safe-integer closure without coe
 
 test('event pages preserve bounded pagination rules and domain-specific input errors', () => {
   assert.deepEqual(eventPageInput(null, null), { limit: 20, cursor: null });
-  assert.deepEqual(eventPageInput('50', 'event-id'), { limit: 50, cursor: 'event-id' });
+  assert.deepEqual(eventPageInput('50', eventCursor({ createdAtMs: 1000, id: 'event-id' })), {
+    limit: 50, cursor: { createdAtMs: 1000, id: 'event-id' },
+  });
   for (const size of ['', '0', '51', '-1', '01', '1.5', ' 2', 'Infinity']) {
     assert.throws(() => eventPageInput(size, null), EventInputError);
   }
-  for (const cursor of ['', ' ', 'x'.repeat(513)]) assert.throws(() => eventPageInput(null, cursor), EventInputError);
+  for (const cursor of ['', ' ', 'x'.repeat(513), 'old-id', '[2,1000,"id"]', '[1,1.5,"id"]',
+    '[1,1000,""]', '[1,"1000","id"]', '[1,1000,"id",4]', '{}']) {
+    assert.throws(() => eventPageInput(null, cursor), EventInputError);
+  }
 });
 
 test('event service checks the exact creation boundary and generates trusted fields before owner-scoped insertion', async () => {
@@ -31,10 +36,11 @@ test('event service checks the exact creation boundary and generates trusted fie
       saved.push(event);
     },
     async findEventForAccount(id, actor) { return actor === 'owner' ? saved.find(e => e.id === id) ?? null : null; },
-    async listEventsForAccount(groupId, actor, limit, afterId) {
+    async listEventsForAccount(groupId, actor, limit, cursor) {
       if (actor !== 'owner' || groupId !== 'group') return null;
-      return saved.filter(e => e.groupId === groupId && (afterId === null || e.id > afterId))
-        .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0).slice(0, limit);
+      return saved.filter(e => e.groupId === groupId && (cursor === null || e.createdAtMs < cursor.createdAtMs
+        || (e.createdAtMs === cursor.createdAtMs && e.id < cursor.id)))
+        .sort((a, b) => b.createdAtMs - a.createdAtMs || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0)).slice(0, limit);
     },
   };
   let now = 1000;
@@ -59,8 +65,8 @@ test('event service checks the exact creation boundary and generates trusted fie
   const first = await service.list('owner', 'group', { limit: 1, cursor: null });
   assert.ok(first);
   assert.equal(first.events.length, 1);
-  assert.equal(first.nextCursor, first.events[0].id);
-  const second = await service.list('owner', 'group', { limit: 1, cursor: first.nextCursor });
+  assert.equal(first.nextCursor, eventCursor(first.events[0]));
+  const second = await service.list('owner', 'group', eventPageInput('1', first.nextCursor));
   assert.ok(second);
   assert.equal(second.events.length, 1);
   assert.equal(second.nextCursor, null);

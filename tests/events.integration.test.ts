@@ -10,6 +10,8 @@ import { GroupsRepository } from '../src/persistence/groups-repository.ts';
 import { SessionsRepository } from '../src/persistence/sessions-repository.ts';
 import { SessionService } from '../src/application/session-service.ts';
 import { authObject } from '../src/domain/authentication.ts';
+import { eventCursor } from '../src/domain/events.ts';
+import { applyMigration } from './helpers/migrations.ts';
 
 test('owner-created events and member-scoped reads run in the bundled Worker with D1', async t => {
   const output = await mkdtemp(join(tmpdir(), 'tocaregalo-events-'));
@@ -26,8 +28,7 @@ test('owner-created events and member-scoped reads run in the bundled Worker wit
   const db = await mf.getD1Database('DB');
   for (const name of ['0001_draws.sql', '0002_accounts_groups.sql', '0003_sessions.sql', '0004_public_auth.sql',
     '0005_email_verification.sql', '0006_password_recovery.sql']) {
-    const sql = await readFile(new URL('../migrations/' + name, import.meta.url), 'utf8');
-    await db.batch(sql.split(';').map(s => s.trim()).filter(Boolean).map(s => db.prepare(s)));
+    await applyMigration(db, name);
     if (name === '0001_draws.sql') {
       await db.prepare('INSERT INTO events (id,closure_at_ms,created_at_ms) VALUES (?,?,?)').bind('legacy-event', null, 0).run();
     }
@@ -144,18 +145,37 @@ test('owner-created events and member-scoped reads run in the bundled Worker wit
     await groups.addMember('listing-group', 'owner', 'member', 1);
     for (let n = 55; n >= 1; n--) {
       await groups.createEvent('owner', { id: 'list-' + String(n).padStart(2, '0'), groupId: 'listing-group',
-        closureAtMs: n % 2 === 0 ? null : 1000, createdAtMs: 0 });
+        closureAtMs: n % 2 === 0 ? null : 1000, createdAtMs: n === 2 ? 999 : 1000 - n });
     }
     const before = await db.prepare('SELECT * FROM events ORDER BY id').all();
-    const migration = await readFile(new URL('../migrations/0007_event_listing_index.sql', import.meta.url), 'utf8');
-    await db.prepare(migration).run();
+    await applyMigration(db, '0007_event_listing_index.sql');
+    await applyMigration(db, '0008_event_creation_order.sql');
     assert.deepEqual((await db.prepare('SELECT * FROM events ORDER BY id').all()).results, before.results);
     const plan = await db.prepare(`EXPLAIN QUERY PLAN SELECT e.id, e.group_id, e.closure_at_ms, e.created_at_ms
-      FROM group_members m LEFT JOIN events e ON e.group_id = m.group_id AND e.id > ?
-      WHERE m.group_id = ? AND m.account_id = ? ORDER BY e.id LIMIT ?`)
-      .bind('list-02', 'listing-group', 'member', 51).all<{ detail: string }>();
-    assert.ok(plan.results.some(row => row.detail.includes('events_by_group_id')));
+      FROM group_members m LEFT JOIN events e ON e.group_id = m.group_id AND (e.created_at_ms, e.id) < (?, ?)
+      WHERE m.group_id = ? AND m.account_id = ? ORDER BY e.created_at_ms DESC, e.id DESC LIMIT ?`)
+      .bind(999, 'list-01', 'listing-group', 'member', 51).all<{ detail: string }>();
+    assert.ok(plan.results.some(row => row.detail.includes('events_by_group_creation')));
     assert.equal(plan.results.some(row => row.detail.includes('TEMP B-TREE')), false);
+  });
+
+  await t.test('creation timestamps remain immutable, including legacy events and transactional updates', async () => {
+    for (const id of ['legacy-event', eventId, 'list-02']) {
+      const before = await db.prepare('SELECT created_at_ms FROM events WHERE id = ?').bind(id).first('created_at_ms');
+      assert.ok(typeof before === 'number');
+      await assert.rejects(db.prepare('UPDATE events SET created_at_ms = ? WHERE id = ?').bind(before + 1, id).run(), /immutable/);
+      assert.equal(await db.prepare('SELECT created_at_ms FROM events WHERE id = ?').bind(id).first('created_at_ms'), before);
+      await db.prepare('UPDATE events SET created_at_ms = created_at_ms WHERE id = ?').bind(id).run();
+    }
+    const original = await db.prepare('SELECT closure_at_ms FROM events WHERE id = ?').bind(eventId).first('closure_at_ms');
+    await assert.rejects(db.batch([
+      db.prepare('UPDATE events SET closure_at_ms = ? WHERE id = ?').bind(12345, eventId),
+      db.prepare('UPDATE events SET created_at_ms = created_at_ms + 1 WHERE id = ?').bind(eventId),
+    ]), /immutable/);
+    assert.equal(await db.prepare('SELECT closure_at_ms FROM events WHERE id = ?').bind(eventId).first('closure_at_ms'), original);
+    // Other fields remain independently mutable internally; there is no public update endpoint.
+    await db.prepare('UPDATE events SET closure_at_ms = ? WHERE id = ?').bind(12345, eventId).run();
+    await db.prepare('UPDATE events SET closure_at_ms = ? WHERE id = ?').bind(original, eventId).run();
   });
 
   await t.test('member event lists distinguish authorized empty pages from inaccessible groups', async () => {
@@ -174,12 +194,19 @@ test('owner-created events and member-scoped reads run in the bundled Worker wit
     assert.equal(first.status, 200);
     const page = authObject(await first.json());
     assert.ok(Array.isArray(page.events));
-    assert.deepEqual(page.events.map(e => authObject(e).id), ['list-01', 'list-02']);
-    assert.deepEqual(page.events.map(e => authObject(e).closureAtMs), [1000, null]);
-    assert.equal(page.nextCursor, 'list-02');
+    assert.deepEqual(page.events.map(e => authObject(e).id), ['list-02', 'list-01']);
+    assert.deepEqual(page.events.map(e => authObject(e).createdAtMs), [999, 999]);
+    assert.deepEqual(page.events.map(e => authObject(e).closureAtMs), [null, 1000]);
+    const cursorQuery = (createdAtMs: number, id: string) => encodeURIComponent(eventCursor({ createdAtMs, id }));
+    assert.equal(page.nextCursor, eventCursor({ createdAtMs: 999, id: 'list-01' }));
+    const tied = authObject(await (await list('listing-group', 'member', '?limit=1')).json());
+    assert.equal(tied.nextCursor, eventCursor({ createdAtMs: 999, id: 'list-02' }));
+    const tiedNext = authObject(await (await list('listing-group', 'member', '?limit=1&cursor=' + cursorQuery(999, 'list-02'))).json());
+    assert.ok(Array.isArray(tiedNext.events));
+    assert.deepEqual(tiedNext.events.map(e => authObject(e).id), ['list-01']);
     // The cursor is a position, not a required existing row or a permission token.
-    await db.prepare('DELETE FROM events WHERE id = ?').bind('list-02').run();
-    const next = authObject(await (await list('listing-group', 'member', '?limit=2&cursor=list-02')).json());
+    await db.prepare('DELETE FROM events WHERE id = ?').bind('list-01').run();
+    const next = authObject(await (await list('listing-group', 'member', '?limit=2&cursor=' + cursorQuery(999, 'list-01'))).json());
     assert.ok(Array.isArray(next.events));
     assert.deepEqual(next.events.map(e => authObject(e).id), ['list-03', 'list-04']);
     const defaults = authObject(await (await list('listing-group', 'member')).json());
@@ -188,17 +215,17 @@ test('owner-created events and member-scoped reads run in the bundled Worker wit
     const maximum = authObject(await (await list('listing-group', 'member', '?limit=50')).json());
     assert.ok(Array.isArray(maximum.events));
     assert.equal(maximum.events.length, 50);
-    assert.equal(maximum.nextCursor, 'list-51');
-    const last = authObject(await (await list('listing-group', 'member', '?limit=50&cursor=list-51')).json());
+    assert.equal(maximum.nextCursor, eventCursor({ createdAtMs: 949, id: 'list-51' }));
+    const last = authObject(await (await list('listing-group', 'member', '?limit=50&cursor=' + cursorQuery(949, 'list-51'))).json());
     assert.ok(Array.isArray(last.events));
     assert.deepEqual(last.events.map(e => authObject(e).id), ['list-52', 'list-53', 'list-54', 'list-55']);
     assert.equal(last.nextCursor, null);
-    assert.deepEqual(await (await list('listing-group', 'member', '?cursor=zzzz')).json(), { events: [], nextCursor: null });
-    const foreign = authObject(await (await list('group', 'owner', '?cursor=list-01')).json());
+    assert.deepEqual(await (await list('listing-group', 'member', '?cursor=' + cursorQuery(-1, 'end'))).json(), { events: [], nextCursor: null });
+    const foreign = authObject(await (await list('group', 'owner', '?cursor=' + cursorQuery(999, 'list-01'))).json());
     assert.ok(Array.isArray(foreign.events));
     assert.equal(foreign.events.some(e => authObject(e).groupId !== 'group'), false);
     assert.equal(await groups.removeMember('listing-group', 'owner', 'member'), true);
-    assert.equal((await list('listing-group', 'member', '?cursor=list-02')).status, 404);
+    assert.equal((await list('listing-group', 'member', '?cursor=' + cursorQuery(999, 'list-02'))).status, 404);
     assert.deepEqual(await groups.listEventsForAccount('empty-group', 'owner', 51, null), []);
     assert.equal(await groups.listEventsForAccount('empty-group', 'other', 51, null), null);
     await assert.rejects(groups.listEventsForAccount('listing-group', 'owner', 52, null), RangeError);
@@ -213,7 +240,7 @@ test('owner-created events and member-scoped reads run in the bundled Worker wit
     const expired = await new SessionService(new SessionsRepository(db), () => 0).issueForVerifiedAccount('owner', 1000);
     assert.equal((await mf.dispatchFetch(path, { headers: { Cookie: '__Host-tocaregalo_session=' + expired.token } })).status, 401);
     for (const query of ['?limit=0', '?limit=51', '?limit=1.5', '?limit=01', '?limit=2&limit=3',
-      '?cursor=', '?cursor=a&cursor=b', '?cursor=' + 'x'.repeat(513)]) {
+      '?cursor=', '?cursor=a&cursor=b', '?cursor=list-01', '?cursor=' + 'x'.repeat(513)]) {
       assert.equal((await mf.dispatchFetch(path + query, { headers: headers('owner') })).status, 400);
     }
     const all = authObject(await (await mf.dispatchFetch(path + '?limit=50', { headers: headers('owner') })).json());
