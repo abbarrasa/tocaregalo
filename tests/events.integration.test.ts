@@ -114,9 +114,9 @@ test('owner-created events and member-scoped reads run in the bundled Worker wit
     const temporary = await sessions.issueForVerifiedAccount('owner', 86400000);
     await sessions.revoke(temporary.token);
     assert.equal((await mf.dispatchFetch(origin + '/api/events/' + eventId, { headers: { Cookie: '__Host-tocaregalo_session=' + temporary.token } })).status, 401);
-    const getCollection = await mf.dispatchFetch(origin + '/api/groups/group/events', { headers: headers('owner') });
-    assert.equal(getCollection.status, 405);
-    assert.equal(getCollection.headers.get('Allow'), 'POST');
+    const deleteCollection = await mf.dispatchFetch(origin + '/api/groups/group/events', { method: 'DELETE', headers: headers('owner') });
+    assert.equal(deleteCollection.status, 405);
+    assert.equal(deleteCollection.headers.get('Allow'), 'GET, POST');
     const postDetail = await mf.dispatchFetch(origin + '/api/events/' + eventId, { method: 'POST', headers: headers('owner') });
     assert.equal(postDetail.status, 405);
     assert.equal(postDetail.headers.get('Allow'), 'GET');
@@ -136,6 +136,89 @@ test('owner-created events and member-scoped reads run in the bundled Worker wit
       method: 'POST', headers: { ...headers('owner'), Origin: origin, 'Content-Type': 'application/json' }, body: '{',
     })).status, 400);
     assert.equal(await db.prepare('SELECT count(*) AS n FROM events').first('n'), before);
+  });
+
+  await t.test('listing index upgrades existing events and avoids a temporary cursor sort', async () => {
+    await groups.create('owner', { id: 'listing-group', name: 'Listing', createdAtMs: 0 });
+    await groups.create('owner', { id: 'empty-group', name: 'Empty', createdAtMs: 0 });
+    await groups.addMember('listing-group', 'owner', 'member', 1);
+    for (let n = 55; n >= 1; n--) {
+      await groups.createEvent('owner', { id: 'list-' + String(n).padStart(2, '0'), groupId: 'listing-group',
+        closureAtMs: n % 2 === 0 ? null : 1000, createdAtMs: 0 });
+    }
+    const before = await db.prepare('SELECT * FROM events ORDER BY id').all();
+    const migration = await readFile(new URL('../migrations/0007_event_listing_index.sql', import.meta.url), 'utf8');
+    await db.prepare(migration).run();
+    assert.deepEqual((await db.prepare('SELECT * FROM events ORDER BY id').all()).results, before.results);
+    const plan = await db.prepare(`EXPLAIN QUERY PLAN SELECT e.id, e.group_id, e.closure_at_ms, e.created_at_ms
+      FROM group_members m LEFT JOIN events e ON e.group_id = m.group_id AND e.id > ?
+      WHERE m.group_id = ? AND m.account_id = ? ORDER BY e.id LIMIT ?`)
+      .bind('list-02', 'listing-group', 'member', 51).all<{ detail: string }>();
+    assert.ok(plan.results.some(row => row.detail.includes('events_by_group_id')));
+    assert.equal(plan.results.some(row => row.detail.includes('TEMP B-TREE')), false);
+  });
+
+  await t.test('member event lists distinguish authorized empty pages from inaccessible groups', async () => {
+    const list = (group: string, actor = 'owner', query = '') => mf.dispatchFetch(origin + '/api/groups/' + group + '/events' + query,
+      { headers: headers(actor) });
+    const empty = await list('empty-group');
+    assert.equal(empty.status, 200);
+    assert.equal(empty.headers.get('Cache-Control'), 'no-store');
+    assert.deepEqual(await empty.json(), { events: [], nextCursor: null });
+    for (const group of ['listing-group', 'missing', 'empty-group']) {
+      const inaccessible = await list(group, 'other', '?actorAccountId=owner');
+      assert.equal(inaccessible.status, 404);
+      assert.deepEqual(await inaccessible.json(), { error: 'Not found' });
+    }
+    const first = await list('listing-group', 'member', '?limit=2');
+    assert.equal(first.status, 200);
+    const page = authObject(await first.json());
+    assert.ok(Array.isArray(page.events));
+    assert.deepEqual(page.events.map(e => authObject(e).id), ['list-01', 'list-02']);
+    assert.deepEqual(page.events.map(e => authObject(e).closureAtMs), [1000, null]);
+    assert.equal(page.nextCursor, 'list-02');
+    // The cursor is a position, not a required existing row or a permission token.
+    await db.prepare('DELETE FROM events WHERE id = ?').bind('list-02').run();
+    const next = authObject(await (await list('listing-group', 'member', '?limit=2&cursor=list-02')).json());
+    assert.ok(Array.isArray(next.events));
+    assert.deepEqual(next.events.map(e => authObject(e).id), ['list-03', 'list-04']);
+    const defaults = authObject(await (await list('listing-group', 'member')).json());
+    assert.ok(Array.isArray(defaults.events));
+    assert.equal(defaults.events.length, 20);
+    const maximum = authObject(await (await list('listing-group', 'member', '?limit=50')).json());
+    assert.ok(Array.isArray(maximum.events));
+    assert.equal(maximum.events.length, 50);
+    assert.equal(maximum.nextCursor, 'list-51');
+    const last = authObject(await (await list('listing-group', 'member', '?limit=50&cursor=list-51')).json());
+    assert.ok(Array.isArray(last.events));
+    assert.deepEqual(last.events.map(e => authObject(e).id), ['list-52', 'list-53', 'list-54', 'list-55']);
+    assert.equal(last.nextCursor, null);
+    assert.deepEqual(await (await list('listing-group', 'member', '?cursor=zzzz')).json(), { events: [], nextCursor: null });
+    const foreign = authObject(await (await list('group', 'owner', '?cursor=list-01')).json());
+    assert.ok(Array.isArray(foreign.events));
+    assert.equal(foreign.events.some(e => authObject(e).groupId !== 'group'), false);
+    assert.equal(await groups.removeMember('listing-group', 'owner', 'member'), true);
+    assert.equal((await list('listing-group', 'member', '?cursor=list-02')).status, 404);
+    assert.deepEqual(await groups.listEventsForAccount('empty-group', 'owner', 51, null), []);
+    assert.equal(await groups.listEventsForAccount('empty-group', 'other', 51, null), null);
+    await assert.rejects(groups.listEventsForAccount('listing-group', 'owner', 52, null), RangeError);
+  });
+
+  await t.test('event list sessions and pagination inputs are enforced without exposing legacy events', async () => {
+    const path = origin + '/api/groups/listing-group/events';
+    assert.equal((await mf.dispatchFetch(path)).status, 401);
+    const issued = await sessions.issueForVerifiedAccount('owner', 86400000);
+    await sessions.revoke(issued.token);
+    assert.equal((await mf.dispatchFetch(path, { headers: { Cookie: '__Host-tocaregalo_session=' + issued.token } })).status, 401);
+    const expired = await new SessionService(new SessionsRepository(db), () => 0).issueForVerifiedAccount('owner', 1000);
+    assert.equal((await mf.dispatchFetch(path, { headers: { Cookie: '__Host-tocaregalo_session=' + expired.token } })).status, 401);
+    for (const query of ['?limit=0', '?limit=51', '?limit=1.5', '?limit=01', '?limit=2&limit=3',
+      '?cursor=', '?cursor=a&cursor=b', '?cursor=' + 'x'.repeat(513)]) {
+      assert.equal((await mf.dispatchFetch(path + query, { headers: headers('owner') })).status, 400);
+    }
+    const all = authObject(await (await mf.dispatchFetch(path + '?limit=50', { headers: headers('owner') })).json());
+    assert.ok(Array.isArray(all.events));
+    assert.equal(all.events.some(e => authObject(e).id === 'legacy-event'), false);
   });
 
   await t.test('storage failure is generic and leaves no event, while parallel creation generates distinct IDs', async () => {

@@ -75,4 +75,23 @@ export class GroupsRepository {
       e.created_at_ms AS createdAtMs FROM events e JOIN group_members m ON m.group_id = e.group_id
       WHERE e.id = ? AND m.account_id = ?`).bind(eventId, actorAccountId).first<GroupEvent>();
   }
+
+  async listEventsForAccount(groupId: string, actorAccountId: string, limit: number, afterId: string | null): Promise<GroupEvent[] | null> {
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 51) throw new RangeError('Invalid event page size.');
+    // An authorized empty page yields a single null event; no membership yields no rows.
+    // Put the cursor in ON so an exhausted page still preserves the authorization row.
+    const after = afterId === null ? '' : 'AND e.id > ?';
+    const statement = this.db.prepare(`SELECT e.id, e.group_id AS groupId, e.closure_at_ms AS closureAtMs,
+      e.created_at_ms AS createdAtMs FROM group_members m LEFT JOIN events e
+      ON e.group_id = m.group_id ${after}
+      WHERE m.group_id = ? AND m.account_id = ? ORDER BY e.id LIMIT ?`);
+    const values = afterId === null ? [groupId, actorAccountId, limit] : [afterId, groupId, actorAccountId, limit];
+    const { results } = await statement.bind(...values).all<{ [K in keyof GroupEvent]: GroupEvent[K] | null }>();
+    if (results.length === 0) return null;
+    return results.flatMap(row => {
+      if (row.id === null) return [];
+      if (row.groupId === null || row.createdAtMs === null) throw new Error('Invalid persisted event.');
+      return [{ id: row.id, groupId: row.groupId, closureAtMs: row.closureAtMs, createdAtMs: row.createdAtMs }];
+    });
+  }
 }

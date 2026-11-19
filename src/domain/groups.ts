@@ -1,4 +1,5 @@
 import { normalizedName } from './validation.ts';
+import { pageInput, PaginationInputError, type PageInput } from './pagination.ts';
 
 export type Group = Readonly<{
   id: string; name: string; ownerAccountId: string; createdAtMs: number;
@@ -22,11 +23,12 @@ export function groupNameInput(value: unknown): string {
   }
 }
 
-export type GroupPageInput = Readonly<{ limit: number; cursor: string | null }>;
+export type GroupPageInput = PageInput;
 
 export function groupPageInput(limit: string | null, cursor: string | null): GroupPageInput {
-  if (limit !== null && !/^[1-9][0-9]?$/.test(limit)) throw new GroupInputError();
-  const size = limit === null ? 20 : Number(limit);
-  if (size > 50 || (cursor !== null && (!cursor.trim() || cursor.length > 512))) throw new GroupInputError();
-  return { limit: size, cursor };
+  try { return pageInput(limit, cursor); }
+  catch (error) {
+    if (error instanceof PaginationInputError) throw new GroupInputError();
+    throw error;
+  }
 }
