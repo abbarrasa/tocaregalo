@@ -7,6 +7,7 @@ export type Session = Readonly<{
 
 export interface SessionStore {
   insert(session: Session): Promise<void>;
+  insertForCredential(session: Session, passwordHash: string): Promise<boolean>;
   findActive(tokenHash: string, nowMs: number): Promise<Session | null>;
   remove(tokenHash: string): Promise<void>;
 }
@@ -21,7 +22,9 @@ export class SessionService {
 
   // Trusted internal boundary: the caller must have verified account ownership.
   // No HTTP endpoint exposes this operation. Each issue generates a fresh token.
-  async issueForVerifiedAccount(accountId: string, lifetimeMs: number) {
+  async issueForVerifiedAccount(accountId: string, lifetimeMs: number): Promise<{ token: string; csrfToken: string; expiresAtMs: number }>;
+  async issueForVerifiedAccount(accountId: string, lifetimeMs: number, passwordHash: string): Promise<{ token: string; csrfToken: string; expiresAtMs: number } | null>;
+  async issueForVerifiedAccount(accountId: string, lifetimeMs: number, passwordHash?: string) {
     requireId(accountId);
     const createdAtMs = this.now();
     requireTimestamp(createdAtMs);
@@ -30,7 +33,9 @@ export class SessionService {
     requireTimestamp(expiresAtMs);
     const token = createSessionToken();
     const tokenHash = await hashSessionToken(token);
-    await this.store.insert({ tokenHash, accountId, createdAtMs, expiresAtMs });
+    const session = { tokenHash, accountId, createdAtMs, expiresAtMs };
+    if (passwordHash === undefined) await this.store.insert(session);
+    else if (!await this.store.insertForCredential(session, passwordHash)) return null;
     return { token, csrfToken: await sessionCsrfToken(token), expiresAtMs };
   }
 

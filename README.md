@@ -36,7 +36,7 @@ TypeScript como Worker, con D1 para persistencia y SendGrid HTTPS para el
 correo. El acceso a la URL publicada será público y la aplicación autenticará
 por su cuenta antes de conceder acceso a cuentas y datos de grupos o eventos.
 
-Quedan pendientes el frontend, la verificación telefónica, la recuperación de contraseña,
+Quedan pendientes el frontend, la verificación telefónica,
 las rutas autenticadas de grupos y eventos, los correos de eventos y sorteos,
 el procesamiento desatendido de cierres y reintentos
 y la publicación. Las pruebas de calendario aquí ejercitan funciones de dominio.
@@ -268,8 +268,8 @@ según los [límites de Cloudflare](https://developers.cloudflare.com/workers/pl
 Los parámetros se basan en [OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html).
 
 El login verifica la contraseña, no la titularidad de los contactos. La
-verificación de correo es un flujo separado; la verificación telefónica y la
-recuperación de contraseña siguen pendientes.
+verificación de correo y la recuperación de contraseña son flujos separados;
+la verificación telefónica sigue pendiente.
 
 ## Verificación de correo
 
@@ -345,3 +345,48 @@ puede confirmarse. Las pruebas unitarias simulan el proveedor y la integración
 intercepta todas las llamadas salientes del Worker: no se han enviado correos
 reales ni validado entregabilidad. Los correos de invitaciones/sorteos son trabajo
 posterior y no están implementados por este adaptador.
+
+## Recuperación de contraseña
+
+La migración [0006_password_recovery.sql](migrations/0006_password_recovery.sql)
+añade una revisión de credenciales y un desafío de recuperación por cuenta.
+Conserva cuentas, hashes y sesiones existentes. No crea contraseñas para cuentas
+aprovisionadas internamente que todavía no tengan credenciales.
+
+1. Enviar `POST /api/password-recovery/request` con JSON
+   `{ "identifier": "persona@example.com" }` o un teléfono internacional.
+   El correo se obtiene exclusivamente de la cuenta; ningún campo del cuerpo
+   permite sobrescribir el destinatario. Las cuentas sin verificar también pueden
+   recuperar su contraseña, sin que esto cambie `emailVerifiedAtMs`.
+2. Para solicitudes válidas y no limitadas, la API responde siempre
+   `202 { "status": "recovery_requested" }`, exista o no la cuenta. La consulta
+   y el envío se ejecutan mediante `waitUntil`, fuera de la respuesta pública.
+   Ese 202 no garantiza aceptación por SendGrid ni entrega. Los fallos generan
+   solo un mensaje de registro genérico y eliminan condicionalmente el desafío
+   fallido sin borrar uno más reciente. No hay cola duradera ni reintento automático.
+3. Introducir el código recibido con `POST /api/password-recovery/confirm`, JSON
+   `{ "token": "<código>", "newPassword": "<nueva contraseña>" }`.
+   Solo se exige un mínimo de seis caracteres Unicode, conservando espacios y
+   el contenido exacto. Una confirmación correcta devuelve 204, invalida todas
+   las sesiones y obliga a iniciar sesión de nuevo. No crea cookie ni sesión.
+
+Ambas rutas exigen el `Origin` HTTPS configurado y JSON, pero no una sesión.
+Los tokens son aleatorios de 256 bits y se almacenan como hash SHA-256 con un
+propósito distinto al de sesiones y verificación de correo. Solo hay un código
+actual por cuenta: el reenvío sustituye al anterior. Caducan a los 30 minutos
+por defecto (`PASSWORD_RECOVERY_TTL_SECONDS=1800`); el instante de caducidad
+ya es inválido. El código queda ligado al correo y a la revisión de credenciales
+vigentes. Los tokens inválidos, vencidos o usados devuelven el mismo 400.
+
+El consumo del código, el cambio del hash Argon2id y el borrado de sesiones se
+realizan en un único batch D1. Si falla una operación, todo se revierte. Una
+comprobación de contraseña antigua que coincida con un restablecimiento tampoco
+puede emitir una nueva sesión después del cambio.
+
+La solicitud permite 5 intentos por identificador normalizado y 30 por IP cada
+15 minutos. Correo y teléfono tienen contadores de identificador distintos.
+La confirmación permite 30 intentos por IP en ese periodo. Se conserva el límite
+de JSON de 16 KiB, `Cache-Control: no-store` y 429 con `Retry-After: 900`.
+Se reutiliza el transporte HTTPS de SendGrid, con un correo específico de
+recuperación y el seguimiento desactivado. La interfaz, los envíos reales y la
+validación remota siguen pendientes; las pruebas interceptan todo correo.

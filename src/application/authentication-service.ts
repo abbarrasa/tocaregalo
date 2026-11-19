@@ -41,6 +41,6 @@ export class AuthenticationService {
     // Unknown accounts still perform a full KDF to reduce credential-enumeration timing differences.
     const valid = await this.passwords.verify(password, credential?.passwordHash ?? null);
     if (!credential || !valid) return null;
-    return this.sessions.issueForVerifiedAccount(credential.accountId, lifetimeMs);
+    return this.sessions.issueForVerifiedAccount(credential.accountId, lifetimeMs, credential.passwordHash);
   }
 }

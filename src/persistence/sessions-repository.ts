@@ -18,6 +18,14 @@ export class SessionsRepository implements SessionStore {
       .bind(tokenHash, nowMs, nowMs).first<Session>();
   }
 
+  async insertForCredential(session: Session, passwordHash: string): Promise<boolean> {
+    // Serialize issuance against recovery: a verified but superseded credential cannot issue a session.
+    return !!await this.db.prepare(`INSERT INTO sessions (token_hash, account_id, created_at_ms, expires_at_ms)
+      SELECT ?, account_id, ?, ? FROM password_credentials WHERE account_id = ? AND password_hash = ?
+      RETURNING token_hash`).bind(session.tokenHash, session.createdAtMs, session.expiresAtMs,
+        session.accountId, passwordHash).first();
+  }
+
   async remove(tokenHash: string): Promise<void> {
     await this.db.batch([this.db.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(tokenHash)]);
   }

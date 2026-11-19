@@ -15,10 +15,10 @@ export class AuthRateLimiter {
     return this.store.consume(hash, windowStartMs, limit);
   }
 
-  async allow(operation: 'register' | 'login' | 'verification-request' | 'verification-confirm', ip: string, identifier?: string): Promise<boolean> {
+  async allow(operation: 'register' | 'login' | 'verification-request' | 'verification-confirm' | 'recovery-request' | 'recovery-confirm', ip: string, identifier?: string): Promise<boolean> {
     const windowStartMs = Math.floor(this.now() / authWindowMs) * authWindowMs;
     if (!await this.consume(operation + ':ip:' + ip, operation === 'register' ? 10 : 30, windowStartMs)) return false;
-    return (operation !== 'login' && operation !== 'verification-request') || identifier === undefined
+    return (operation !== 'login' && operation !== 'verification-request' && operation !== 'recovery-request') || identifier === undefined
       || this.consume(operation + ':identifier:' + identifier, 5, windowStartMs);
   }
 }

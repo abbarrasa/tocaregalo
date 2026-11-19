@@ -13,24 +13,38 @@ import { EmailVerificationService } from './application/email-verification-servi
 import { EmailVerificationsRepository } from './persistence/email-verifications-repository.ts';
 import { SendgridVerificationSender } from './infrastructure/sendgrid-verification-sender.ts';
 import { handleEmailVerificationRequest } from './http/email-verification-routes.ts';
+import { PasswordRecoveryService } from './application/password-recovery-service.ts';
+import { PasswordRecoveriesRepository } from './persistence/password-recoveries-repository.ts';
+import { SendgridRecoverySender } from './infrastructure/sendgrid-recovery-sender.ts';
+import { handlePasswordRecoveryRequest } from './http/password-recovery-routes.ts';
 
 export interface Env {
   DB: D1Database;
   APP_ORIGIN: string;
   SESSION_TTL_SECONDS: string;
   EMAIL_VERIFICATION_TTL_SECONDS: string;
+  PASSWORD_RECOVERY_TTL_SECONDS: string;
   SENDGRID_API_KEY?: string;
   SENDGRID_FROM_EMAIL?: string;
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, context) {
     const url = new URL(request.url);
     if (request.method === 'GET' && url.pathname === '/health') {
       return Response.json({ status: 'ok' });
     }
     try {
       const sessions = new SessionService(new SessionsRepository(env.DB));
+      if (url.pathname === '/api/password-recovery/request' || url.pathname === '/api/password-recovery/confirm') {
+        return await handlePasswordRecoveryRequest(request, {
+          recovery: new PasswordRecoveryService(new PasswordRecoveriesRepository(env.DB), new Argon2PasswordHasher(),
+            new SendgridRecoverySender({ apiKey: env.SENDGRID_API_KEY, fromEmail: env.SENDGRID_FROM_EMAIL })),
+          limiter: new AuthRateLimiter(new AuthCountersRepository(env.DB)),
+          applicationOrigin: env.APP_ORIGIN, tokenTtlSeconds: env.PASSWORD_RECOVERY_TTL_SECONDS,
+          schedule: work => context.waitUntil(work),
+        });
+      }
       if (url.pathname === '/api/email-verification/request' || url.pathname === '/api/email-verification/confirm') {
         return await handleEmailVerificationRequest(request, {
           sessions,
