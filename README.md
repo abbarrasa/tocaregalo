@@ -37,7 +37,7 @@ correo. El acceso a la URL publicada será público y la aplicación autenticar�
 por su cuenta antes de conceder acceso a cuentas y datos de grupos o eventos.
 
 Quedan pendientes el frontend, la verificación telefónica,
-las rutas autenticadas de eventos, las invitaciones, los correos de eventos y sorteos,
+el listado y la gestión adicional de eventos, las invitaciones, los correos de eventos y sorteos,
 el procesamiento desatendido de cierres y reintentos
 y la publicación. Las pruebas de calendario aquí ejercitan funciones de dominio.
 La prueba del plazo de 60 segundos debe cronometrar el cierre desde el instante
@@ -131,8 +131,9 @@ La integración D1 prueba también unicidad de correos, rollback del alta de gru
 permisos de propietario, aislamiento entre grupos, revocación de acceso, claves
 externas y migración desde datos preexistentes. Las operaciones de grupos y
 eventos se validan a nivel de persistencia. La creación y consulta de grupos
-también están conectadas a las rutas HTTP descritas más abajo; los eventos y
-la gestión de miembros siguen siendo internos.
+también están conectadas a las rutas HTTP descritas más abajo. Los eventos
+disponen de creación y consulta individual autenticadas; la gestión de miembros
+sigue siendo interna.
 
 ## Sesiones
 
@@ -432,7 +433,52 @@ inválidos con 400, tipo de contenido incorrecto con 415 y cuerpos mayores de
 persistencia devuelven un 500 genérico y el batch evita un grupo sin propietario.
 
 Se mantienen separados dominio, servicio de aplicación, HTTP y repositorio.
-Esta tarea no añade migraciones, invitaciones, alta pública de miembros, edición,
-borrado, rutas de eventos ni interfaz. Las pruebas del Worker empaquetado usan
+La API de grupos no incluye invitaciones, alta pública de miembros, edición,
+borrado ni interfaz. Los eventos tienen sus propias rutas descritas a continuación.
+Las pruebas del Worker empaquetado usan
 D1 efímera y comprueban aislamiento, revocación, CSRF, paginación, límites,
 validación y rollback. No se han desplegado recursos remotos.
+
+## API autenticada de eventos
+
+Esta primera API usa únicamente el modelo existente: `id`, `groupId`,
+`closureAtMs` y `createdAtMs`. No añade nombre, descripción, participantes
+propios ni estados nuevos. Los atributos y reglas adicionales necesitan sus
+requisitos de producto antes de implementarse.
+
+- `POST /api/groups/<groupId>/events`: JSON `{ "closureAtMs": null }` para un
+  evento sin cierre programado, o `{ "closureAtMs": 1800000000000 }` como ejemplo
+  de fecha UTC en milisegundos (debe ser futura al realizar la petición).
+  El campo es obligatorio. Si no es `null`, debe ser un número entero seguro
+  estrictamente mayor que la fecha de creación tomada del reloj del servidor.
+  No se convierten cadenas, fechas ISO ni valores fraccionarios. Esta regla
+  se aplica a nuevas altas públicas; no reescribe los eventos ya existentes.
+- Solo el propietario del grupo puede crear eventos. Se requieren sesión activa,
+  `Origin` HTTPS configurado y `X-CSRF-Token`. El propietario se comprueba en
+  el SQL de inserción, sin depender de una lectura previa de permisos.
+- La creación devuelve 201 `{ event }` y `Location: /api/events/<id>`. El servidor
+  genera ID y fecha; el grupo procede de la ruta. Los campos del cuerpo `id`,
+  `groupId`, `actorAccountId` o `createdAtMs` no permiten cambiar esos valores.
+- `GET /api/events/<id>` devuelve `{ event }` solo a miembros actuales del grupo.
+  Revocar una membresía retira inmediatamente el acceso. Tanto los eventos
+  inexistentes como los inaccesibles devuelven el mismo 404; los eventos antiguos
+  sin grupo siguen inaccesibles y no reciben un propietario implícito.
+
+La creación en un grupo inexistente o sin propiedad también devuelve el mismo
+404. Sin sesión válida se devuelve 401; los fallos de Origin/CSRF devuelven 403,
+y una configuración de origen inválida impide crear con 503. JSON o fechas
+inválidas devuelven 400, tipo de contenido incorrecto 415, y un cuerpo mayor de
+16 KiB, 413. Los métodos incorrectos devuelven 405 con `Allow`; todas las
+respuestas usan `Cache-Control: no-store`. Los errores de almacenamiento se
+traducen en un 500 genérico y una inserción fallida no deja un evento parcial.
+
+El servicio de aplicación depende de un contrato pequeño y reutiliza el SQL
+de eventos existente. Los tipos de evento y errores compartidos viven en dominio,
+con reexportaciones compatibles desde el repositorio. No se necesitan migraciones
+ni dependencias nuevas. Las pruebas usan el Worker empaquetado y D1 efímera para
+comprobar permisos, datos históricos, revocación, fechas, CSRF, cuerpos inválidos,
+fallos de inserción y altas concurrentes.
+
+Guardar una fecha de cierre no ejecuta ni programa el sorteo. Esta tarea no
+implementa listados de eventos, edición, borrado, cierre manual, correos, interfaz
+ni procesamiento desatendido. No se han desplegado recursos remotos.

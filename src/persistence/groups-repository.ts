@@ -1,15 +1,9 @@
 import type { PersistenceDatabase } from './d1.ts';
 import { normalizedName, requireId, requireTimestamp } from '../domain/validation.ts';
-import type { Group } from '../domain/groups.ts';
-export type { Group } from '../domain/groups.ts';
-
-export class GroupAccessError extends Error {
-  constructor() { super('Group operation unavailable.'); this.name = 'GroupAccessError'; }
-}
-
-export type GroupEvent = Readonly<{
-  id: string; groupId: string; closureAtMs: number | null; createdAtMs: number;
-}>;
+import { GroupAccessError, type Group } from '../domain/groups.ts';
+import type { GroupEvent } from '../domain/events.ts';
+export { GroupAccessError, type Group } from '../domain/groups.ts';
+export type { GroupEvent } from '../domain/events.ts';
 
 // All actorAccountId values must come from a verified session.
 // Ownership is derived from groups, never accepted as a caller-provided role.
