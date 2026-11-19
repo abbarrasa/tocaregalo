@@ -48,8 +48,9 @@ necesitará un programador externo que invoque un endpoint autenticado e idempot
 
 La migración [0001_draws.sql](migrations/0001_draws.sql) prepara eventos,
 sorteos, la instantánea de participantes y las asignaciones cifradas.
-Los tiempos se guardan como milisegundos UTC. El esquema de eventos es mínimo;
-cuentas, grupos, membresías y autorización quedan pendientes de implementar.
+Los tiempos se guardan como milisegundos UTC. La migración
+[0002_accounts_groups.sql](migrations/0002_accounts_groups.sql) añade cuentas,
+grupos, membresías y la relación opcional de eventos con grupos.
 
 [DrawRepository](src/persistence/draw-repository.ts) recibe el binding D1 del
 Worker. `save` valida la permutación completa, cifra todos los destinatarios y
@@ -87,3 +88,43 @@ independiente de la base persistente de `wrangler dev`. Miniflare está fijado a
 versión que utiliza Wrangler; actualmente esa versión lleva sufijo beta y usa
 su adaptador oficial `convertV4MiniflareOptions` para configurar los tests.
 La validación en un D1 remoto queda pendiente.
+
+## Cuentas, grupos y permisos de persistencia
+
+[AccountsRepository](src/persistence/accounts-repository.ts) permite provisionar
+cuentas con correo único normalizado (espacios exteriores eliminados y minúsculas)
+y nombre visible. No guarda contraseñas ni verifica el correo. La creación de una
+cuenta no inicia una sesión ni demuestra que el solicitante controle ese correo.
+
+[GroupsRepository](src/persistence/groups-repository.ts) crea el grupo y la
+membresía de su propietario en un único batch. La política inicial permite solo
+al propietario añadir o retirar miembros y crear eventos. El propietario no se
+puede retirar mediante este repositorio. No se implementan todavía transferencia
+de propiedad, invitaciones ni alta pública de miembros: `addMember` es una
+operación interna que deberá llamarse tras aceptar una invitación.
+
+Todas las identidades `actorAccountId` y el identificador de `findSelf` deberán
+proceder de una sesión verificada por la futura API, nunca de un campo arbitrario
+enviado por el navegador. Las consultas de grupo y evento verifican membresía;
+los cambios de miembros y el alta de eventos verifican propietario en el mismo
+SQL que realiza la escritura. Las consultas devuelven `null` cuando no hay acceso,
+sin distinguir un recurso inexistente. Añadir miembros o crear eventos sin
+propiedad lanza `GroupAccessError`; retirar miembros sin permiso o inexistentes
+devuelve `false`. Los conflictos de unicidad y claves externas se propagan.
+
+`DrawRepository.findRecipientForAccount` devuelve exclusivamente la asignación
+del titular de la sesión, siempre que siga perteneciendo al grupo del evento.
+Retirar una membresía revoca estas consultas sin borrar la instantánea cifrada
+del sorteo. La política completa de eliminación de cuentas y destinatarios queda
+pendiente. `findRecipient`, `findByEvent` y `save` siguen siendo métodos internos
+sin autorización y no deben exponerse directamente en endpoints.
+
+La migración conserva los eventos anteriores con `group_id = NULL`. Las nuevas
+consultas con comprobación de membresía no conceden acceso a esos eventos; no se
+infiere ni asigna automáticamente un propietario a datos antiguos.
+
+La integración D1 prueba también unicidad de correos, rollback del alta de grupo,
+permisos de propietario, aislamiento entre grupos, revocación de acceso, claves
+externas y migración desde datos preexistentes. El Worker continúa exponiendo
+únicamente `/health`; el siguiente paso es implementar autenticación y sesiones
+antes de conectar estas operaciones a rutas HTTP.
