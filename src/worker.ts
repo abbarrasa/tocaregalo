@@ -22,6 +22,10 @@ import { GroupService } from './application/group-service.ts';
 import { handleGroupRequest } from './http/group-routes.ts';
 import { EventService } from './application/event-service.ts';
 import { handleEventRequest } from './http/event-routes.ts';
+import { InvitationService } from './application/invitation-service.ts';
+import { InvitationsRepository } from './persistence/invitations-repository.ts';
+import { SendgridInvitationSender } from './infrastructure/sendgrid-invitation-sender.ts';
+import { handleInvitationRequest } from './http/invitation-routes.ts';
 
 export interface Env {
   DB: D1Database;
@@ -41,6 +45,14 @@ export default {
     }
     try {
       const sessions = new SessionService(new SessionsRepository(env.DB));
+      if (/^\/api\/groups\/[^/]+\/invitations$/.test(url.pathname) || url.pathname === '/api/invitations/accept') {
+        return await handleInvitationRequest(request, {
+          sessions, applicationOrigin: env.APP_ORIGIN,
+          invitations: new InvitationService(new InvitationsRepository(env.DB),
+            new SendgridInvitationSender({ apiKey: env.SENDGRID_API_KEY, fromEmail: env.SENDGRID_FROM_EMAIL }),
+            new AuthRateLimiter(new AuthCountersRepository(env.DB))),
+        });
+      }
       if (/^\/api\/groups\/[^/]+\/events$/.test(url.pathname) || url.pathname.startsWith('/api/events/')) {
         return await handleEventRequest(request, {
           events: new EventService(new GroupsRepository(env.DB)), sessions, applicationOrigin: env.APP_ORIGIN,

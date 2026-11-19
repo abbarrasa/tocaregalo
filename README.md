@@ -37,7 +37,7 @@ correo. El acceso a la URL publicada será público y la aplicación autenticar�
 por su cuenta antes de conceder acceso a cuentas y datos de grupos o eventos.
 
 Quedan pendientes el frontend, la verificación telefónica,
-la gestión adicional de eventos, las invitaciones, los correos de eventos y sorteos,
+la gestión adicional de eventos e invitaciones, los correos de eventos y sorteos,
 el procesamiento desatendido de cierres y reintentos
 y la publicación. Las pruebas de calendario aquí ejercitan funciones de dominio.
 La prueba del plazo de 60 segundos debe cronometrar el cierre desde el instante
@@ -104,8 +104,9 @@ cuenta no inicia una sesión ni demuestra que el solicitante controle ese correo
 membresía de su propietario en un único batch. La política inicial permite solo
 al propietario añadir o retirar miembros y crear eventos. El propietario no se
 puede retirar mediante este repositorio. No se implementan todavía transferencia
-de propiedad, invitaciones ni alta pública de miembros: `addMember` es una
-operación interna que deberá llamarse tras aceptar una invitación.
+de propiedad ni administración completa de miembros. `addMember` sigue siendo
+provisión interna de confianza; las altas públicas se realizan mediante el
+consumo atómico de una invitación, descrito más abajo.
 
 Todas las identidades `actorAccountId` y el identificador de `findSelf` deberán
 proceder de una sesión verificada por la futura API, nunca de un campo arbitrario
@@ -346,8 +347,8 @@ No hay envío automático al registrarse, cola, reintentos desatendidos ni garan
 de orden de entrega. Tras un fallo se solicita un código nuevo; solo el actual
 puede confirmarse. Las pruebas unitarias simulan el proveedor y la integración
 intercepta todas las llamadas salientes del Worker: no se han enviado correos
-reales ni validado entregabilidad. Los correos de invitaciones/sorteos son trabajo
-posterior y no están implementados por este adaptador.
+reales ni validado entregabilidad. Las invitaciones usan otro adaptador sobre
+el mismo transporte; los correos de sorteos siguen pendientes.
 
 ## Recuperación de contraseña
 
@@ -433,8 +434,8 @@ inválidos con 400, tipo de contenido incorrecto con 415 y cuerpos mayores de
 persistencia devuelven un 500 genérico y el batch evita un grupo sin propietario.
 
 Se mantienen separados dominio, servicio de aplicación, HTTP y repositorio.
-La API de grupos no incluye invitaciones, alta pública de miembros, edición,
-borrado ni interfaz. Los eventos tienen sus propias rutas descritas a continuación.
+Las rutas de creación y consulta de grupos no incluyen edición, borrado ni
+interfaz. Invitaciones y eventos tienen sus propias rutas descritas a continuación.
 Las pruebas del Worker empaquetado usan
 D1 efímera y comprueban aislamiento, revocación, CSRF, paginación, límites,
 validación y rollback. No se han desplegado recursos remotos.
@@ -540,3 +541,62 @@ de eventos usan [el cargador de migraciones](tests/helpers/migrations.ts), que
 conserva los bloques separados por `-- statement-breakpoint` en estas migraciones.
 No dividir el contenido de un trigger por cada punto y coma. Los cargadores
 antiguos de otras pruebas solo recorren sus migraciones anteriores de DDL simple.
+
+## Invitaciones a grupos
+
+Solo el propietario puede invitar por correo. El destinatario debe aceptar
+explícitamente desde una sesión con el mismo correo. Puede registrarse después
+de recibir la invitación; no se crea una cuenta ni una membresía al enviar el
+correo. No se exige correo previamente verificado y aceptar no modifica su
+estado de verificación, no cambia contraseñas ni inicia una nueva sesión.
+
+- `POST /api/groups/<groupId>/invitations`, JSON `{ "email": "persona@example.test" }`:
+  requiere sesión del propietario, Origin HTTPS configurado y `X-CSRF-Token`.
+  El correo se normaliza igual que en el registro. No se consulta si ya existe
+  una cuenta con esa dirección ni se expone esa información. Se envía el código
+  al correo solicitado y se toma el nombre del grupo desde D1. Los campos del
+  cuerpo de identidad, grupo o destinatario alternativo no permiten sobrescribir
+  esos datos. Devuelve 202 cuando SendGrid acepta el envío, sin devolver el código;
+  esto no garantiza entrega en el buzón.
+- `POST /api/invitations/accept`, JSON `{ "token": "<código>" }`:
+  requiere sesión, Origin y CSRF. La cuenta se obtiene de la sesión y su correo
+  almacenado debe coincidir con el invitado. La aceptación devuelve 204 sin cookie.
+  Tras ella se aplican los permisos habituales de miembro, incluidos los de
+  lectura de los eventos existentes del grupo.
+
+La migración [0009_group_invitations.sql](migrations/0009_group_invitations.sql)
+conserva los datos previos y añade una invitación actual por grupo/correo.
+Los códigos son aleatorios de 256 bits y solo se guarda su hash SHA-256 con
+un propósito distinto del de sesiones, verificación y recuperación. Caducan a
+los siete días; el instante exacto de vencimiento ya es inválido. Reenviar crea
+un código nuevo e invalida el anterior. No se permiten aceptar con otra cuenta,
+reutilizar códigos consumidos ni aceptar invitaciones de un propietario que ya
+no lo sea. Eliminar el grupo elimina sus invitaciones.
+
+Consumir el código y añadir la membresía se realiza en un único batch D1:
+si falla el alta, también se revierte el consumo. Una aceptación concurrente
+solo tiene un ganador. Si la cuenta ya era miembro, se consume la invitación
+sin duplicar ni cambiar la membresía. Retirar después al miembro no reactiva
+los códigos que ya consumió.
+
+Se admiten cinco solicitudes por grupo/correo y treinta por propietario cada
+quince minutos. Los contadores son atómicos, incluyen intentos autorizados que
+terminen limitados o fallen en el envío, y usan claves hash. Los no propietarios
+se rechazan antes de consumir la cuota del grupo; la propiedad también se
+comprueba en el SQL de emisión. Las respuestas limitadas devuelven 429 con
+`Retry-After: 900`. Un grupo inexistente y uno sin propiedad comparten el mismo
+404. Un código inválido, vencido, usado o de correo distinto devuelve el mismo 400.
+
+Se reutilizan los límites JSON de 16 KiB y las respuestas no-store. Sin sesión
+válida se devuelve 401; los fallos de Origin/CSRF, 403; tipo de contenido
+incorrecto, 415; cuerpo excesivo, 413; métodos no admitidos, 405. Una configuración
+de origen inválida impide operar con 503. Los fallos de SendGrid devuelven 503
+genérico e invalidan únicamente el código de ese intento, sin borrar un reenvío
+posterior. Se usa el remitente y secreto de SendGrid existentes, sin seguimiento
+de aperturas/clics. No hay cola duradera, reintentos automáticos, garantía de orden
+de entrega ni envío de correo probado en un buzón real.
+
+Las pruebas interceptan todo envío y usan D1 efímera/workerd, incluyendo registro
+público posterior a la invitación, login y aceptación. La interfaz, los enlaces
+automáticos, el listado/revocación de invitaciones, la retirada de miembros por
+HTTP y la limpieza de invitaciones caducadas quedan para otros alcances.
