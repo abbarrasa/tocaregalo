@@ -3,6 +3,7 @@ export type D1Value = string | number | null | ArrayBuffer | Uint8Array;
 export interface D1Statement {
   bind(...values: D1Value[]): D1Statement;
   first<T>(): Promise<T | null>;
+  all<T>(): Promise<{ results: T[] }>;
 }
 export interface PersistenceDatabase {
   prepare(sql: string): D1Statement;

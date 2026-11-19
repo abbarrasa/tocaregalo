@@ -1,13 +1,12 @@
 import type { PersistenceDatabase } from './d1.ts';
 import { normalizedName, requireId, requireTimestamp } from '../domain/validation.ts';
+import type { Group } from '../domain/groups.ts';
+export type { Group } from '../domain/groups.ts';
 
 export class GroupAccessError extends Error {
   constructor() { super('Group operation unavailable.'); this.name = 'GroupAccessError'; }
 }
 
-export type Group = Readonly<{
-  id: string; name: string; ownerAccountId: string; createdAtMs: number;
-}>;
 export type GroupEvent = Readonly<{
   id: string; groupId: string; closureAtMs: number | null; createdAtMs: number;
 }>;
@@ -34,6 +33,17 @@ export class GroupsRepository {
     return this.db.prepare(`SELECT g.id, g.name, g.owner_account_id AS ownerAccountId,
       g.created_at_ms AS createdAtMs FROM groups g JOIN group_members m ON m.group_id = g.id
       WHERE g.id = ? AND m.account_id = ?`).bind(groupId, actorAccountId).first<Group>();
+  }
+
+  async listForAccount(actorAccountId: string, limit: number, afterId: string | null): Promise<Group[]> {
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 51) throw new RangeError('Invalid group page size.');
+    // Separate first/subsequent page queries keep the membership index range usable.
+    const after = afterId === null ? '' : 'AND m.group_id > ?';
+    const statement = this.db.prepare(`SELECT g.id, g.name, g.owner_account_id AS ownerAccountId,
+      g.created_at_ms AS createdAtMs FROM group_members m JOIN groups g ON g.id = m.group_id
+      WHERE m.account_id = ? ${after} ORDER BY m.group_id LIMIT ?`);
+    const values = afterId === null ? [actorAccountId, limit] : [actorAccountId, afterId, limit];
+    return (await statement.bind(...values).all<Group>()).results;
   }
 
   // Internal provisioning after acceptance of an invitation (invitation flow is pending).

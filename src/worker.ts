@@ -17,6 +17,9 @@ import { PasswordRecoveryService } from './application/password-recovery-service
 import { PasswordRecoveriesRepository } from './persistence/password-recoveries-repository.ts';
 import { SendgridRecoverySender } from './infrastructure/sendgrid-recovery-sender.ts';
 import { handlePasswordRecoveryRequest } from './http/password-recovery-routes.ts';
+import { GroupsRepository } from './persistence/groups-repository.ts';
+import { GroupService } from './application/group-service.ts';
+import { handleGroupRequest } from './http/group-routes.ts';
 
 export interface Env {
   DB: D1Database;
@@ -36,6 +39,11 @@ export default {
     }
     try {
       const sessions = new SessionService(new SessionsRepository(env.DB));
+      if (url.pathname === '/api/groups' || url.pathname.startsWith('/api/groups/')) {
+        return await handleGroupRequest(request, {
+          groups: new GroupService(new GroupsRepository(env.DB)), sessions, applicationOrigin: env.APP_ORIGIN,
+        });
+      }
       if (url.pathname === '/api/password-recovery/request' || url.pathname === '/api/password-recovery/confirm') {
         return await handlePasswordRecoveryRequest(request, {
           recovery: new PasswordRecoveryService(new PasswordRecoveriesRepository(env.DB), new Argon2PasswordHasher(),

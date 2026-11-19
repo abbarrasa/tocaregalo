@@ -37,7 +37,7 @@ correo. El acceso a la URL publicada será público y la aplicación autenticar�
 por su cuenta antes de conceder acceso a cuentas y datos de grupos o eventos.
 
 Quedan pendientes el frontend, la verificación telefónica,
-las rutas autenticadas de grupos y eventos, los correos de eventos y sorteos,
+las rutas autenticadas de eventos, las invitaciones, los correos de eventos y sorteos,
 el procesamiento desatendido de cierres y reintentos
 y la publicación. Las pruebas de calendario aquí ejercitan funciones de dominio.
 La prueba del plazo de 60 segundos debe cronometrar el cierre desde el instante
@@ -130,7 +130,9 @@ infiere ni asigna automáticamente un propietario a datos antiguos.
 La integración D1 prueba también unicidad de correos, rollback del alta de grupo,
 permisos de propietario, aislamiento entre grupos, revocación de acceso, claves
 externas y migración desde datos preexistentes. Las operaciones de grupos y
-eventos todavía no están conectadas a rutas HTTP.
+eventos se validan a nivel de persistencia. La creación y consulta de grupos
+también están conectadas a las rutas HTTP descritas más abajo; los eventos y
+la gestión de miembros siguen siendo internos.
 
 ## Sesiones
 
@@ -390,3 +392,47 @@ de JSON de 16 KiB, `Cache-Control: no-store` y 429 con `Retry-After: 900`.
 Se reutiliza el transporte HTTPS de SendGrid, con un correo específico de
 recuperación y el seguimiento desactivado. La interfaz, los envíos reales y la
 validación remota siguen pendientes; las pruebas interceptan todo correo.
+
+## API autenticada de grupos
+
+La API permite crear y consultar grupos con una sesión válida. No exige correo
+verificado, de acuerdo con la política actual de acceso. Todas las respuestas
+llevan `Cache-Control: no-store`; no se expone una lista pública de grupos.
+
+- `POST /api/groups`: JSON `{ "name": "Amigos" }`, cookie de sesión,
+  `Origin` configurado y `X-CSRF-Token` del login o de `/api/me`.
+  Devuelve 201 con `{ group }` y `Location: /api/groups/<id>`.
+  El nombre usa la validación existente (recortado, 1–100 caracteres).
+  El servidor genera ID y fecha y toma el propietario de la sesión; los campos
+  `id`, `ownerAccountId`, `actorAccountId` o `createdAtMs` enviados por el cliente
+  no permiten alterar esos valores. Grupo y membresía del propietario se crean
+  en el mismo batch D1.
+- `GET /api/groups/<id>`: devuelve `{ group }` solo para miembros actuales.
+  Un grupo inexistente y uno inaccesible devuelven el mismo 404.
+- `GET /api/groups?limit=20&cursor=<id>`: devuelve `{ groups, nextCursor }`.
+  El límite predeterminado es 20, el máximo 50 y el mínimo 1. Se devuelven grupos
+  de los que la cuenta es miembro, no solo los que posee. `nextCursor` es el ID
+  del último grupo devuelto cuando quedan resultados; al terminar es `null`.
+  Para la siguiente página, enviar ese valor como `cursor`, codificado para URL.
+
+Los grupos incluyen `id`, `name`, `ownerAccountId` y `createdAtMs`.
+El listado se ordena por ID ascendente, no por fecha. Usa el índice de membresías
+por cuenta/grupo, sin OFFSET ni recuento total, y consulta como máximo 51 filas
+para detectar una siguiente página. El cursor es una posición, no un permiso:
+se comprueba la membresía en cada consulta. La paginación no constituye una
+instantánea; altas o cambios de membresía entre peticiones pueden cambiar el
+conjunto disponible. La eliminación del grupo usado como cursor no impide
+continuar. Los cursores vacíos, de más de 512 caracteres, los límites inválidos
+y los parámetros `limit`/`cursor` duplicados devuelven 400.
+
+Una sesión ausente, vencida o revocada devuelve 401. La creación rechaza fallos
+de Origin/CSRF con 403, configuración de origen inválida con 503, JSON o nombre
+inválidos con 400, tipo de contenido incorrecto con 415 y cuerpos mayores de
+16 KiB con 413. Los métodos no admitidos devuelven 405 y `Allow`. Los fallos de
+persistencia devuelven un 500 genérico y el batch evita un grupo sin propietario.
+
+Se mantienen separados dominio, servicio de aplicación, HTTP y repositorio.
+Esta tarea no añade migraciones, invitaciones, alta pública de miembros, edición,
+borrado, rutas de eventos ni interfaz. Las pruebas del Worker empaquetado usan
+D1 efímera y comprueban aislamiento, revocación, CSRF, paginación, límites,
+validación y rollback. No se han desplegado recursos remotos.

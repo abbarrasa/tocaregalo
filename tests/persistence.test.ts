@@ -22,6 +22,9 @@ class Statement implements D1Statement {
     return Object.fromEntries(Object.entries(row).map(([k, v]) =>
       [k, v instanceof Uint8Array ? [...v] : v])) as T;
   }
+  async all<T>(): Promise<{ results: T[] }> {
+    return { results: this.db.prepare(this.sql).all(...this.parameters()) as T[] };
+  }
 }
 
 function fixture() {
