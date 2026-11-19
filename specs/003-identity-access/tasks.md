@@ -1,6 +1,6 @@
 # Tasks 003 — Identity and account access
 
-Status: approved v0.4; T1–T7 complete; T8 execution plan and implementation separately gated
+Status: approved v0.4; T1–T8 complete; T9 execution plan and implementation separately gated
 Approval (v0.4): “Apruebo estas listas y autorizo finalizar y el presentar el plan”, 2026-11-18.
 Preparation authority (v0.4): “Apruebo las revisiones y autorizo actualizar las tareas afectadas”, 2026-11-18. No implementation authorization.
 Approval (v0.3): “Apruebo las listas y autorizo reanudar 003:T1”, 2026-11-17. Authorizes revised 003:T1 implementation and its approved bounded temporary-MySQL checks; no later task or installation.
@@ -71,12 +71,12 @@ No dependency installation, image pull/build requiring packages, or browser down
   - Done when: Typing/paste, loading/errors and keyboard component tests pass; browser login/logout/reset succeeds on desktop/mobile; no registration/verification link.
   - Evidence: Complete under approved execution plan v0.1: frontend 28 tests, real identity E2E 24 tests/four profiles, foundation E2E 8 tests, full backend/mail 105 tests/1084 assertions, build/static/97 PHP syntax/container/12 YAML and PHPStan level 10 zero errors pass. See [T7 evidence](./verification.md#t7-completion). Stop before T8.
 
-- [ ] **T8. Implement responsive own-account editing.** FR-3, FR-4, FR-29, NFR-5, NFR-6, NFR-8, NFR-10
+- [x] **T8. Implement responsive own-account editing.** FR-3, FR-4, FR-29, NFR-5, NFR-6, NFR-8, NFR-10
   - Depends on: T7.
   - Work: Create own-data/password form bound to JSON API, required/unique errors and exact password handling; omit delete until 007.
   - Files/responsibility: frontend/src/views/AccountView.vue; frontend/src/api/; tests/e2e/.
   - Done when: Logged-in profile/password changes work in browser, unauthorized edits remain denied, and mobile/keyboard labels and errors are verified.
-  - Evidence: not executed; no completion or passing result claimed.
+  - Evidence: [T8 completion](./verification.md#t8-completion): frontend 39 tests, identity browser 40 cases/four profiles, backend 91 tests/829 assertions, build/static/changed PHP syntax and PHPStan fixed level 10 zero errors pass. Temporary runtime/private material removed. No installation or real provisioning; stop before T9.
 
 - [ ] **T9. Verify identity privacy and record slice evidence.** FR-3, FR-4, FR-5, FR-13, FR-15, FR-22, FR-28, FR-29, FR-30, FR-34, FR-35, NFR-1, NFR-2, NFR-4, NFR-5, NFR-6, NFR-7, NFR-8, NFR-10
   - Depends on: T8.
@@ -159,3 +159,7 @@ T6 complete under execution plan v0.3 approved with “apruebo el plan y su impl
 ## T7 completion — latest boundary
 
 User approved [execution plan v0.1](./t7-execution-plan.md) and implementation with “Apruebo el plan y la implementación”, 2026-11-18. [Evidence](./verification.md#t7-completion): Vue 28 tests, real identity browser 24 cases/four profiles, foundation browser eight cases/four profiles, full backend/mail 105/1084, build/static/97 syntax/container/12 YAML/editor and PHPStan fixed level 10 zero errors pass. Local phone fallback preserves the approved phone policy; no package added. Temporary graph/private test env material removed; real development provisioning remains pending. Seven local tasks complete/two pending; project 17 complete/39 pending. Stop before T8 and require its execution-plan approval and implementation/runtime authorization. No automatic slice Validation, installation, commit or push.
+
+## T8 completion — latest boundary
+
+User approved [execution plan v0.1](./t8-execution-plan.md) with “Apruebo el plan y su implementación”, 2026-11-18. [Evidence](./verification.md#t8-completion): frontend 39 tests, real identity browser 40 cases/four profiles, backend 91/829, build/static/changed PHP syntax and PHPStan fixed level 10 zero errors pass. Editor diagnostics unavailable; no passing claim. Temporary graph/private test material removed, no real provisioning or installation. Eight local tasks complete/one pending; project 18 complete/38 pending. Stop before T9 and require its execution-plan approval and explicit implementation/runtime authorization; no automatic formal Validation, commit or push.

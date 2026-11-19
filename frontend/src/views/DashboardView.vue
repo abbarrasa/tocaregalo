@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { session } from '../composables/useSession.js'
 const router = useRouter()
 const busy = ref(false)
@@ -19,6 +19,7 @@ async function logout() {
     <h2>Tu panel</h2>
     <template v-if="session.state.actor && session.state.status === 'authenticated'">
       <p>Hola, {{ session.state.actor.firstName }}.</p>
+      <RouterLink class="d-inline-block mb-3" to="/account">Mi cuenta</RouterLink>
       <p>Tu sesión está iniciada. El panel de grupos y eventos estará disponible en una próxima fase.</p>
       <p v-if="error" role="alert" class="text-danger">{{ error }}</p>
       <button class="btn btn-outline-primary" :disabled="busy" @click="logout">{{ busy ? 'Cerrando sesión…' : 'Cerrar sesión' }}</button>

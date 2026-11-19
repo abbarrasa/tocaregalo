@@ -6,7 +6,7 @@ import { identity } from '../../src/api/identity.js'
 import { session } from '../../src/composables/useSession.js'
 import { routes, installSessionGuard } from '../../src/router/index.js'
 
-vi.mock('../../src/api/identity.js', async (original) => ({ ...(await original()), identity: { me: vi.fn(), login: vi.fn(), logout: vi.fn(), recover: vi.fn(), reset: vi.fn() } }))
+vi.mock('../../src/api/identity.js', async (original) => ({ ...(await original()), identity: { me: vi.fn(), login: vi.fn(), logout: vi.fn(), recover: vi.fn(), reset: vi.fn(), update: vi.fn() } }))
 let wrapper
 beforeEach(() => { vi.clearAllMocks(); session.clear(); session.notice(''); identity.me.mockRejectedValue({ status: 401 }); window.history.replaceState({}, '', '/') })
 afterEach(() => { wrapper?.unmount(); document.body.innerHTML = '' })
@@ -104,4 +104,105 @@ it('guards anonymous dashboard navigation and network errors separately', async 
   expect(router.currentRoute.value.path).toBe('/dashboard')
   expect(wrapper.text()).toContain('No se pudo comprobar la sesión')
   expect(wrapper.text()).not.toContain('Hola,')
+})
+
+it('edits only changed profile fields and clears optional surnames', async () => {
+  const actor = { id: 1, firstName: 'Ana', lastName: 'García', email: 'ana@example.test', phone: '+34600123456', roles: ['ROLE_USER'] }
+  identity.me.mockResolvedValue(actor)
+  identity.update.mockResolvedValue({ ...actor, lastName: null })
+  await screen('/account')
+  expect(wrapper.get('#account-firstName').element.value).toBe('Ana')
+  await wrapper.get('#profile-form').trigger('submit'); await flushPromises()
+  expect(identity.update).not.toHaveBeenCalled()
+  expect(wrapper.text()).toContain('No hay cambios')
+  await wrapper.get('#account-lastName').setValue('')
+  await wrapper.get('#profile-form').trigger('submit'); await flushPromises()
+  expect(identity.update).toHaveBeenCalledWith({ lastName: null })
+  expect(wrapper.text()).toContain('Datos actualizados')
+})
+
+it('keeps profile drafts on duplicate errors and sends password separately', async () => {
+  const actor = { id: 1, firstName: 'Ana', lastName: null, email: 'ana@example.test', phone: '+34600123456', roles: ['ROLE_USER'] }
+  identity.me.mockResolvedValue(actor)
+  identity.update.mockRejectedValueOnce({ status: 422, fields: { email: 'Este email ya existe.' } }).mockResolvedValueOnce(actor)
+  await screen('/account')
+  await wrapper.get('#account-email').setValue('super@example.test')
+  await wrapper.get('#profile-form').trigger('submit'); await flushPromises()
+  expect(wrapper.get('#account-email').attributes('aria-invalid')).toBe('true')
+  expect(wrapper.get('#account-email').element.value).toBe('super@example.test')
+  await wrapper.get('#account-password').setValue(' exact password ')
+  await wrapper.get('#password-form').trigger('submit'); await flushPromises()
+  expect(identity.update).toHaveBeenLastCalledWith({ password: ' exact password ' })
+  expect(wrapper.get('#account-password').element.value).toBe('')
+  expect(wrapper.get('#account-email').element.value).toBe('super@example.test')
+})
+
+it('requires profile fields, associates errors and clears an edited field error', async () => {
+  identity.me.mockResolvedValue({ id: 1, firstName: 'Ana', email: 'ana@example.test', phone: '+34600123456', roles: ['ROLE_USER'] })
+  await screen('/account')
+  await wrapper.get('#account-firstName').setValue(' ')
+  await wrapper.get('#profile-form').trigger('submit'); await flushPromises()
+  expect(identity.update).not.toHaveBeenCalled()
+  expect(wrapper.get('#account-firstName').attributes('aria-invalid')).toBe('true')
+  expect(document.activeElement.id).toBe('account-firstName')
+  await wrapper.get('#account-firstName').setValue('Eva')
+  expect(wrapper.get('#account-firstName').attributes('aria-invalid')).toBe('false')
+})
+
+it('blocks both actions while saving and uses canonical server values', async () => {
+  const actor = { id: 1, firstName: 'Ana', lastName: null, email: 'ana@example.test', phone: '+34600123456', roles: ['ROLE_USER'] }
+  identity.me.mockResolvedValue(actor)
+  let finish
+  identity.update.mockReturnValue(new Promise(resolve => { finish = resolve }))
+  await screen('/account')
+  await wrapper.get('#account-firstName').setValue(' Eva ')
+  await wrapper.get('#profile-form').trigger('submit')
+  expect(wrapper.findAll('button').every(button => button.attributes('disabled') !== undefined)).toBe(true)
+  await wrapper.get('#profile-form').trigger('submit')
+  expect(identity.update).toHaveBeenCalledTimes(1)
+  finish({ ...actor, firstName: 'Eva' }); await flushPromises()
+  expect(wrapper.get('#account-firstName').element.value).toBe('Eva')
+  expect(session.state.actor.firstName).toBe('Eva')
+})
+
+it('enforces password boundaries before sending and preserves whitespace', async () => {
+  const actor = { id: 1, firstName: 'Ana', email: 'ana@example.test', phone: '+34600123456', roles: ['ROLE_USER'] }
+  identity.me.mockResolvedValue(actor); identity.update.mockResolvedValue(actor)
+  await screen('/account')
+  for (const value of ['12345', 'a'.repeat(4097), 'á'.repeat(2048) + 'a']) {
+    await wrapper.get('#account-password').setValue(value)
+    await wrapper.get('#password-form').trigger('submit'); await flushPromises()
+    expect(identity.update).not.toHaveBeenCalled()
+    expect(wrapper.get('#account-password').attributes('aria-invalid')).toBe('true')
+  }
+  for (const value of ['123456', 'a'.repeat(4096), 'á'.repeat(2048), ' a b c ']) {
+    await wrapper.get('#account-password').setValue(value)
+    await wrapper.get('#password-form').trigger('submit'); await flushPromises()
+    expect(identity.update).toHaveBeenLastCalledWith({ password: value })
+    expect(wrapper.get('#account-password').element.value).toBe('')
+  }
+})
+
+it('retains profile draft after forbidden save and redirects on expiration without replay', async () => {
+  identity.me.mockResolvedValue({ id: 1, firstName: 'Ana', email: 'ana@example.test', phone: '+34600123456', roles: ['ROLE_USER'] })
+  identity.update.mockRejectedValueOnce({ status: 403 }).mockRejectedValueOnce({ status: 401 })
+  const router = await screen('/account')
+  await wrapper.get('#account-firstName').setValue('Eva')
+  await wrapper.get('#profile-form').trigger('submit'); await flushPromises()
+  expect(wrapper.get('[role=alert]').text()).toContain('Inténtalo de nuevo')
+  expect(wrapper.get('#account-firstName').element.value).toBe('Eva')
+  await wrapper.get('#profile-form').trigger('submit'); await flushPromises()
+  expect(router.currentRoute.value.path).toBe('/login')
+  expect(session.state.actor).toBeNull()
+  expect(identity.update).toHaveBeenCalledTimes(2)
+})
+
+it('loads a fresh profile after retrying a session service failure', async () => {
+  identity.me.mockRejectedValueOnce({ status: 503 })
+  await screen('/account')
+  expect(wrapper.find('#profile-form').exists()).toBe(false)
+  identity.me.mockResolvedValue({ id: 1, firstName: 'Ana', email: 'ana@example.test', phone: '+34600123456', roles: ['ROLE_USER'] })
+  await wrapper.get('button').trigger('click'); await flushPromises()
+  expect(wrapper.get('#account-firstName').element.value).toBe('Ana')
+  expect(wrapper.get('#account-email').element.value).toBe('ana@example.test')
 })
