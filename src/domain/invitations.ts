@@ -1,6 +1,25 @@
 import { AuthInputError, normalizeEmail } from './authentication.ts';
+import { pageInput, PaginationInputError, type PageInput } from './pagination.ts';
 
 export const invitationLifetimeMs = 7 * 24 * 60 * 60_000;
+
+export type InvitationRecord = Readonly<{
+  email: string; createdAtMs: number; expiresAtMs: number; accepted: boolean;
+}>;
+
+export function invitationStatus(accepted: boolean, expiresAtMs: number, nowMs: number): 'accepted' | 'expired' | 'pending' {
+  return accepted ? 'accepted' : nowMs >= expiresAtMs ? 'expired' : 'pending';
+}
+
+export function invitationPageInput(limit: string | null, cursor: string | null): PageInput {
+  try {
+    const page = pageInput(limit, cursor);
+    return { limit: page.limit, cursor: page.cursor === null ? null : normalizeEmail(page.cursor) };
+  } catch (error) {
+    if (error instanceof PaginationInputError) throw new AuthInputError();
+    throw error;
+  }
+}
 
 export function invitationEmailInput(value: unknown): string {
   if (typeof value !== 'object' || value === null || Array.isArray(value)

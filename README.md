@@ -598,5 +598,55 @@ de entrega ni envío de correo probado en un buzón real.
 
 Las pruebas interceptan todo envío y usan D1 efímera/workerd, incluyendo registro
 público posterior a la invitación, login y aceptación. La interfaz, los enlaces
-automáticos, el listado/revocación de invitaciones, la retirada de miembros por
-HTTP y la limpieza de invitaciones caducadas quedan para otros alcances.
+automáticos, la retirada de miembros por HTTP y la limpieza de invitaciones
+caducadas quedan para otros alcances. El listado y la revocación se describen
+a continuación.
+
+### Administrar invitaciones
+
+El propietario del grupo puede consultar y revocar invitaciones:
+
+- `GET /api/groups/<groupId>/invitations?limit=20&cursor=<correo>` devuelve
+  `{ invitations, nextCursor }`. Requiere sesión del propietario, sin CSRF
+  porque es una lectura. Las invitaciones se ordenan por correo normalizado
+  ascendente. El límite predeterminado es 20 y el máximo 50; se consulta una
+  fila adicional para detectar la siguiente página. El cursor es el último
+  correo devuelto, codificado para URL. Si no hay más resultados, vale `null`.
+- Cada elemento contiene únicamente `email`, `createdAtMs`, `expiresAtMs` y
+  `status`: `pending`, `expired` o `accepted`. Una invitación consumida permanece
+  aceptada aunque después caduque o se retire la membresía. La caducidad es
+  inclusiva: a partir de `expiresAtMs` ya se muestra caducada. Nunca se devuelven
+  códigos, hashes ni marcadores de consumo.
+- `DELETE /api/groups/<groupId>/invitations`, con JSON `{ "email": "persona@example.test" }`,
+  requiere sesión del propietario, Origin y CSRF. Devuelve 204 y elimina solo
+  la invitación activa sin consumir para ese correo. Es idempotente si no existe,
+  está caducada o ya se aceptó; estas dos últimas filas se conservan. Una invitación
+  aceptada no se revoca mediante esta operación ni se elimina la membresía.
+
+El listado distingue un grupo accesible vacío (200 con array vacío) de uno
+inexistente o sin propiedad (mismo 404). Comprueba la propiedad en la misma
+consulta que obtiene los datos. La revocación también comprueba la propiedad
+al borrar y comparte transacción con su comprobación de autorización, incluidos
+los casos sin cambios. Un miembro que no sea propietario no puede listar ni
+revocar invitaciones.
+
+Si compiten aceptación y revocación, gana la primera que se serialice en D1:
+si se aceptó, la membresía permanece; si se revocó, ese código ya no permite
+aceptar. Una invitación emitida después de finalizar la revocación es válida.
+Cuando compiten reenvío y revocación, la cancelación afecta a la invitación
+vigente al ejecutar su transacción. No se envía correo al listar o revocar.
+
+El listado muestra la fila actual por grupo/correo, no un historial de reenvíos
+ni una confirmación de entrega. Las páginas no son una instantánea; un cursor
+eliminado o de otro grupo nunca concede permisos ni impide continuar por su
+posición. Cursores se normalizan como correos; límites inválidos, correos de
+cursor inválidos y parámetros de paginación duplicados devuelven 400. Sesiones
+inválidas devuelven 401, y los fallos de Origin/CSRF en DELETE, 403. Se mantienen
+las respuestas no-store y el límite JSON de 16 KiB. La colección ahora admite
+`GET, POST, DELETE`; los métodos restantes devuelven 405 con `Allow`.
+
+El índice existente por grupo/correo permite paginar sin ordenación temporal;
+no se han añadido migraciones ni dependencias. La interfaz, el historial, el
+aviso de cancelación por correo y la retirada de miembros por HTTP siguen
+pendientes. Las pruebas comprueban estados, permisos, paginación, rollback y
+carreras de aceptación/reenvío con la revocación en D1 efímera/workerd.

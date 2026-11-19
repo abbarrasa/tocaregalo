@@ -26,6 +26,7 @@ import { InvitationService } from './application/invitation-service.ts';
 import { InvitationsRepository } from './persistence/invitations-repository.ts';
 import { SendgridInvitationSender } from './infrastructure/sendgrid-invitation-sender.ts';
 import { handleInvitationRequest } from './http/invitation-routes.ts';
+import { InvitationManagementService } from './application/invitation-management-service.ts';
 
 export interface Env {
   DB: D1Database;
@@ -48,6 +49,7 @@ export default {
       if (/^\/api\/groups\/[^/]+\/invitations$/.test(url.pathname) || url.pathname === '/api/invitations/accept') {
         return await handleInvitationRequest(request, {
           sessions, applicationOrigin: env.APP_ORIGIN,
+          management: new InvitationManagementService(new InvitationsRepository(env.DB)),
           invitations: new InvitationService(new InvitationsRepository(env.DB),
             new SendgridInvitationSender({ apiKey: env.SENDGRID_API_KEY, fromEmail: env.SENDGRID_FROM_EMAIL }),
             new AuthRateLimiter(new AuthCountersRepository(env.DB))),
