@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createInvitationToken, hashInvitationToken, invitationEmailInput, invitationLifetimeMs } from '../src/domain/invitations.ts';
+import { createInvitationToken, hashInvitationToken, invitationEmailInput, invitationLifetimeMs, invitationPageInput, invitationStatus } from '../src/domain/invitations.ts';
 import { hashSessionToken } from '../src/domain/session.ts';
 import { hashEmailVerificationToken } from '../src/domain/email-verification.ts';
 import { hashPasswordRecoveryToken } from '../src/domain/password-recovery.ts';
 import { AuthInputError } from '../src/domain/authentication.ts';
 import { SendgridInvitationSender } from '../src/infrastructure/sendgrid-invitation-sender.ts';
 import { InvitationService, InvitationDeliveryError, type InvitationStore } from '../src/application/invitation-service.ts';
+import { InvitationManagementService, type InvitationManagementStore } from '../src/application/invitation-management-service.ts';
 
 test('invitation tokens are random, purpose-separated and addressed with normalized email', async () => {
   const token = createInvitationToken();
@@ -61,4 +62,39 @@ test('invitation sender uses distinct text, stored group context and tracking-fr
     return new Response(null, { status: 202 });
   });
   await sender.send({ email: 'recipient@example.test', groupName: 'Friends', token, expiresAtMs: 604800000 });
+});
+
+test('invitation administration validates email cursors and derives states at the expiry boundary', () => {
+  assert.equal(invitationStatus(false, 1000, 999), 'pending');
+  assert.equal(invitationStatus(false, 1000, 1000), 'expired');
+  assert.equal(invitationStatus(true, 1000, 2000), 'accepted');
+  assert.deepEqual(invitationPageInput(null, null), { limit: 20, cursor: null });
+  assert.deepEqual(invitationPageInput('50', ' A@EXAMPLE.TEST '), { limit: 50, cursor: 'a@example.test' });
+  for (const size of ['0', '51', '1.5', '01']) assert.throws(() => invitationPageInput(size, null), AuthInputError);
+  for (const cursor of ['', 'invalid', 'x'.repeat(513)]) assert.throws(() => invitationPageInput(null, cursor), AuthInputError);
+});
+
+test('management service keeps inaccessible and empty results distinct and emits a bounded page', async () => {
+  const store: InvitationManagementStore = {
+    async listForOwner(group, actor, limit, after) {
+      if (actor !== 'owner') return null;
+      if (group === 'empty') return [];
+      assert.equal(limit, 2); assert.equal(after, null);
+      return [
+        { email: 'a@example.test', createdAtMs: 0, expiresAtMs: 1000, accepted: false },
+        { email: 'b@example.test', createdAtMs: 0, expiresAtMs: 2000, accepted: false },
+      ];
+    },
+    async revokeForOwner(group, actor, email, now) {
+      assert.equal(group, 'group'); assert.equal(email, 'a@example.test'); assert.equal(now, 1000);
+      return actor === 'owner';
+    },
+  };
+  const service = new InvitationManagementService(store, () => 1000);
+  assert.equal(await service.list('other', 'group', { limit: 1, cursor: null }), null);
+  assert.deepEqual(await service.list('owner', 'empty', { limit: 1, cursor: null }), { invitations: [], nextCursor: null });
+  assert.deepEqual(await service.list('owner', 'group', { limit: 1, cursor: null }), {
+    invitations: [{ email: 'a@example.test', createdAtMs: 0, expiresAtMs: 1000, status: 'expired' }], nextCursor: 'a@example.test',
+  });
+  assert.equal(await service.revoke('owner', 'group', ' A@EXAMPLE.TEST '), true);
 });

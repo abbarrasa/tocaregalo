@@ -189,7 +189,9 @@ test('group invitations run through the bundled Worker and atomic D1 acceptance'
     assert.equal((await post(path, { email: 'invalid' })).status, 400);
     assert.equal((await post(path, { email: 'x@example.test' }, 'owner', { 'Content-Type': 'text/plain' })).status, 415);
     assert.equal((await post(path, { email: 'x@example.test', padding: 'x'.repeat(17000) })).status, 413);
-    assert.equal((await mf.dispatchFetch(origin + path)).status, 405);
+    const unsupported = await mf.dispatchFetch(origin + path, { method: 'PUT' });
+    assert.equal(unsupported.status, 405);
+    assert.equal(unsupported.headers.get('Allow'), 'GET, POST, DELETE');
     for (let n = 0; n < 5; n++) assert.equal((await invite('limited@example.test')).status, 202);
     const limited = await invite('limited@example.test');
     assert.equal(limited.status, 429); assert.equal(limited.headers.get('Retry-After'), '900');
@@ -198,5 +200,125 @@ test('group invitations run through the bundled Worker and atomic D1 acceptance'
     assert.equal(ownerResults.filter(Boolean).length, 30);
     const recipientResults = await Promise.all(Array.from({ length: 10 }, () => limiter.allowInvitation('other-owner', 'other-group', 'same@example.test')));
     assert.equal(recipientResults.filter(Boolean).length, 5);
+  });
+
+  await t.test('owner lists paginate safely without leaking tokens and include pending, expired and accepted states', async () => {
+    await groups.create('owner', { id: 'management-group', name: 'Management', createdAtMs: 0 });
+    await groups.create('owner', { id: 'empty-management', name: 'Empty', createdAtMs: 0 });
+    await groups.addMember('management-group', 'owner', 'outsider', 0);
+    const mailCount = messages.length;
+    for (let n = 55; n >= 1; n--) {
+      const email = 'list-' + String(n).padStart(2, '0') + '@example.test';
+      await issue(email, 1000, n === 2 || n === 3 ? 2000 : Date.now() + 600000, 'management-group');
+      if (n === 3) await db.prepare('UPDATE group_invitations SET consumption_id = ? WHERE group_id = ? AND email = ?')
+        .bind('synthetic-consumed', 'management-group', email).run();
+    }
+    const list = (group: string, actor = 'owner', query = '') => mf.dispatchFetch(origin + '/api/groups/' + group + '/invitations' + query,
+      { headers: headers(actor) });
+    const empty = await list('empty-management');
+    assert.equal(empty.status, 200);
+    assert.deepEqual(await empty.json(), { invitations: [], nextCursor: null });
+    for (const group of ['management-group', 'missing', 'empty-management']) {
+      const response = await list(group, 'outsider', '?actorAccountId=owner');
+      assert.equal(response.status, 404);
+      assert.deepEqual(await response.json(), { error: 'Not found' });
+    }
+    const first = await list('management-group', 'owner', '?limit=3');
+    assert.equal(first.status, 200); assert.equal(first.headers.get('Cache-Control'), 'no-store');
+    const page = authObject(await first.json());
+    assert.ok(Array.isArray(page.invitations));
+    assert.deepEqual(page.invitations.map(i => authObject(i).status), ['pending', 'expired', 'accepted']);
+    for (const invitation of page.invitations) {
+      assert.deepEqual(Object.keys(authObject(invitation)).sort(), ['createdAtMs', 'email', 'expiresAtMs', 'status']);
+    }
+    assert.equal(page.nextCursor, 'list-03@example.test');
+    await db.prepare('DELETE FROM group_invitations WHERE group_id = ? AND email = ?').bind('management-group', page.nextCursor).run();
+    const next = authObject(await (await list('management-group', 'owner', '?limit=2&cursor=list-03%40example.test')).json());
+    assert.ok(Array.isArray(next.invitations));
+    assert.deepEqual(next.invitations.map(i => authObject(i).email), ['list-04@example.test', 'list-05@example.test']);
+    const maximum = authObject(await (await list('management-group', 'owner', '?limit=50')).json());
+    assert.ok(Array.isArray(maximum.invitations)); assert.equal(maximum.invitations.length, 50);
+    assert.equal(maximum.nextCursor, 'list-51@example.test');
+    const last = authObject(await (await list('management-group', 'owner', '?limit=50&cursor=list-51%40example.test')).json());
+    assert.ok(Array.isArray(last.invitations)); assert.equal(last.invitations.length, 4); assert.equal(last.nextCursor, null);
+    assert.deepEqual(await (await list('management-group', 'owner', '?cursor=zzz%40example.test')).json(), { invitations: [], nextCursor: null });
+    const defaults = authObject(await (await list('management-group')).json());
+    assert.ok(Array.isArray(defaults.invitations)); assert.equal(defaults.invitations.length, 20);
+    assert.equal(messages.length, mailCount);
+    const plan = await db.prepare(`EXPLAIN QUERY PLAN SELECT i.email FROM groups g LEFT JOIN group_invitations i
+      ON i.group_id = g.id AND i.email > ? WHERE g.id = ? AND g.owner_account_id = ? ORDER BY i.email LIMIT ?`)
+      .bind('list-03@example.test', 'management-group', 'owner', 51).all<{ detail: string }>();
+    assert.equal(plan.results.some(row => row.detail.includes('TEMP B-TREE')), false);
+    await assert.rejects(repository.listForOwner('management-group', 'owner', 52, null), RangeError);
+  });
+
+  await t.test('revocation is owner-only, idempotent and leaves consumed memberships and later reissues intact', async () => {
+    const revoke = (email: string, actor = 'owner', group = 'group', extra: Record<string, string> = {}) => mf.dispatchFetch(origin + '/api/groups/' + group + '/invitations', {
+      method: 'DELETE', headers: { ...headers(actor), Origin: origin, 'Content-Type': 'application/json', ...extra }, body: JSON.stringify({ email }),
+    });
+    const token = await issue('recipient@example.test', Date.now(), Date.now() + 600000);
+    assert.equal((await revoke('recipient@example.test', 'outsider')).status, 404);
+    assert.equal((await revoke('recipient@example.test', 'owner', 'missing')).status, 404);
+    assert.equal((await revoke(' Recipient@EXAMPLE.TEST ')).status, 204);
+    assert.equal((await accept(token)).status, 400);
+    assert.equal((await revoke('recipient@example.test')).status, 204);
+    const newer = await issue('recipient@example.test', Date.now(), Date.now() + 600000);
+    assert.equal((await accept(newer)).status, 204);
+    assert.equal((await revoke('recipient@example.test')).status, 204);
+    assert.ok(await groups.findForAccount('group', 'recipient'));
+    const expired = await issue('expired@example.test');
+    assert.equal((await revoke('expired@example.test')).status, 204);
+    assert.equal(await db.prepare('SELECT token_hash FROM group_invitations WHERE group_id = ? AND email = ?')
+      .bind('group', 'expired@example.test').first('token_hash'), await hashInvitationToken(expired));
+    const raceToken = await issue('rollback@example.test', Date.now(), Date.now() + 600000);
+    await groups.removeMember('group', 'owner', 'rollback');
+    const [accepted, revoked] = await Promise.all([accept(raceToken, 'rollback'), revoke('rollback@example.test')]);
+    assert.equal(revoked.status, 204);
+    assert.ok(accepted.status === 204 || accepted.status === 400);
+    assert.equal(!!await groups.findForAccount('group', 'rollback'), accepted.status === 204);
+    const previous = await issue('recipient@example.test', Date.now(), Date.now() + 600000);
+    const concurrentToken = createInvitationToken();
+    const concurrentHash = await hashInvitationToken(concurrentToken);
+    const [revocation] = await Promise.all([
+      revoke('recipient@example.test'),
+      repository.issue('group', 'owner', 'recipient@example.test', concurrentHash, Date.now(), Date.now() + 600000),
+    ]);
+    assert.equal(revocation.status, 204);
+    assert.equal((await accept(previous)).status, 400);
+    const currentHash = await db.prepare('SELECT token_hash FROM group_invitations WHERE group_id = ? AND email = ?')
+      .bind('group', 'recipient@example.test').first('token_hash');
+    assert.ok(currentHash === null || currentHash === concurrentHash);
+    assert.equal(await repository.consume(concurrentHash, 'recipient', Date.now()), currentHash === concurrentHash);
+    // An issuance strictly after the completed revocation always remains usable.
+    const later = await issue('recipient@example.test', Date.now(), Date.now() + 600000);
+    assert.equal((await accept(later)).status, 204);
+    const mailCount = messages.length;
+    assert.equal((await revoke('none@example.test', 'owner', 'group', { 'X-CSRF-Token': '' })).status, 403);
+    assert.equal((await revoke('none@example.test', 'owner', 'group', { Origin: 'https://evil.example.test' })).status, 403);
+    assert.equal((await revoke('none@example.test', 'owner', 'group', { Cookie: '' })).status, 401);
+    assert.equal((await revoke('none@example.test', 'owner', 'group', { 'Content-Type': 'text/plain' })).status, 415);
+    assert.equal(messages.length, mailCount);
+  });
+
+  await t.test('administration rejects invalid pages and sessions and rolls back a failed revocation', async () => {
+    const path = origin + '/api/groups/management-group/invitations';
+    assert.equal((await mf.dispatchFetch(path)).status, 401);
+    for (const query of ['?limit=0', '?limit=51', '?limit=01', '?limit=2&limit=3', '?cursor=', '?cursor=invalid', '?cursor=a&cursor=b']) {
+      assert.equal((await mf.dispatchFetch(path + query, { headers: headers('owner') })).status, 400);
+    }
+    const revoked = await sessions.issueForVerifiedAccount('owner', 86400000);
+    await sessions.revoke(revoked.token);
+    assert.equal((await mf.dispatchFetch(path, { headers: { Cookie: '__Host-tocaregalo_session=' + revoked.token } })).status, 401);
+    const token = await issue('rollback-delete@example.test', Date.now(), Date.now() + 600000);
+    await db.prepare(`CREATE TRIGGER reject_invitation_delete BEFORE DELETE ON group_invitations
+      WHEN OLD.email = 'rollback-delete@example.test' BEGIN SELECT RAISE(ABORT, 'synthetic revoke failure'); END`).run();
+    const failed = await mf.dispatchFetch(origin + '/api/groups/group/invitations', {
+      method: 'DELETE', headers: { ...headers('owner'), Origin: origin, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'rollback-delete@example.test' }),
+    });
+    assert.equal(failed.status, 500);
+    assert.equal((await failed.text()).includes('synthetic revoke failure'), false);
+    assert.equal(await db.prepare('SELECT token_hash FROM group_invitations WHERE email = ?').bind('rollback-delete@example.test').first('token_hash'), await hashInvitationToken(token));
+    await db.prepare('DROP TRIGGER reject_invitation_delete').run();
   });
 });
