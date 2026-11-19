@@ -492,10 +492,12 @@ eventos, o sin eventos después del cursor, devuelve 200 con
 `{ "events": [], "nextCursor": null }`. Grupos inexistentes e inaccesibles
 comparten el mismo 404. No se exige CSRF para esta lectura.
 
-La paginación es por ID ascendente, no por fecha: `limit` vale 20 por defecto
+La paginación se ordena por fecha de creación descendente (más recientes primero),
+con ID descendente como desempate: `limit` vale 20 por defecto
 y admite enteros de 1 a 50. La consulta recupera una fila adicional para detectar
-la siguiente página. Cuando exista, `nextCursor` contiene el ID del último evento
-devuelto; enviarlo como `cursor` codificado para URL. Al terminar vale `null`.
+la siguiente página. Cuando exista, `nextCursor` contiene un cursor versionado
+con la fecha y el ID del último evento devuelto; enviarlo completo como `cursor`
+codificado para URL. Al terminar vale `null`.
 El cursor puede apuntar a un evento eliminado o de otro grupo sin conceder
 acceso: la ruta y la membresía siempre determinan el conjunto consultado.
 Los cambios de eventos o membresía entre páginas no constituyen una instantánea.
@@ -511,8 +513,30 @@ no hay una comprobación previa que pueda quedar obsoleta entre consultas.
 El repositorio distingue un grupo inaccesible de una página vacía mediante un
 LEFT JOIN y consulta como máximo 51 filas, sin OFFSET ni recuento total.
 La migración [0007_event_listing_index.sql](migrations/0007_event_listing_index.sql)
-añade el índice `(group_id, id)`. El plan SQL comprobado en SQLite y D1 local
-usa ese índice para avanzar por cursor y evita la ordenación temporal que
-necesitaba el índice anterior. La migración conserva los datos existentes;
+añadió el índice para el orden anterior por ID. La nueva migración
+[0008_event_creation_order.sql](migrations/0008_event_creation_order.sql) añade
+`(group_id, created_at_ms DESC, id DESC)` para el orden cronológico.
+El plan SQL comprobado en D1 local usa el nuevo índice para avanzar por cursor
+sin ordenación temporal. La migración conserva los datos existentes;
 los eventos antiguos sin grupo siguen inaccesibles. No se han aplicado
 migraciones remotas ni se ha medido capacidad en producción.
+
+La fecha de creación `createdAtMs` se asigna al crear el evento desde el reloj
+del servidor. El cliente no puede elegirla y no se puede modificar después.
+La migración 0008 añade un trigger que rechaza cambios de esa columna en D1,
+incluidos los de eventos históricos, sin alterar sus fechas existentes.
+Una actualización que conserve el mismo valor no modifica la fecha y se permite.
+No se ha añadido una ruta pública de edición.
+
+Los cursores nuevos son cadenas JSON versionadas con estructura
+`[1, createdAtMs, id]`. Deben tratarse como valores opacos y codificarse para URL.
+Los anteriores cursores de eventos que contenían únicamente el ID devuelven 400:
+para continuar, reiniciar el listado sin cursor. El formato y orden de los
+cursores de grupos no cambian. La comparación por fecha e ID evita saltos entre
+eventos que compartan milisegundo, incluso si se elimina la fila usada de cursor.
+
+La nueva migración contiene un trigger con puntos y coma internos. Las pruebas
+de eventos usan [el cargador de migraciones](tests/helpers/migrations.ts), que
+conserva los bloques separados por `-- statement-breakpoint` en estas migraciones.
+No dividir el contenido de un trigger por cada punto y coma. Los cargadores
+antiguos de otras pruebas solo recorren sus migraciones anteriores de DDL simple.

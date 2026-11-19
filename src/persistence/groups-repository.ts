@@ -1,7 +1,7 @@
 import type { PersistenceDatabase } from './d1.ts';
 import { normalizedName, requireId, requireTimestamp } from '../domain/validation.ts';
 import { GroupAccessError, type Group } from '../domain/groups.ts';
-import type { GroupEvent } from '../domain/events.ts';
+import type { EventCursor, GroupEvent } from '../domain/events.ts';
 export { GroupAccessError, type Group } from '../domain/groups.ts';
 export type { GroupEvent } from '../domain/events.ts';
 
@@ -76,16 +76,17 @@ export class GroupsRepository {
       WHERE e.id = ? AND m.account_id = ?`).bind(eventId, actorAccountId).first<GroupEvent>();
   }
 
-  async listEventsForAccount(groupId: string, actorAccountId: string, limit: number, afterId: string | null): Promise<GroupEvent[] | null> {
+  async listEventsForAccount(groupId: string, actorAccountId: string, limit: number, cursor: EventCursor | null): Promise<GroupEvent[] | null> {
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > 51) throw new RangeError('Invalid event page size.');
     // An authorized empty page yields a single null event; no membership yields no rows.
     // Put the cursor in ON so an exhausted page still preserves the authorization row.
-    const after = afterId === null ? '' : 'AND e.id > ?';
+    const after = cursor === null ? '' : 'AND (e.created_at_ms, e.id) < (?, ?)';
     const statement = this.db.prepare(`SELECT e.id, e.group_id AS groupId, e.closure_at_ms AS closureAtMs,
       e.created_at_ms AS createdAtMs FROM group_members m LEFT JOIN events e
       ON e.group_id = m.group_id ${after}
-      WHERE m.group_id = ? AND m.account_id = ? ORDER BY e.id LIMIT ?`);
-    const values = afterId === null ? [groupId, actorAccountId, limit] : [afterId, groupId, actorAccountId, limit];
+      WHERE m.group_id = ? AND m.account_id = ? ORDER BY e.created_at_ms DESC, e.id DESC LIMIT ?`);
+    const values = cursor === null ? [groupId, actorAccountId, limit]
+      : [cursor.createdAtMs, cursor.id, groupId, actorAccountId, limit];
     const { results } = await statement.bind(...values).all<{ [K in keyof GroupEvent]: GroupEvent[K] | null }>();
     if (results.length === 0) return null;
     return results.flatMap(row => {
