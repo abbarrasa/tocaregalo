@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tocaregalo-api",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-11-19",
+  "workers_dev": false,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tocaregalo-local",
+      // Local-only placeholder. Replace with a real D1 ID before deploying.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

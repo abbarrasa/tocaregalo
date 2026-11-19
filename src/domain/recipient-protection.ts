@@ -1,11 +1,11 @@
 const encoder = new TextEncoder();
-const decoder = new TextDecoder('utf-8', { fatal: true });
+const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: false });
 const ivBytes = 12;
 
 export type AssignmentScope = Readonly<{ drawId: string; giverId: string }>;
 export type RecipientEnvelope = Readonly<{
   keyId: string;
-  iv: Uint8Array;
+  iv: Uint8Array<ArrayBuffer>;
   ciphertext: ArrayBuffer;
   recipientIndex: ArrayBuffer;
 }>;
@@ -15,8 +15,8 @@ export type RecipientKey = Readonly<{
   index: CryptoKey;
 }>;
 
-function scopeBytes(scope: AssignmentScope, keyId: string): Uint8Array {
-  return encoder.encode(JSON.stringify(['tocaregalo/recipient/v1', keyId, scope.drawId, scope.giverId]));
+function scopeBytes(scope: AssignmentScope, keyId: string): Uint8Array<ArrayBuffer> {
+  return new Uint8Array(encoder.encode(JSON.stringify(['tocaregalo/recipient/v1', keyId, scope.drawId, scope.giverId])));
 }
 
 export async function recipientIndex(
