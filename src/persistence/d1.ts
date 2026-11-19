@@ -7,5 +7,5 @@ export interface D1Statement {
 export interface PersistenceDatabase {
   prepare(sql: string): D1Statement;
   // D1 executes a batch transactionally, rolling back on any failing statement.
-  batch(statements: D1Statement[]): Promise<unknown>;
+  batch(statements: D1Statement[]): Promise<readonly { success: boolean; results: unknown[] }[]>;
 }

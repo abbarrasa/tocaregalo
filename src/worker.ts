@@ -9,11 +9,18 @@ import { CredentialsRepository } from './persistence/credentials-repository.ts';
 import { AuthCountersRepository } from './persistence/auth-counters-repository.ts';
 import { Argon2PasswordHasher } from './infrastructure/argon2-password-hasher.ts';
 import { handleAuthRequest } from './http/auth-routes.ts';
+import { EmailVerificationService } from './application/email-verification-service.ts';
+import { EmailVerificationsRepository } from './persistence/email-verifications-repository.ts';
+import { SendgridVerificationSender } from './infrastructure/sendgrid-verification-sender.ts';
+import { handleEmailVerificationRequest } from './http/email-verification-routes.ts';
 
 export interface Env {
   DB: D1Database;
   APP_ORIGIN: string;
   SESSION_TTL_SECONDS: string;
+  EMAIL_VERIFICATION_TTL_SECONDS: string;
+  SENDGRID_API_KEY?: string;
+  SENDGRID_FROM_EMAIL?: string;
 }
 
 export default {
@@ -24,6 +31,16 @@ export default {
     }
     try {
       const sessions = new SessionService(new SessionsRepository(env.DB));
+      if (url.pathname === '/api/email-verification/request' || url.pathname === '/api/email-verification/confirm') {
+        return await handleEmailVerificationRequest(request, {
+          sessions,
+          verification: new EmailVerificationService(new EmailVerificationsRepository(env.DB),
+            new SendgridVerificationSender({ apiKey: env.SENDGRID_API_KEY, fromEmail: env.SENDGRID_FROM_EMAIL })),
+          limiter: new AuthRateLimiter(new AuthCountersRepository(env.DB)),
+          applicationOrigin: env.APP_ORIGIN,
+          tokenTtlSeconds: env.EMAIL_VERIFICATION_TTL_SECONDS,
+        });
+      }
       if (url.pathname === '/api/register' || url.pathname === '/api/login') {
         return await handleAuthRequest(request, {
           authentication: new AuthenticationService(new CredentialsRepository(env.DB), new Argon2PasswordHasher(), sessions),
