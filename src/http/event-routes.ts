@@ -1,6 +1,6 @@
 import type { EventService } from '../application/event-service.ts';
 import type { SessionService } from '../application/session-service.ts';
-import { EventInputError, eventCreationInput } from '../domain/events.ts';
+import { EventInputError, eventCreationInput, eventPageInput } from '../domain/events.ts';
 import { GroupAccessError } from '../domain/groups.ts';
 import { equalCsrfTokens, sessionCsrfToken } from '../domain/session.ts';
 import { applicationOrigin } from './application-origin.ts';
@@ -26,27 +26,36 @@ function decodedId(value: string): string {
 }
 
 export async function handleEventRequest(request: Request, dependencies: EventDependencies): Promise<Response> {
-  const path = new URL(request.url).pathname;
-  const creation = /^\/api\/groups\/([^/]+)\/events$/.exec(path);
+  const url = new URL(request.url);
+  const path = url.pathname;
+  const collection = /^\/api\/groups\/([^/]+)\/events$/.exec(path);
   const detail = /^\/api\/events\/([^/]+)$/.exec(path);
-  if (!creation && !detail) return json({ error: 'Not found' }, 404);
-  const method = creation ? 'POST' : 'GET';
-  if (request.method !== method) return json({ error: 'Method not allowed' }, 405, { Allow: method });
+  if (!collection && !detail) return json({ error: 'Not found' }, 404);
+  const allowed = collection ? 'GET, POST' : 'GET';
+  if (request.method !== 'GET' && !(collection && request.method === 'POST')) {
+    return json({ error: 'Method not allowed' }, 405, { Allow: allowed });
+  }
   const token = readSessionCookie(request.headers.get('Cookie'));
   const session = await dependencies.sessions.authenticate(token);
   if (!session || !token) return json({ error: 'Unauthorized' }, 401);
   try {
-    if (creation) {
+    if (collection && request.method === 'POST') {
       const origin = applicationOrigin(dependencies.applicationOrigin);
       if (!origin) return json({ error: 'Event creation unavailable' }, 503);
       if (request.headers.get('Origin') !== origin
         || !equalCsrfTokens(request.headers.get('X-CSRF-Token') ?? '', await sessionCsrfToken(token))) {
         return json({ error: 'Forbidden' }, 403);
       }
-      const groupId = decodedId(creation[1]);
+      const groupId = decodedId(collection[1]);
       const input = eventCreationInput(await readAuthBody(request));
       const event = await dependencies.events.create(session.accountId, groupId, input);
       return json({ event }, 201, { Location: '/api/events/' + encodeURIComponent(event.id) });
+    }
+    if (collection) {
+      if (url.searchParams.getAll('limit').length > 1 || url.searchParams.getAll('cursor').length > 1) throw new EventInputError();
+      const page = eventPageInput(url.searchParams.get('limit'), url.searchParams.get('cursor'));
+      const result = await dependencies.events.list(session.accountId, decodedId(collection[1]), page);
+      return result === null ? json({ error: 'Not found' }, 404) : json(result);
     }
     if (!detail) return json({ error: 'Not found' }, 404);
     const event = await dependencies.events.find(session.accountId, decodedId(detail[1]));

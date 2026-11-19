@@ -37,7 +37,7 @@ correo. El acceso a la URL publicada será público y la aplicación autenticar�
 por su cuenta antes de conceder acceso a cuentas y datos de grupos o eventos.
 
 Quedan pendientes el frontend, la verificación telefónica,
-el listado y la gestión adicional de eventos, las invitaciones, los correos de eventos y sorteos,
+la gestión adicional de eventos, las invitaciones, los correos de eventos y sorteos,
 el procesamiento desatendido de cierres y reintentos
 y la publicación. Las pruebas de calendario aquí ejercitan funciones de dominio.
 La prueba del plazo de 60 segundos debe cronometrar el cierre desde el instante
@@ -132,7 +132,7 @@ permisos de propietario, aislamiento entre grupos, revocación de acceso, claves
 externas y migración desde datos preexistentes. Las operaciones de grupos y
 eventos se validan a nivel de persistencia. La creación y consulta de grupos
 también están conectadas a las rutas HTTP descritas más abajo. Los eventos
-disponen de creación y consulta individual autenticadas; la gestión de miembros
+disponen de creación, listado por grupo y consulta individual autenticados; la gestión de miembros
 sigue siendo interna.
 
 ## Sesiones
@@ -479,6 +479,40 @@ ni dependencias nuevas. Las pruebas usan el Worker empaquetado y D1 efímera par
 comprobar permisos, datos históricos, revocación, fechas, CSRF, cuerpos inválidos,
 fallos de inserción y altas concurrentes.
 
-Guardar una fecha de cierre no ejecuta ni programa el sorteo. Esta tarea no
-implementa listados de eventos, edición, borrado, cierre manual, correos, interfaz
+Guardar una fecha de cierre no ejecuta ni programa el sorteo. Esta API no
+implementa edición, borrado, cierre manual, correos, interfaz
 ni procesamiento desatendido. No se han desplegado recursos remotos.
+
+### Listar eventos de un grupo
+
+`GET /api/groups/<groupId>/events?limit=20&cursor=<id>` requiere una sesión
+válida y membresía actual del grupo. Devuelve `{ events, nextCursor }` con los
+mismos campos de evento que la consulta individual. Un grupo accesible sin
+eventos, o sin eventos después del cursor, devuelve 200 con
+`{ "events": [], "nextCursor": null }`. Grupos inexistentes e inaccesibles
+comparten el mismo 404. No se exige CSRF para esta lectura.
+
+La paginación es por ID ascendente, no por fecha: `limit` vale 20 por defecto
+y admite enteros de 1 a 50. La consulta recupera una fila adicional para detectar
+la siguiente página. Cuando exista, `nextCursor` contiene el ID del último evento
+devuelto; enviarlo como `cursor` codificado para URL. Al terminar vale `null`.
+El cursor puede apuntar a un evento eliminado o de otro grupo sin conceder
+acceso: la ruta y la membresía siempre determinan el conjunto consultado.
+Los cambios de eventos o membresía entre páginas no constituyen una instantánea.
+
+La validación de paginación se comparte con el listado de grupos. Límites
+inválidos, cursores vacíos o de más de 512 caracteres y parámetros duplicados
+`limit`/`cursor` devuelven 400. Se conserva 401 para sesiones inválidas,
+`Cache-Control: no-store` y 405 con `Allow: GET, POST` en métodos no admitidos
+para la colección. Las reglas de creación por POST permanecen iguales.
+
+La consulta verifica membresía y obtiene la página en una sola sentencia SQL;
+no hay una comprobación previa que pueda quedar obsoleta entre consultas.
+El repositorio distingue un grupo inaccesible de una página vacía mediante un
+LEFT JOIN y consulta como máximo 51 filas, sin OFFSET ni recuento total.
+La migración [0007_event_listing_index.sql](migrations/0007_event_listing_index.sql)
+añade el índice `(group_id, id)`. El plan SQL comprobado en SQLite y D1 local
+usa ese índice para avanzar por cursor y evita la ordenación temporal que
+necesitaba el índice anterior. La migración conserva los datos existentes;
+los eventos antiguos sin grupo siguen inaccesibles. No se han aplicado
+migraciones remotas ni se ha medido capacidad en producción.
