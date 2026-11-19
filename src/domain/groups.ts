@@ -4,6 +4,10 @@ export type Group = Readonly<{
   id: string; name: string; ownerAccountId: string; createdAtMs: number;
 }>;
 
+export class GroupAccessError extends Error {
+  constructor() { super('Group operation unavailable.'); this.name = 'GroupAccessError'; }
+}
+
 export class GroupInputError extends Error {
   constructor() { super('Invalid group input.'); this.name = 'GroupInputError'; }
 }
