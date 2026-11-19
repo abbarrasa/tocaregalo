@@ -40,7 +40,7 @@ export class GroupsRepository {
     return (await statement.bind(...values).all<Group>()).results;
   }
 
-  // Internal provisioning after acceptance of an invitation (invitation flow is pending).
+  // Trusted internal provisioning. Public joins use atomic invitation consumption instead.
   async addMember(groupId: string, actorAccountId: string, accountId: string, joinedAtMs: number): Promise<void> {
     requireId(accountId);
     requireTimestamp(joinedAtMs);
