@@ -7,7 +7,7 @@
   },
   "scripts": {
     "test": "node --test tests/*.test.ts",
-    "test:unit": "node --test tests/domain.test.ts tests/recipient-protection.test.ts tests/persistence.test.ts tests/session.test.ts",
+    "test:unit": "node --test tests/domain.test.ts tests/recipient-protection.test.ts tests/persistence.test.ts tests/session.test.ts tests/authentication.test.ts",
     "test:integration": "node --test tests/*.integration.test.ts",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.worker.json",
     "dev": "wrangler dev --local",
@@ -19,5 +19,8 @@
     "miniflare": "5.20261118.0-beta",
     "typescript": "^7.0.2",
     "wrangler": "^4.165.0"
+  },
+  "dependencies": {
+    "@noble/hashes": "2.4.0"
   }
 }

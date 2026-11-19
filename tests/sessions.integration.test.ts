@@ -16,7 +16,7 @@ test('persistent sessions enforce identity, expiration, revocation and HTTP prot
   }] }));
   t.after(() => mf.dispose());
   const db = await mf.getD1Database('DB');
-  for (const name of ['0001_draws.sql', '0002_accounts_groups.sql', '0003_sessions.sql']) {
+  for (const name of ['0001_draws.sql', '0002_accounts_groups.sql', '0003_sessions.sql', '0004_public_auth.sql']) {
     // These migrations contain plain DDL only, with no embedded semicolons.
     const sql = await readFile(new URL('../migrations/' + name, import.meta.url), 'utf8');
     await db.batch(sql.split(';').map(s => s.trim()).filter(Boolean).map(s => db.prepare(s)));

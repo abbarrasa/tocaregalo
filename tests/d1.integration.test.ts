@@ -71,6 +71,8 @@ test('accounts, groups and membership checks work against D1 after upgrading exi
   await migrate('0001_draws.sql');
   await db.prepare('INSERT INTO events VALUES (?, ?, ?)').bind('legacy-event', null, 0).run();
   await migrate('0002_accounts_groups.sql');
+  await migrate('0003_sessions.sql');
+  await migrate('0004_public_auth.sql');
   const accounts = new AccountsRepository(db);
   const groups = new GroupsRepository(db);
   const draws = new DrawRepository(db);
@@ -81,6 +83,7 @@ test('accounts, groups and membership checks work against D1 after upgrading exi
     }
     assert.deepEqual(await accounts.findSelf('owner'), {
       id: 'owner', email: 'owner@example.test', displayName: 'owner', createdAtMs: 0,
+      lastName: null, phone: null,
     });
     assert.equal(await accounts.findSelf('missing'), null);
     await assert.rejects(accounts.create({ id: 'duplicate', email: 'OWNER@example.test', displayName: 'Test', createdAtMs: 0 }));
