@@ -36,8 +36,9 @@ TypeScript como Worker, con D1 para persistencia y SendGrid HTTPS para el
 correo. El acceso a la URL publicada será público y la aplicación autenticará
 por su cuenta antes de conceder acceso a cuentas y datos de grupos o eventos.
 
-Quedan pendientes el frontend, la verificación de contacto, las rutas autenticadas de grupos y eventos,
-la integración de correo, el procesamiento desatendido de cierres y reintentos
+Quedan pendientes el frontend, la verificación telefónica, la recuperación de contraseña,
+las rutas autenticadas de grupos y eventos, los correos de eventos y sorteos,
+el procesamiento desatendido de cierres y reintentos
 y la publicación. Las pruebas de calendario aquí ejercitan funciones de dominio.
 La prueba del plazo de 60 segundos debe cronometrar el cierre desde el instante
 previsto en un entorno publicado, sin tráfico de navegador ni sesión abierta.
@@ -69,7 +70,8 @@ esas reglas requieren la futura capa de servicio y operaciones atómicas adicion
 [wrangler.jsonc](wrangler.jsonc) configura el binding `DB`, el directorio de
 migraciones y un identificador ficticio para desarrollo local. El Worker expone
 `GET /health`, `POST /api/register`, `POST /api/login`, `GET /api/me` y
-`POST /api/logout`. No expone datos de sorteos.
+`POST /api/logout` y las rutas de verificación de correo descritas más abajo.
+No expone datos de sorteos.
 Para aplicar las migraciones e iniciar el Worker local:
 
 ```sh
@@ -179,7 +181,7 @@ Cambiar `APP_ORIGIN` al configurar otro host/puerto. Si Sites sirve el frontend
 desde un origen diferente, habrá que diseñar y probar esa integración antes de
 publicar, considerando CORS y las restricciones de cookies del navegador.
 La API permite registrar una cuenta sintética y entrar con ella para probar el
-flujo. Todavía no hay interfaz de login ni verificación de correo/teléfono.
+flujo. Todavía no hay interfaz de login ni verificación telefónica.
 
 Las pruebas de sesiones cubren almacenamiento de hashes, caducidad, revocación,
 aislamiento, atributos de cookie, CSRF y borrado en cascada usando D1 local.
@@ -265,6 +267,81 @@ presupuestar Workers Paid: el plan Free solo dispone de 10 ms de CPU por petici�
 según los [límites de Cloudflare](https://developers.cloudflare.com/workers/platform/limits/).
 Los parámetros se basan en [OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html).
 
-La verificación de correo/teléfono y la recuperación de contraseña siguen
-pendientes. El login verifica la contraseña, no la titularidad de los contactos;
-no se marca ningún dato de contacto como verificado.
+El login verifica la contraseña, no la titularidad de los contactos. La
+verificación de correo es un flujo separado; la verificación telefónica y la
+recuperación de contraseña siguen pendientes.
+
+## Verificación de correo
+
+La migración [0005_email_verification.sql](migrations/0005_email_verification.sql)
+añade `email_verified_at_ms` al perfil y una tabla con un único desafío actual
+por cuenta. Las cuentas existentes permanecen sin verificar. El login continúa
+permitido antes de confirmar el correo.
+
+Flujo de API:
+
+1. Iniciar sesión y obtener `csrfToken` mediante login o `/api/me`.
+2. Enviar `POST /api/email-verification/request` con JSON `{}`, la cookie de
+   sesión, el `Origin` configurado y `X-CSRF-Token`. El destinatario se obtiene
+   de la cuenta autenticada; los campos `email` o `accountId` del cuerpo no
+   permiten cambiarlo. Devuelve 202 cuando SendGrid acepta la petición, o 204
+   sin enviar otro correo si la cuenta ya estaba verificada.
+3. El correo de texto contiene un código aleatorio de 64 caracteres hexadecimales.
+   Enviar `POST /api/email-verification/confirm` con JSON `{ "token": "<código>" }`
+   y el `Origin` configurado. Esta confirmación no necesita sesión ni CSRF de
+   sesión: el código secreto autoriza exclusivamente la verificación de su cuenta.
+   Devuelve 204 y no crea sesión ni cookie. La futura interfaz deberá permitir
+   copiar/pegar el código; todavía no existe esa pantalla ni un enlace automático.
+
+`GET /api/me` añade `account.emailVerifiedAtMs`: `null` si no está verificado,
+o la fecha UTC en milisegundos tras confirmarlo. El código original no se
+devuelve en las respuestas de API ni se guarda en D1. Se genera con 256 bits
+aleatorios y se guarda un hash SHA-256 con un prefijo de dominio distinto al de
+las sesiones. No se usa como contraseña ni como token de sesión.
+
+La caducidad se configura con `EMAIL_VERIFICATION_TTL_SECONDS` (86400 por
+defecto local). El instante de vencimiento ya es inválido. Un reenvío sustituye
+el código anterior y la confirmación comprueba el correo exacto guardado al
+emitirlo. Los códigos inválidos, caducados o reutilizados devuelven el mismo 400.
+El consumo y la fecha de verificación se actualizan en un único batch D1; si
+falla cualquiera de las operaciones, se revierte todo. Las confirmaciones
+concurrentes tienen un solo ganador.
+
+La solicitud admite 5 intentos por cuenta y 30 por IP cada 15 minutos; la
+confirmación admite 30 intentos por IP en ese periodo. Comparten la infraestructura
+de contadores persistidos y devuelven 429 con `Retry-After: 900`. Las peticiones
+exigen JSON y aplican el límite de cuerpo de 16 KiB existente; las respuestas
+llevan `Cache-Control: no-store`. Los métodos incorrectos devuelven 405,
+una solicitud sin sesión válida 401 y los fallos de origen/CSRF 403.
+
+### Configurar SendGrid
+
+El adaptador usa la [API Mail Send](https://www.twilio.com/docs/sendgrid/api-reference/mail-send/mail-send)
+por HTTPS. Antes de probar envíos reales se necesitan:
+
+- `SENDGRID_API_KEY`: secreto con permiso Mail Send; no guardarlo en la configuración versionada.
+- `SENDGRID_FROM_EMAIL`: remitente autorizado en la cuenta de SendGrid.
+- `APP_ORIGIN`: origen HTTPS exacto de la aplicación.
+- `EMAIL_VERIFICATION_TTL_SECONDS`: entero positivo de duración del código.
+
+En local se pueden proporcionar los valores de SendGrid en `.dev.vars`, que
+está excluido de Git. No copiar secretos a documentación, pruebas ni logs. La
+configuración versionada solo incluye la duración y los valores locales existentes.
+En el futuro despliegue habrá que configurar el secreto y el remitente reales;
+no se han creado ni modificado recursos remotos.
+
+El adaptador aplica un timeout de 10 segundos, desactiva el seguimiento de
+aperturas/clics y acepta únicamente una respuesta 202. Usa redirecciones en
+modo manual y rechaza los 3xx para no reenviar credenciales a otro destino.
+Workers [no admite `redirect: "error"`](https://developers.cloudflare.com/workers/runtime-apis/request/).
+Una respuesta 202 indica aceptación por SendGrid, no entrega en el buzón ni
+verificación de la cuenta. Los errores del proveedor o de configuración producen
+un 503 genérico, sin devolver detalles sensibles; se invalida condicionalmente
+el código de ese intento sin borrar otro emitido después.
+
+No hay envío automático al registrarse, cola, reintentos desatendidos ni garantía
+de orden de entrega. Tras un fallo se solicita un código nuevo; solo el actual
+puede confirmarse. Las pruebas unitarias simulan el proveedor y la integración
+intercepta todas las llamadas salientes del Worker: no se han enviado correos
+reales ni validado entregabilidad. Los correos de invitaciones/sorteos son trabajo
+posterior y no están implementados por este adaptador.

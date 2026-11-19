@@ -25,9 +25,9 @@ Read-only inspection and planning may proceed before approval. A request to cont
 ## Project boundaries
 
 - Repository: `abbarrasa/tocaregalo-sites`, the independent ChatGPT Sites implementation of TocaRegalo. The Symfony application is in another repository; do not introduce Symfony/PHP assumptions here.
-- Target stack: Vue and Bootstrap for the frontend, a TypeScript Cloudflare Worker API, D1 persistence, and SendGrid over HTTPS for email. The frontend and email integration are not implemented yet.
+- Target stack: Vue and Bootstrap for the frontend, a TypeScript Cloudflare Worker API, D1 persistence, and SendGrid over HTTPS for email. The frontend is not implemented yet. A SendGrid verification-email adapter exists; real delivery has not been tested.
 - Product references are the TocaRegalo v1.2 functional specification and the approved visual prototype. They are mentioned in the README but are not included in this repository. Do not invent their contents; obtain the relevant requirements when a decision depends on them.
-- Keep HTTP, application orchestration, domain rules, and persistence responsibilities distinct. The Worker exposes `GET /health`, public registration/login, authenticated `GET /api/me`, and CSRF-protected `POST /api/logout`. Public login checks a password before internal session issuance.
+- Keep HTTP, application orchestration, domain rules, and persistence responsibilities distinct. The Worker exposes health, public registration/login, authenticated account reads/logout, and email-verification request/confirmation routes. Public login checks a password before internal session issuance.
 
 ## Clean Code and SOLID
 
@@ -56,7 +56,8 @@ Read-only inspection and planning may proceed before approval. A request to cont
 - Keep encryption keys and SendGrid credentials in Worker secrets, never in D1, source code, test fixtures with real data, memory documents, or logs. Do not log clear-text assignments or authentication tokens.
 - Account provisioning is not authentication or email verification. All acting account IDs must come from a verified session before exposing repository operations through HTTP.
 - Public registration requires email, password, and name; surname and phone are optional. Login accepts email or international phone plus password. The user explicitly requires only a minimum of six Unicode characters for passwords: do not introduce a password-specific maximum, composition rules, trimming, normalization, or silent truncation.
-- Password authentication does not prove email or phone ownership. Verification and password recovery are pending. Store only salted Argon2id hashes in the separate credential table; never expose hashes in account responses.
+- Password authentication does not prove email or phone ownership. Store only salted Argon2id hashes in the separate credential table; never expose hashes in account responses.
+- Email verification is available through authenticated/CSRF-protected requests and token-based confirmation. Login remains allowed before verification. Only the stored account email may receive a challenge; never accept a recipient or account ID override from the browser. Tokens are single-use, hashed at rest, expiring, and replaced by reissue. Verification consumption and account marking must stay atomic. Phone verification and password recovery remain pending.
 - The current membership policy permits only the owner to manage members and create events; the owner cannot be removed through the repository. Member addition is internal provisioning pending an invitation flow.
 - Use the membership-scoped assignment query for the future participant API. The low-level draw methods do not authorize callers. Do not expose them directly as endpoints.
 - Removing membership revokes scoped reads but preserves encrypted draw snapshots. Legacy events with no group remain inaccessible through membership-scoped queries. Do not silently assign ownership to old data.

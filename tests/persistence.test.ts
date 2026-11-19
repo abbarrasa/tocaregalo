@@ -34,10 +34,11 @@ function fixture() {
     async batch(statements) {
       db.exec('BEGIN');
       try {
-        for (const statement of statements as Statement[]) {
-          db.prepare(statement.sql).run(...statement.parameters());
-        }
+        const results = (statements as Statement[]).map(statement => ({
+          success: true, results: db.prepare(statement.sql).all(...statement.parameters()),
+        }));
         db.exec('COMMIT');
+        return results;
       } catch (error) {
         db.exec('ROLLBACK');
         throw error;

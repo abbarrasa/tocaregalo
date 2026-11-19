@@ -30,7 +30,7 @@ test('bundled Worker registration and login run real Argon2id against D1', async
   }] }));
   t.after(() => mf.dispose());
   const db = await mf.getD1Database('DB');
-  for (const name of ['0001_draws.sql', '0002_accounts_groups.sql', '0003_sessions.sql', '0004_public_auth.sql']) {
+  for (const name of ['0001_draws.sql', '0002_accounts_groups.sql', '0003_sessions.sql', '0004_public_auth.sql', '0005_email_verification.sql']) {
     // These migrations are plain DDL without embedded semicolons.
     const sql = await readFile(new URL('../migrations/' + name, import.meta.url), 'utf8');
     await db.batch(sql.split(';').map(s => s.trim()).filter(Boolean).map(s => db.prepare(s)));
