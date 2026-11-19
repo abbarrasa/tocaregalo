@@ -2,6 +2,7 @@ import type { SessionService } from '../application/session-service.ts';
 import type { Account } from '../persistence/accounts-repository.ts';
 import { equalCsrfTokens, sessionCsrfToken } from '../domain/session.ts';
 import { expiredSessionCookie, readSessionCookie } from './session-cookie.ts';
+import { applicationOrigin } from './application-origin.ts';
 
 interface SessionRouteDependencies {
   sessions: SessionService;
@@ -31,16 +32,8 @@ export async function handleSessionRequest(request: Request, dependencies: Sessi
   }
 
   // Explicit trusted origin plus a session-bound token: SameSite alone is insufficient.
-  let allowedOrigin: string;
-  try {
-    const configured = new URL(dependencies.applicationOrigin);
-    if (configured.protocol !== 'https:' || configured.origin !== dependencies.applicationOrigin) {
-      return json({ error: 'Session origin unavailable' }, 503);
-    }
-    allowedOrigin = configured.origin;
-  } catch {
-    return json({ error: 'Session origin unavailable' }, 503);
-  }
+  const allowedOrigin = applicationOrigin(dependencies.applicationOrigin);
+  if (!allowedOrigin) return json({ error: 'Session origin unavailable' }, 503);
   if (request.headers.get('Origin') !== allowedOrigin
     || !equalCsrfTokens(request.headers.get('X-CSRF-Token') ?? '', await sessionCsrfToken(token))) {
     return json({ error: 'Forbidden' }, 403);

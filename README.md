@@ -36,7 +36,7 @@ TypeScript como Worker, con D1 para persistencia y SendGrid HTTPS para el
 correo. El acceso a la URL publicada será público y la aplicación autenticará
 por su cuenta antes de conceder acceso a cuentas y datos de grupos o eventos.
 
-Quedan pendientes el frontend, el login, las rutas autenticadas de grupos y eventos,
+Quedan pendientes el frontend, la verificación de contacto, las rutas autenticadas de grupos y eventos,
 la integración de correo, el procesamiento desatendido de cierres y reintentos
 y la publicación. Las pruebas de calendario aquí ejercitan funciones de dominio.
 La prueba del plazo de 60 segundos debe cronometrar el cierre desde el instante
@@ -68,7 +68,8 @@ esas reglas requieren la futura capa de servicio y operaciones atómicas adicion
 
 [wrangler.jsonc](wrangler.jsonc) configura el binding `DB`, el directorio de
 migraciones y un identificador ficticio para desarrollo local. El Worker expone
-`GET /health`, `GET /api/me` y `POST /api/logout`. No expone datos de sorteos.
+`GET /health`, `POST /api/register`, `POST /api/login`, `GET /api/me` y
+`POST /api/logout`. No expone datos de sorteos.
 Para aplicar las migraciones e iniciar el Worker local:
 
 ```sh
@@ -93,7 +94,8 @@ La validación en un D1 remoto queda pendiente.
 
 [AccountsRepository](src/persistence/accounts-repository.ts) permite provisionar
 cuentas con correo único normalizado (espacios exteriores eliminados y minúsculas)
-y nombre visible. No guarda contraseñas ni verifica el correo. La creación de una
+y nombre visible. El registro público añade credenciales en una tabla separada;
+la provisión interna existente sigue sin asignar contraseñas. La creación de una
 cuenta no inicia una sesión ni demuestra que el solicitante controle ese correo.
 
 [GroupsRepository](src/persistence/groups-repository.ts) crea el grupo y la
@@ -128,7 +130,7 @@ permisos de propietario, aislamiento entre grupos, revocación de acceso, claves
 externas y migración desde datos preexistentes. Las operaciones de grupos y
 eventos todavía no están conectadas a rutas HTTP.
 
-## Sesiones (base interna; login pendiente)
+## Sesiones
 
 La migración [0003_sessions.sql](migrations/0003_sessions.sql) añade sesiones
 ligadas a cuentas, con caducidad y borrado en cascada al eliminar la cuenta.
@@ -139,10 +141,11 @@ se comprueba en cada autenticación, incluido el instante exacto de vencimiento.
 [SessionService](src/application/session-service.ts) separa los casos de uso
 del repositorio y permite inyectar el reloj. `issueForVerifiedAccount` es una
 frontera interna: su llamador deberá haber verificado la identidad de la cuenta.
-No hay endpoint para emitir sesiones ni para entrar usando solo un correo o ID.
-La duración se proporciona explícitamente en milisegundos (mínimo 1000); todavía
-no se ha decidido la política de duración del producto. Cada emisión genera un
-token nuevo y permite sesiones independientes por dispositivo. La renovación,
+El login público invoca esa frontera después de comprobar la contraseña. No hay
+endpoint para entrar usando solo un correo o ID.
+La duración interna se proporciona explícitamente en milisegundos (mínimo 1000).
+El login usa por defecto 24 horas, configurables mediante `SESSION_TTL_SECONDS`.
+Cada emisión genera un token nuevo y permite sesiones independientes por dispositivo. La renovación,
 el tiempo máximo de inactividad y la limpieza de sesiones caducadas quedan pendientes.
 
 Rutas implementadas:
@@ -157,9 +160,9 @@ Rutas implementadas:
   incorrecto devuelve 405. Las respuestas de sesión llevan `Cache-Control: no-store`.
 
 La cookie se llama `__Host-tocaregalo_session` y usa `Secure`, `HttpOnly`,
-`SameSite=Lax` y `Path=/`, sin `Domain`. El helper `sessionCookie` está preparado
-para el futuro login; este deberá ajustar `Max-Age` a la vida restante de la
-sesión. El CSRF se deriva del token con un prefijo de dominio independiente y no
+`SameSite=Lax` y `Path=/`, sin `Domain`. El login usa el helper `sessionCookie`
+y ajusta `Max-Age` a la vida restante de la sesión. El CSRF se deriva del token
+con un prefijo de dominio independiente y no
 es el hash almacenado en D1. Nunca se debe registrar el token, la cookie o el CSRF.
 
 Esta primera integración está orientada a frontend y API bajo el mismo origen;
@@ -175,12 +178,93 @@ npm run dev -- --local-protocol https
 Cambiar `APP_ORIGIN` al configurar otro host/puerto. Si Sites sirve el frontend
 desde un origen diferente, habrá que diseñar y probar esa integración antes de
 publicar, considerando CORS y las restricciones de cookies del navegador.
-No se han creado credenciales, verificado correos ni añadido un mecanismo de
-login. Las pruebas usan emisión interna con cuentas sintéticas; `/api/me`
-responderá 401 en el navegador hasta disponer de un flujo de autenticación real.
+La API permite registrar una cuenta sintética y entrar con ella para probar el
+flujo. Todavía no hay interfaz de login ni verificación de correo/teléfono.
 
 Las pruebas de sesiones cubren almacenamiento de hashes, caducidad, revocación,
 aislamiento, atributos de cookie, CSRF y borrado en cascada usando D1 local.
 La tercera migración se ha aplicado con Wrangler local. También se ha verificado
 el Worker empaquetado en workerd con una base efímera y una cuenta sintética,
 incluyendo consulta autenticada, cierre y rechazo de la sesión revocada.
+
+## Registro público y acceso por contraseña
+
+La migración [0004_public_auth.sql](migrations/0004_public_auth.sql) añade
+apellidos y teléfono al perfil, un índice único para teléfonos no nulos,
+credenciales separadas y contadores de intentos. Las cuentas previas se conservan
+sin contraseña; no se pueden reclamar registrándose con su correo existente.
+
+`POST /api/register` acepta JSON:
+
+```json
+{
+  "email": "persona@example.test",
+  "password": "abcdef",
+  "name": "Nombre",
+  "lastName": "Apellidos opcionales",
+  "phone": "+34612345678"
+}
+```
+
+Correo, contraseña y nombre son obligatorios; se pueden omitir `lastName` y
+`phone`. El correo se normaliza a minúsculas; los nombres se recortan y admiten
+1–100 caracteres según la validación existente. El teléfono exige prefijo `+`
+y formato internacional de hasta 15 dígitos; se eliminan espacios, paréntesis y
+guiones. No se infiere un país ni se verifica que el número exista o pertenezca
+al usuario. Correo y teléfono normalizado son únicos.
+
+La **única regla de contraseña es un mínimo de seis caracteres Unicode**.
+No se imponen mayúsculas, números, símbolos ni máximo específico de contraseña,
+y no se recorta, normaliza ni trunca. Se admiten espacios. Como límite operativo
+independiente, el cuerpo JSON completo de registro/login no puede superar
+16 KiB; el lector comprueba también cuerpos transmitidos sin `Content-Length`.
+
+El registro guarda cuenta y credencial atómicamente y devuelve 201 con
+`{ account }`, sin iniciar sesión. El perfil devuelto usa `displayName` para el
+nombre y añade `lastName` y `phone` (nulos cuando no se indican). Un conflicto de
+correo/teléfono devuelve 409 genérico, sin indicar el campo duplicado. La
+respuesta de registro puede revelar que alguno de los identificadores ya existe;
+el login devuelve el mismo 401 para cuenta inexistente o contraseña incorrecta.
+
+`POST /api/login` acepta `{ "identifier": "persona@example.test", "password": "abcdef" }`.
+`identifier` puede ser correo o teléfono internacional. Una contraseña correcta
+genera una sesión nueva y devuelve `{ csrfToken }` junto a la cookie HttpOnly;
+el token de sesión no se devuelve en el JSON. `SESSION_TTL_SECONDS` vale `86400`
+en la configuración local y debe ser un entero positivo. El logout no afecta
+a otras sesiones del mismo usuario.
+
+Ambas rutas exigen `Content-Type: application/json` y una cabecera `Origin`
+exactamente igual al `APP_ORIGIN` HTTPS configurado. Los métodos incorrectos
+devuelven 405; el origen no permitido, 403; JSON/datos inválidos, 400; tipo de
+contenido incorrecto, 415; cuerpo excesivo, 413. Las respuestas llevan
+`Cache-Control: no-store`. No se habilita CORS.
+
+La limitación usa ventanas fijas de 15 minutos persistidas en D1: 10 registros
+por IP, 30 accesos por IP y 5 accesos por identificador. Cuenta intentos válidos
+de formato, incluidos éxitos; el siguiente intento devuelve 429 con
+`Retry-After: 900`. Los contadores se actualizan atómicamente y se limpia un
+máximo de 100 entradas antiguas por operación de contador. Las claves son hashes,
+no identificadores en claro; esto no garantiza anonimato frente a diccionarios.
+Se confía en `CF-Connecting-IP` establecido por Cloudflare; sin cabecera todos
+comparten el contador `unknown`. Un proxy alternativo deberá conservar esa
+frontera de confianza y no aceptar direcciones elegidas por el cliente.
+
+[Argon2PasswordHasher](src/infrastructure/argon2-password-hasher.ts) utiliza
+`@noble/hashes` con Argon2id v19, memoria de 19 MiB, dos iteraciones, paralelismo
+uno, salt aleatorio de 16 bytes y salida de 32 bytes, en formato PHC. Los
+parámetros están fijados y el verificador rechaza formatos no soportados; no
+acepta costes arbitrarios de una cadena almacenada. Las cuentas inexistentes
+también ejecutan la KDF para reducir diferencias temporales, sin prometer tiempos
+de respuesta idénticos. No se almacenan ni devuelven contraseñas en claro.
+
+El Worker empaquetado se prueba en workerd con Argon2id real y D1 efímero;
+esto no mide CPU ni capacidad en producción. La KDF es síncrona para evitar
+asignaciones de memoria de KDF concurrentes en el mismo isolate y puede bloquear
+temporalmente otras peticiones. Antes de publicar hay que perfilar el coste y
+presupuestar Workers Paid: el plan Free solo dispone de 10 ms de CPU por petición
+según los [límites de Cloudflare](https://developers.cloudflare.com/workers/platform/limits/).
+Los parámetros se basan en [OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html).
+
+La verificación de correo/teléfono y la recuperación de contraseña siguen
+pendientes. El login verifica la contraseña, no la titularidad de los contactos;
+no se marca ningún dato de contacto como verificado.
