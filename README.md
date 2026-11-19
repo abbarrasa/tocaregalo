@@ -36,7 +36,7 @@ TypeScript como Worker, con D1 para persistencia y SendGrid HTTPS para el
 correo. El acceso a la URL publicada será público y la aplicación autenticará
 por su cuenta antes de conceder acceso a cuentas y datos de grupos o eventos.
 
-Quedan pendientes el frontend, la API autenticada, la integración del repositorio D1,
+Quedan pendientes el frontend, el login, las rutas autenticadas de grupos y eventos,
 la integración de correo, el procesamiento desatendido de cierres y reintentos
 y la publicación. Las pruebas de calendario aquí ejercitan funciones de dominio.
 La prueba del plazo de 60 segundos debe cronometrar el cierre desde el instante
@@ -68,7 +68,7 @@ esas reglas requieren la futura capa de servicio y operaciones atómicas adicion
 
 [wrangler.jsonc](wrangler.jsonc) configura el binding `DB`, el directorio de
 migraciones y un identificador ficticio para desarrollo local. El Worker expone
-únicamente `GET /health`; el resto devuelve 404. No expone datos de sorteos.
+`GET /health`, `GET /api/me` y `POST /api/logout`. No expone datos de sorteos.
 Para aplicar las migraciones e iniciar el Worker local:
 
 ```sh
@@ -125,6 +125,62 @@ infiere ni asigna automáticamente un propietario a datos antiguos.
 
 La integración D1 prueba también unicidad de correos, rollback del alta de grupo,
 permisos de propietario, aislamiento entre grupos, revocación de acceso, claves
-externas y migración desde datos preexistentes. El Worker continúa exponiendo
-únicamente `/health`; el siguiente paso es implementar autenticación y sesiones
-antes de conectar estas operaciones a rutas HTTP.
+externas y migración desde datos preexistentes. Las operaciones de grupos y
+eventos todavía no están conectadas a rutas HTTP.
+
+## Sesiones (base interna; login pendiente)
+
+La migración [0003_sessions.sql](migrations/0003_sessions.sql) añade sesiones
+ligadas a cuentas, con caducidad y borrado en cascada al eliminar la cuenta.
+Solo se guarda el hash SHA-256 de un token aleatorio de 256 bits generado con
+Web Crypto. El token original nunca se persiste. La caducidad es absoluta y
+se comprueba en cada autenticación, incluido el instante exacto de vencimiento.
+
+[SessionService](src/application/session-service.ts) separa los casos de uso
+del repositorio y permite inyectar el reloj. `issueForVerifiedAccount` es una
+frontera interna: su llamador deberá haber verificado la identidad de la cuenta.
+No hay endpoint para emitir sesiones ni para entrar usando solo un correo o ID.
+La duración se proporciona explícitamente en milisegundos (mínimo 1000); todavía
+no se ha decidido la política de duración del producto. Cada emisión genera un
+token nuevo y permite sesiones independientes por dispositivo. La renovación,
+el tiempo máximo de inactividad y la limpieza de sesiones caducadas quedan pendientes.
+
+Rutas implementadas:
+
+- `GET /api/me`: devuelve `{ account, csrfToken }` únicamente para una sesión
+  válida. La cuenta se obtiene de la sesión, sin aceptar un ID del navegador.
+- `POST /api/logout`: requiere la cookie, una cabecera `Origin` idéntica a
+  `APP_ORIGIN` y `X-CSRF-Token` con el valor devuelto por `/api/me`. Revoca solo
+  esa sesión y elimina su cookie mediante una respuesta 204.
+- Sin sesión válida se devuelve 401; un fallo de CSRF devuelve 403; un origen
+  configurado incorrectamente impide el cierre y devuelve 503. Un método
+  incorrecto devuelve 405. Las respuestas de sesión llevan `Cache-Control: no-store`.
+
+La cookie se llama `__Host-tocaregalo_session` y usa `Secure`, `HttpOnly`,
+`SameSite=Lax` y `Path=/`, sin `Domain`. El helper `sessionCookie` está preparado
+para el futuro login; este deberá ajustar `Max-Age` a la vida restante de la
+sesión. El CSRF se deriva del token con un prefijo de dominio independiente y no
+es el hash almacenado en D1. Nunca se debe registrar el token, la cookie o el CSRF.
+
+Esta primera integración está orientada a frontend y API bajo el mismo origen;
+no habilita CORS. `APP_ORIGIN` debe ser un origen HTTPS exacto, sin barra final ni
+ruta. La configuración local contiene `https://localhost:8787`. Para probar con
+un navegador, usar HTTPS y ese host:
+
+```sh
+npm run db:migrate:local
+npm run dev -- --local-protocol https
+```
+
+Cambiar `APP_ORIGIN` al configurar otro host/puerto. Si Sites sirve el frontend
+desde un origen diferente, habrá que diseñar y probar esa integración antes de
+publicar, considerando CORS y las restricciones de cookies del navegador.
+No se han creado credenciales, verificado correos ni añadido un mecanismo de
+login. Las pruebas usan emisión interna con cuentas sintéticas; `/api/me`
+responderá 401 en el navegador hasta disponer de un flujo de autenticación real.
+
+Las pruebas de sesiones cubren almacenamiento de hashes, caducidad, revocación,
+aislamiento, atributos de cookie, CSRF y borrado en cascada usando D1 local.
+La tercera migración se ha aplicado con Wrangler local. También se ha verificado
+el Worker empaquetado en workerd con una base efímera y una cuenta sintética,
+incluyendo consulta autenticada, cierre y rechazo de la sesión revocada.

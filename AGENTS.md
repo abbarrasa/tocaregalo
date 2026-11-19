@@ -27,7 +27,7 @@ Read-only inspection and planning may proceed before approval. A request to cont
 - Repository: `abbarrasa/tocaregalo-sites`, the independent ChatGPT Sites implementation of TocaRegalo. The Symfony application is in another repository; do not introduce Symfony/PHP assumptions here.
 - Target stack: Vue and Bootstrap for the frontend, a TypeScript Cloudflare Worker API, D1 persistence, and SendGrid over HTTPS for email. The frontend and email integration are not implemented yet.
 - Product references are the TocaRegalo v1.2 functional specification and the approved visual prototype. They are mentioned in the README but are not included in this repository. Do not invent their contents; obtain the relevant requirements when a decision depends on them.
-- Keep HTTP, application orchestration, domain rules, and persistence responsibilities distinct. The current Worker only exposes `GET /health`.
+- Keep HTTP, application orchestration, domain rules, and persistence responsibilities distinct. The Worker exposes `GET /health`, authenticated `GET /api/me`, and CSRF-protected `POST /api/logout`. Session issuance remains internal; no public login exists yet.
 
 ## Clean Code and SOLID
 
