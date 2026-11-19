@@ -9,6 +9,19 @@ type SaveDraw = Readonly<{
   assignments: readonly Assignment[];
 }>;
 
+type EnvelopeRow = { key_id: string; iv: number[]; ciphertext: number[]; recipient_index: number[] };
+
+function decodeEnvelope(row: EnvelopeRow | null): RecipientEnvelope | null {
+  if (!row) return null;
+  // D1 returns BLOB columns as arrays of bytes.
+  return {
+    keyId: row.key_id,
+    iv: new Uint8Array(row.iv),
+    ciphertext: new Uint8Array(row.ciphertext).buffer,
+    recipientIndex: new Uint8Array(row.recipient_index).buffer,
+  };
+}
+
 function validate(draw: SaveDraw): void {
   const givers = new Set(draw.assignments.map(a => a.giverId));
   const recipients = new Set(draw.assignments.map(a => a.recipientId));
@@ -55,16 +68,18 @@ export class DrawRepository {
   async findRecipient(drawId: string, giverId: string): Promise<RecipientEnvelope | null> {
     const row = await this.db.prepare(
       'SELECT key_id, iv, ciphertext, recipient_index FROM assignments WHERE draw_id = ? AND giver_id = ?',
-    ).bind(drawId, giverId).first<{
-      key_id: string; iv: number[]; ciphertext: number[]; recipient_index: number[];
-    }>();
-    if (!row) return null;
-    // D1 returns BLOB columns as arrays of bytes.
-    return {
-      keyId: row.key_id,
-      iv: new Uint8Array(row.iv),
-      ciphertext: new Uint8Array(row.ciphertext).buffer,
-      recipientIndex: new Uint8Array(row.recipient_index).buffer,
-    };
+    ).bind(drawId, giverId).first<EnvelopeRow>();
+    return decodeEnvelope(row);
+  }
+
+  // For the future authenticated API: only the session's own assignment is returned,
+  // and only while the account remains a member of the event's group.
+  async findRecipientForAccount(drawId: string, actorAccountId: string): Promise<RecipientEnvelope | null> {
+    const row = await this.db.prepare(`SELECT a.key_id, a.iv, a.ciphertext, a.recipient_index
+      FROM assignments a JOIN draws d ON d.id = a.draw_id
+      JOIN events e ON e.id = d.event_id
+      JOIN group_members m ON m.group_id = e.group_id AND m.account_id = a.giver_id
+      WHERE a.draw_id = ? AND a.giver_id = ?`).bind(drawId, actorAccountId).first<EnvelopeRow>();
+    return decodeEnvelope(row);
   }
 }
