@@ -1,27 +1,14 @@
-import type { DrawDatabase } from './d1.ts';
+import type { PersistenceDatabase } from './d1.ts';
+import { normalizedName, requireId, requireTimestamp } from '../domain/validation.ts';
 
 export type Account = Readonly<{
   id: string; email: string; displayName: string; createdAtMs: number;
 }>;
 
-export function requireId(id: string): void {
-  if (!id.trim()) throw new RangeError('An ID is required.');
-}
-
-export function requireTimestamp(value: number): void {
-  if (!Number.isSafeInteger(value)) throw new RangeError('Invalid timestamp.');
-}
-
-export function normalizedName(value: string): string {
-  const name = value.trim();
-  if (name.length < 1 || name.length > 100) throw new RangeError('Invalid name.');
-  return name;
-}
-
 // Provisioning only. Creating an account does not verify its email or authenticate it.
 export class AccountsRepository {
-  private readonly db: DrawDatabase;
-  constructor(db: DrawDatabase) { this.db = db; }
+  private readonly db: PersistenceDatabase;
+  constructor(db: PersistenceDatabase) { this.db = db; }
 
   async create(account: Account): Promise<void> {
     requireId(account.id);

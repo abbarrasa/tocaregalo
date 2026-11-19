@@ -1,5 +1,5 @@
-import type { DrawDatabase } from './d1.ts';
-import { normalizedName, requireId, requireTimestamp } from './accounts-repository.ts';
+import type { PersistenceDatabase } from './d1.ts';
+import { normalizedName, requireId, requireTimestamp } from '../domain/validation.ts';
 
 export class GroupAccessError extends Error {
   constructor() { super('Group operation unavailable.'); this.name = 'GroupAccessError'; }
@@ -15,8 +15,8 @@ export type GroupEvent = Readonly<{
 // All actorAccountId values must come from a verified session.
 // Ownership is derived from groups, never accepted as a caller-provided role.
 export class GroupsRepository {
-  private readonly db: DrawDatabase;
-  constructor(db: DrawDatabase) { this.db = db; }
+  private readonly db: PersistenceDatabase;
+  constructor(db: PersistenceDatabase) { this.db = db; }
 
   async create(actorAccountId: string, group: Omit<Group, 'ownerAccountId'>): Promise<void> {
     requireId(actorAccountId);

@@ -4,7 +4,7 @@ export interface D1Statement {
   bind(...values: D1Value[]): D1Statement;
   first<T>(): Promise<T | null>;
 }
-export interface DrawDatabase {
+export interface PersistenceDatabase {
   prepare(sql: string): D1Statement;
   // D1 executes a batch transactionally, rolling back on any failing statement.
   batch(statements: D1Statement[]): Promise<unknown>;
