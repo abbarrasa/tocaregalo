@@ -1,6 +1,6 @@
 import { encryptRecipient, type RecipientKey, type RecipientEnvelope } from '../domain/recipient-protection.ts';
 import type { Assignment } from '../domain/draw.ts';
-import type { DrawDatabase } from './d1.ts';
+import type { PersistenceDatabase } from './d1.ts';
 
 type SaveDraw = Readonly<{
   id: string;
@@ -34,8 +34,8 @@ function validate(draw: SaveDraw): void {
 }
 
 export class DrawRepository {
-  private readonly db: DrawDatabase;
-  constructor(db: DrawDatabase) { this.db = db; }
+  private readonly db: PersistenceDatabase;
+  constructor(db: PersistenceDatabase) { this.db = db; }
 
   async findByEvent(eventId: string): Promise<{ id: string; createdAtMs: number } | null> {
     return this.db.prepare('SELECT id, created_at_ms AS createdAtMs FROM draws WHERE event_id = ?')
