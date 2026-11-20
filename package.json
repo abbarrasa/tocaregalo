@@ -13,6 +13,7 @@
     "test:frontend": "vitest run",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.worker.json && npm run typecheck --workspace frontend",
     "build:frontend": "vite build",
+    "build:site": "npm run build:frontend && wrangler deploy --config wrangler.site.jsonc --dry-run --outdir dist/worker",
     "dev:frontend": "vite",
     "dev:api": "wrangler dev --local --ip 127.0.0.1 --port 8787 --var APP_ORIGIN:https://localhost:5173",
     "dev": "wrangler dev --local",

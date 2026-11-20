@@ -24,6 +24,7 @@ npm run test:integration  # Binding D1 local con Miniflare
 npm run typecheck         # Tipos de Node y Workers por separado
 npm run test:frontend     # Cliente HTTP y formularios Vue en jsdom
 npm run build:frontend    # Assets estáticos en dist/frontend
+npm run build:site        # Frontend y dry run del Worker con assets; no despliega
 ```
 
 `npm test` incluye también las pruebas del frontend. `npm run typecheck` comprueba
@@ -70,10 +71,20 @@ POST, sin enlaces con tokens. El registro no inicia sesión; la recuperación no
 verifica correo ni autentica. Solo se exige un mínimo de seis caracteres Unicode
 en las contraseñas; apellidos y teléfono son opcionales.
 
-`npm run build:frontend` genera una salida estática independiente. Todavía no se
-ha configurado su alojamiento ni un binding de assets en el Worker: para publicar,
-debe servirse el frontend con `/api` dirigido al Worker bajo el mismo origen HTTPS.
-Publicar los archivos estáticos por separado no configura ese enrutamiento ni CORS.
+`npm run build:site` compila el frontend en `dist/frontend` y empaqueta el Worker
+en `dist/worker` mediante un dry run de [wrangler.site.jsonc](wrangler.site.jsonc).
+No publica nada. Esta configuración sirve assets y API bajo el mismo origen:
+`/api`, `/api/*` y `/health` pasan primero al backend. La navegación usa fragmentos
+(`#groups`, `#account`); no hay fallback de rutas inexistentes a `index.html`.
+Los errores de API no se convierten en HTML. Los assets públicos no contienen
+cuentas, sesiones ni asignaciones. No se necesita un binding de assets en el código:
+el enrutamiento lo realiza Cloudflare antes de ejecutar el Worker.
+
+[wrangler.jsonc](wrangler.jsonc) conserva el desarrollo de la API sin assets.
+Ambas configuraciones contienen únicamente un ID D1 local de ejemplo y no habilitan
+`workers.dev`. La publicación requiere una configuración de destino revisada con
+base, origen HTTPS, secretos y ruta reales, según [la guía](docs/deployment.md).
+Publicar los archivos en otro hostname no configura ese enrutamiento ni CORS.
 
 Las herramientas de Vue necesitan la API de TypeScript 6, por lo que el workspace
 privado de frontend fija ese compilador y lo resuelve explícitamente en su check.
