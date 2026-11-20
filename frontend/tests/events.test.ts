@@ -23,7 +23,11 @@ function stubs() {
 let app: VueApp | undefined;
 async function mount(clients: ReturnType<typeof stubs>) {
   const host = document.createElement('div'); document.body.append(host);
-  app = createApp(App, { client: auth, groupClient: clients.groups, eventClient: clients.events }); app.mount(host);
+  app = createApp(App, { client: auth, groupClient: clients.groups, eventClient: clients.events, lifecycleClient: {
+    async state(eventId: string) { return { eventId, status: 'pending', drawId: null, closedAtMs: null }; },
+    async draw(eventId: string) { return { eventId, status: 'ready', drawId: 'draw', closedAtMs: null }; },
+    async close(eventId: string) { return { eventId, status: 'closed', drawId: 'draw', closedAtMs: 1000 }; },
+  } }); app.mount(host);
   await vi.waitFor(() => expect(document.querySelector('.loading-state')).toBeNull()); await nextTick();
 }
 function text() { return document.body.textContent ?? ''; }
