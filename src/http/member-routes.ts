@@ -1,4 +1,4 @@
-import type { MemberService } from '../application/member-service.ts';
+import { MemberRedrawPending, type MemberService } from '../application/member-service.ts';
 import type { SessionService } from '../application/session-service.ts';
 import { MemberInputError, memberPageInput } from '../domain/members.ts';
 import { equalCsrfTokens, sessionCsrfToken } from '../domain/session.ts';
@@ -54,6 +54,7 @@ export async function handleMemberRequest(request: Request, dependencies: Member
     if (result === 'owner-protected') return json({ error: 'The group owner cannot be removed' }, 409);
     return new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
+    if (error instanceof MemberRedrawPending) return json({ error: 'Membership removed; event redraw pending. Retry removal to resume.' }, 503);
     if (error instanceof MemberInputError) return json({ error: 'Invalid member input' }, 400);
     throw error;
   }

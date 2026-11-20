@@ -7,10 +7,23 @@ export interface MemberStore {
   removeForOwner(groupId: string, actorAccountId: string, accountId: string, nowMs: number): Promise<MemberRemovalResult>;
 }
 
+export interface MemberRedraws {
+  redrawAfterRemoval(actorAccountId: string, groupId: string): Promise<void>;
+}
+
+export class MemberRedrawPending extends Error {
+  constructor(cause: unknown) {
+    super('Membership removed; event redraw pending.', { cause }); this.name = 'MemberRedrawPending';
+  }
+}
+
 export class MemberService {
   private readonly store: MemberStore;
   private readonly now: () => number;
-  constructor(store: MemberStore, now = Date.now) { this.store = store; this.now = now; }
+  private readonly redraws: MemberRedraws;
+  constructor(store: MemberStore, redraws: MemberRedraws, now = Date.now) {
+    this.store = store; this.now = now; this.redraws = redraws;
+  }
 
   async list(actorAccountId: string, groupId: string, page: PageInput) {
     const rows = await this.store.listForMember(groupId, actorAccountId, page.limit + 1, page.cursor);
@@ -21,6 +34,11 @@ export class MemberService {
 
   async remove(actorAccountId: string, groupId: string, accountId: string): Promise<MemberRemovalResult> {
     const nowMs = this.now(); requireTimestamp(nowMs);
-    return this.store.removeForOwner(groupId, actorAccountId, accountId, nowMs);
+    const result = await this.store.removeForOwner(groupId, actorAccountId, accountId, nowMs);
+    if (result === 'ok') {
+      try { await this.redraws.redrawAfterRemoval(actorAccountId, groupId); }
+      catch (error) { throw new MemberRedrawPending(error); }
+    }
+    return result;
   }
 }

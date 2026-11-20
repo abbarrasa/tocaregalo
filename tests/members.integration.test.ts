@@ -26,14 +26,15 @@ test('group member HTTP uses scoped D1 reads and atomic removal with invitation 
   const origin = 'https://app.example.test';
   const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{
     name: 'members-test', modules: true, script: await readFile(join(output, 'worker.js'), 'utf8'),
-    compatibilityDate: '2026-11-19', d1Databases: ['DB'], bindings: { APP_ORIGIN: origin },
+    compatibilityDate: '2026-11-19', d1Databases: ['DB'], bindings: { APP_ORIGIN: origin,
+      DRAW_KEY_ID: 'synthetic', DRAW_CIPHER_KEY_HEX: '01'.repeat(32), DRAW_INDEX_KEY_HEX: '02'.repeat(32) },
     outboundService: async () => { assert.fail('Member operations must never send mail'); },
   }] }));
   t.after(() => mf.dispose());
   const db = await mf.getD1Database('DB');
   for (const name of ['0001_draws.sql', '0002_accounts_groups.sql', '0003_sessions.sql', '0004_public_auth.sql',
     '0005_email_verification.sql', '0006_password_recovery.sql', '0007_event_listing_index.sql',
-    '0008_event_creation_order.sql', '0009_group_invitations.sql']) await applyMigration(db, name);
+    '0008_event_creation_order.sql', '0009_group_invitations.sql', '0010_event_draw_lifecycle.sql']) await applyMigration(db, name);
   const accounts = new AccountsRepository(db);
   const groups = new GroupsRepository(db);
   const members = new MembersRepository(db);

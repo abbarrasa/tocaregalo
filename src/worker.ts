@@ -30,8 +30,12 @@ import { InvitationManagementService } from './application/invitation-management
 import { MemberService } from './application/member-service.ts';
 import { MembersRepository } from './persistence/members-repository.ts';
 import { handleMemberRequest } from './http/member-routes.ts';
+import { EventLifecycleService } from './application/event-lifecycle-service.ts';
+import { EventLifecycleRepository } from './persistence/event-lifecycle-repository.ts';
+import { loadRecipientKey, type RecipientKeySettings } from './infrastructure/recipient-key.ts';
+import { handleEventLifecycleRequest } from './http/event-lifecycle-routes.ts';
 
-export interface Env {
+export interface Env extends RecipientKeySettings {
   DB: D1Database;
   APP_ORIGIN: string;
   SESSION_TTL_SECONDS: string;
@@ -49,9 +53,13 @@ export default {
     }
     try {
       const sessions = new SessionService(new SessionsRepository(env.DB));
+      const lifecycle = new EventLifecycleService(new EventLifecycleRepository(env.DB), () => loadRecipientKey(env));
+      if (/^\/api\/events\/[^/]+\/(draw|close)$/.test(url.pathname)) {
+        return await handleEventLifecycleRequest(request, { lifecycle, sessions, applicationOrigin: env.APP_ORIGIN });
+      }
       if (/^\/api\/groups\/[^/]+\/members(?:\/[^/]+)?$/.test(url.pathname)) {
         return await handleMemberRequest(request, {
-          members: new MemberService(new MembersRepository(env.DB)), sessions, applicationOrigin: env.APP_ORIGIN,
+          members: new MemberService(new MembersRepository(env.DB), lifecycle), sessions, applicationOrigin: env.APP_ORIGIN,
         });
       }
       if (/^\/api\/groups\/[^/]+\/invitations$/.test(url.pathname) || url.pathname === '/api/invitations/accept') {

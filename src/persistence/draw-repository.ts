@@ -38,7 +38,7 @@ export class DrawRepository {
   constructor(db: PersistenceDatabase) { this.db = db; }
 
   async findByEvent(eventId: string): Promise<{ id: string; createdAtMs: number } | null> {
-    return this.db.prepare('SELECT id, created_at_ms AS createdAtMs FROM draws WHERE event_id = ?')
+    return this.db.prepare('SELECT id, created_at_ms AS createdAtMs FROM draws WHERE event_id = ? ORDER BY created_at_ms DESC, id DESC LIMIT 1')
       .bind(eventId).first();
   }
 
@@ -49,8 +49,9 @@ export class DrawRepository {
     const envelopes = await Promise.all(draw.assignments.map(a =>
       encryptRecipient(key, { drawId: draw.id, giverId: a.giverId }, a.recipientId)));
     const statements = [this.db.prepare(
-      'INSERT INTO draws (id, event_id, created_at_ms) VALUES (?, ?, ?)',
-    ).bind(draw.id, draw.eventId, draw.createdAtMs)];
+      `INSERT INTO draws (id, event_id, created_at_ms) SELECT ?, ?, ?
+        WHERE NOT EXISTS (SELECT 1 FROM draws WHERE event_id = ?)`,
+    ).bind(draw.id, draw.eventId, draw.createdAtMs, draw.eventId)];
     for (const [i, assignment] of draw.assignments.entries()) {
       const envelope = envelopes[i];
       statements.push(this.db.prepare(
