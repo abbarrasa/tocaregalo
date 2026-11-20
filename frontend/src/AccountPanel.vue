@@ -1,21 +1,29 @@
 <script setup lang="ts">
-import { nextTick, ref } from 'vue';
+import { nextTick, onBeforeUnmount, ref } from 'vue';
 import { ApiError, errorMessage, type Account, type AuthClient } from './api.ts';
 defineProps<{ account: Account; client: AuthClient }>();
 const emit = defineEmits<{ refresh: []; expired: []; logout: []; busy: [value: boolean] }>();
 const busy = ref(false); const error = ref(''); const notice = ref(''); const token = ref('');
 const errorElement = ref<HTMLElement>();
+let active = true;
+onBeforeUnmount(() => {
+  active = false;
+  token.value = '';
+  // Refresh replaces this panel before the operation's finally can notify its parent.
+  if (busy.value) { busy.value = false; emit('busy', false); }
+});
 async function perform(operation: () => Promise<void>, message: string) {
-  if (busy.value) return;
+  if (!active || busy.value) return;
   busy.value = true; emit('busy', true); error.value = ''; notice.value = '';
-  try { await operation(); notice.value = message; }
+  try { await operation(); if (active) notice.value = message; }
   catch (failure) {
+    if (!active) return;
     if (failure instanceof ApiError && failure.status === 401) emit('expired');
     else {
       error.value = errorMessage(failure, 'El código no es válido, ha caducado o ya se utilizó.');
-      await nextTick(); errorElement.value?.focus();
+      await nextTick(); if (active) errorElement.value?.focus();
     }
-  } finally { busy.value = false; emit('busy', false); }
+  } finally { if (active) { busy.value = false; emit('busy', false); } }
 }
 </script>
 
@@ -30,7 +38,7 @@ async function perform(operation: () => Promise<void>, message: string) {
     <div class="account-content">
       <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap mb-4">
         <h2>Mi cuenta</h2>
-        <button class="btn btn-outline-primary" :disabled="busy" @click="perform(async () => { await client.logout(); emit('logout'); }, '')">Cerrar sesión</button>
+        <button class="btn btn-outline-primary" :disabled="busy" @click="perform(async () => { await client.logout(); if (active) emit('logout'); }, '')">Cerrar sesión</button>
       </div>
       <p v-if="error" ref="errorElement" role="alert" class="alert alert-danger" tabindex="-1">{{ error }}</p>
       <p v-if="notice" role="status" class="alert alert-success">{{ notice }}</p>
@@ -53,7 +61,7 @@ async function perform(operation: () => Promise<void>, message: string) {
             <p class="text-muted mt-2">Te enviaremos un código a {{ account.email }}. Puedes seguir usando tu cuenta mientras lo verificas.</p>
             <button class="btn btn-outline-primary mt-2" :disabled="busy"
               @click="perform(() => client.requestVerification(), 'Solicitud procesada. Si el correo aún no estaba verificado, recibirás un código; solicitar otro invalida el anterior.')">Solicitar código</button>
-            <form class="mt-4" :aria-busy="busy" @submit.prevent="perform(async () => { await client.confirmVerification(token.trim()); token = ''; emit('refresh'); }, 'Correo confirmado.')">
+            <form class="mt-4" :aria-busy="busy" @submit.prevent="perform(async () => { await client.confirmVerification(token.trim()); token = ''; if (active) emit('refresh'); }, 'Correo confirmado.')">
               <fieldset :disabled="busy">
                 <label for="verification-token" class="form-label">Código recibido por correo</label>
                 <input id="verification-token" v-model="token" name="token" class="form-control" required autocomplete="off" :spellcheck="false">
