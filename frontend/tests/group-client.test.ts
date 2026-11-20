@@ -7,6 +7,23 @@ const account = { id: 'self', email: 'self@example.test', displayName: 'Self', l
 const group = { id: 'g', name: 'Friends', ownerAccountId: 'self', createdAtMs: 1000 };
 const member = { accountId: 'self', displayName: 'Self', joinedAtMs: 1000, isOwner: true };
 describe('focused group client', () => {
+  it('removes only the encoded target with shared CSRF and no identity body or automatic retry', async () => {
+    const requests: Array<{ path: string; options: RequestInit }> = [];
+    let status = 204;
+    const clients = createClients(async (path, options = {}) => {
+      requests.push({ path: String(path), options });
+      return path === '/api/me' ? Response.json({ account, csrfToken: 'proof' }) : new Response(null, { status });
+    });
+    await expect(clients.groups.removeMember('g', 'p')).rejects.toMatchObject({ status: 401 });
+    expect(requests).toHaveLength(0);
+    await clients.auth.me(); await clients.groups.removeMember('g /?', 'p /#');
+    expect(requests[1].path).toBe('/api/groups/g%20%2F%3F/members/p%20%2F%23');
+    expect(requests[1].options.method).toBe('DELETE'); expect(requests[1].options.body).toBeUndefined();
+    expect(requests[1].options.credentials).toBe('same-origin'); expect(requests[1].options.cache).toBe('no-store');
+    expect(new Headers(requests[1].options.headers).get('X-CSRF-Token')).toBe('proof');
+    status = 503; await expect(clients.groups.removeMember('g', 'p')).rejects.toMatchObject({ status: 503 });
+    expect(requests).toHaveLength(3);
+  });
   it('shares CSRF with authentication, bounds pages and encodes IDs/cursors without actor overrides', async () => {
     const requests: Array<{ path: string; options: RequestInit }> = [];
     const clients = createClients(async (path, options = {}) => {

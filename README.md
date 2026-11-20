@@ -37,7 +37,8 @@ verificación de correo y logout. Conserva el estilo del prototipo HTML facilita
 el 20-11-2026: marfil, ciruela, coral, títulos serif y logotipo de regalo.
 La interfaz de grupos permite crear, listar y consultar grupos y sus miembros.
 Las invitaciones permiten envío/listado/revocación por el propietario y aceptación
-con código. Retirada de miembros, eventos y destinatarios aún no tienen interfaz.
+con código. El propietario puede retirar miembros con confirmación. Eventos y
+destinatarios aún no tienen interfaz.
 
 Después de `npm ci`, iniciar en dos terminales:
 
@@ -101,13 +102,30 @@ Las fechas se presentan en la zona horaria del navegador.
 
 Los clientes de autenticación y grupos tienen contratos separados y comparten
 [el transporte HTTP](frontend/src/http-client.ts), incluida la prueba CSRF en
-memoria. Solo la creación añade CSRF; las lecturas no lo necesitan. El servidor
+memoria. La creación y la retirada de miembros añaden CSRF; las lecturas no lo necesitan. El servidor
 comprueba permisos en cada operación. Una respuesta 401 vigente devuelve al login
 y elimina los datos privados de pantalla; un 404 de detalle/miembros elimina
 el detalle y muestra el mismo mensaje para grupo inexistente o inaccesible.
 Las respuestas antiguas no repueblan una vista tras navegar o cambiar de grupo.
-Las invitaciones se describen a continuación. Retirar miembros, editar o borrar
-grupos siguen fuera de la interfaz actual.
+Las invitaciones se describen a continuación. Editar o borrar grupos sigue fuera
+de la interfaz actual.
+
+El propietario puede retirar a otros miembros desde el detalle, con confirmación
+explícita. El propietario queda protegido; los participantes no ven controles de
+retirada. La operación cancela las invitaciones pendientes vigentes de la persona
+y revoca su acceso al grupo. Los eventos abiertos se recalculan cuando hay al menos
+tres miembros; los cerrados conservan sus sorteos. Para volver al grupo se necesita
+aceptar una nueva invitación.
+
+Durante la retirada se bloquean solicitudes duplicadas y operaciones simultáneas
+de invitaciones, y se invalidan las lecturas anteriores. Después se recargan desde
+la primera página los miembros y las invitaciones. Un 503 puede producirse después
+de aplicar la retirada, con trabajo de recálculo pendiente; también puede indicar
+indisponibilidad previa. Ante 503 o pérdida de respuesta, la interfaz explica la
+incertidumbre y consulta el estado, sin repetir el DELETE automáticamente ni
+afirmar que todos los eventos se han recalculado. El listado de miembros no permite
+certificar el estado del recálculo. La confirmación y su cancelación gestionan el
+foco de teclado; la verificación en navegador real sigue pendiente.
 
 ### Invitaciones
 
