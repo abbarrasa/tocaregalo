@@ -1,3 +1,6 @@
+import { ApiError, createHttpClient, isRecord as object, readJson, type HttpClient } from './http-client.ts';
+export { ApiError } from './http-client.ts';
+
 export type Account = Readonly<{
   id: string; email: string; displayName: string; lastName: string | null;
   phone: string | null; emailVerifiedAtMs: number | null;
@@ -16,16 +19,6 @@ export interface AuthClient {
   logout(): Promise<void>;
 }
 
-export class ApiError extends Error {
-  readonly status: number;
-  constructor(status: number) {
-    super('Request failed'); this.name = 'ApiError'; this.status = status;
-  }
-}
-
-function object(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 function nullableString(value: unknown): value is string | null { return value === null || typeof value === 'string'; }
 function account(value: unknown): value is Account {
   return object(value) && typeof value.id === 'string' && typeof value.email === 'string'
@@ -36,37 +29,20 @@ function account(value: unknown): value is Account {
 // Paths are fixed and relative. Neither browser-supplied identities nor remote API URLs are accepted.
 // Session cookie is HttpOnly; the CSRF proof stays in this instance's memory only.
 export function createAuthClient(send: typeof fetch = fetch.bind(globalThis)): AuthClient {
-  let csrfToken: string | null = null;
-  async function request(path: string, body?: unknown, csrf = false): Promise<Response> {
-    if (csrf && !csrfToken) throw new ApiError(401);
-    const headers = new Headers();
-    if (body !== undefined) headers.set('Content-Type', 'application/json');
-    if (csrf && csrfToken) headers.set('X-CSRF-Token', csrfToken);
-    let response: Response;
-    try {
-      response = await send(path, { method: body === undefined ? 'GET' : 'POST', headers,
-        body: body === undefined ? undefined : JSON.stringify(body), credentials: 'same-origin',
-        cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(15_000) });
-    } catch { throw new ApiError(0); }
-    if (!response.ok) {
-      if (response.status === 401) csrfToken = null;
-      await response.body?.cancel();
-      throw new ApiError(response.status);
-    }
-    return response;
-  }
+  return authClientFor(createHttpClient(send));
+}
+
+export function authClientFor(http: HttpClient): AuthClient {
   async function post(path: string, body: unknown, csrf = false): Promise<void> {
-    const response = await request(path, body, csrf); await response.body?.cancel();
+    const response = await http.request(path, body, csrf); await response.body?.cancel();
   }
   return {
     async me() {
-      const response = await request('/api/me');
-      let value: unknown;
-      try { value = await response.json(); } catch { throw new ApiError(502); }
+      const value = await readJson(await http.request('/api/me'));
       if (!object(value) || !account(value.account) || typeof value.csrfToken !== 'string' || !value.csrfToken) {
-        csrfToken = null; throw new ApiError(502);
+        http.setCsrf(null); throw new ApiError(502);
       }
-      csrfToken = value.csrfToken; return value.account;
+      http.setCsrf(value.csrfToken); return value.account;
     },
     async login(identifier, password) { await post('/api/login', { identifier, password }); },
     async register(input) { await post('/api/register', input); },
@@ -74,7 +50,7 @@ export function createAuthClient(send: typeof fetch = fetch.bind(globalThis)): A
     async reset(token, newPassword) { await post('/api/password-recovery/confirm', { token, newPassword }); },
     async requestVerification() { await post('/api/email-verification/request', {}, true); },
     async confirmVerification(token) { await post('/api/email-verification/confirm', { token }); },
-    async logout() { await post('/api/logout', {}, true); csrfToken = null; },
+    async logout() { await post('/api/logout', {}, true); http.setCsrf(null); },
   };
 }
 
