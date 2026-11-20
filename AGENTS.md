@@ -25,8 +25,8 @@ Read-only inspection and planning may proceed before approval. A request to cont
 ## Project boundaries
 
 - Repository: `abbarrasa/tocaregalo-sites`, the independent ChatGPT Sites implementation of TocaRegalo. The Symfony application is in another repository; do not introduce Symfony/PHP assumptions here.
-- Target stack: Vue and Bootstrap for the frontend, a TypeScript Cloudflare Worker API, D1 persistence, and SendGrid over HTTPS for email. The frontend is not implemented yet. A SendGrid verification-email adapter exists; real delivery has not been tested.
-- Product references are the TocaRegalo v1.2 functional specification and the approved visual prototype. They are mentioned in the README but are not included in this repository. Do not invent their contents; obtain the relevant requirements when a decision depends on them.
+- Stack: Vue and Bootstrap for the frontend, a TypeScript Cloudflare Worker API, D1 persistence, and SendGrid over HTTPS for email. The first frontend delivery covers authentication and account/verification reads; group/event/invitation/recipient screens remain pending. Real email delivery has not been tested.
+- Product references are the TocaRegalo v1.2 functional specification and the approved visual prototype. The HTML prototype was supplied outside the repository on 2026-11-20; see the handoff. The specification remains absent. Treat demo logic as a visual reference, not a replacement for approved domain/privacy rules; obtain missing requirements before depending on them.
 - Keep HTTP, application orchestration, domain rules, and persistence responsibilities distinct. The Worker exposes health, public registration/login, authenticated account reads/logout, email-verification and password-recovery routes, authenticated group creation/list/detail, invitation/member operations, event creation/list/detail, owner draw/close operations and private recipient reads. Public login checks a password before internal session issuance.
 
 ## Clean Code and SOLID
@@ -38,6 +38,7 @@ Read-only inspection and planning may proceed before approval. A request to cont
 - Extend behavior through composition and focused contracts. Keep implementations substitutable by honoring their documented return values, errors, atomicity, and authorization semantics.
 - Use strict TypeScript and explicit null/error handling. Avoid `any`, unchecked casts, broad exception swallowing, speculative abstractions, and inheritance added merely to satisfy a pattern.
 - Use the existing ESM style with explicit `.ts` imports and erasable TypeScript syntax. Node executes the test files directly; do not introduce constructs that require an unconfigured transpilation step.
+- Keep browser code in [frontend](./frontend/), outside Worker type inputs. Vue SFCs use the Vite toolchain and a separate strict frontend check. Backend checks retain TypeScript 7; the frontend workspace resolves TypeScript 6 explicitly for Vue tooling. Install all workspaces through the root lockfile, not a separate frontend lockfile.
 
 ## Scalability and persistence
 
@@ -96,6 +97,10 @@ git diff --check
 ```
 
 `npm test` runs the complete suite. Use meaningful regression tests for changed behavior, security boundaries, rollback, and concurrency; a mechanical refactor can rely on the relevant existing suite. Do not add tests that only mirror implementation details.
+
+- `npm run test:frontend` runs browser client/component tests with Vitest/jsdom. This is not visual or real-browser verification. `npm run build:frontend` builds static assets in `dist/frontend`; CI checks this build too. `npm run typecheck` includes Node, Worker and Vue checks.
+- For local browser development use `npm run dev:api` and `npm run dev:frontend`, then `https://localhost:5173/`. The local HTTPS Vite proxy preserves Origin and the Worker command sets the matching allowed origin. Do not weaken Origin/CSRF/cookie rules for development. No production asset hosting is configured by these commands.
+- Browser sessions/CSRF and account state remain in memory/HttpOnly cookies. Never add auth codes or credentials to URLs, browser storage, logs or demo fixtures with real data. Retain the public password and optional-field policies in UI validation; never transplant the prototype's password maximum, mandatory phone, SHA-256 credential storage, unchecked identities or automatic browser-side closure.
 
 - Node and Worker types are checked separately by [tsconfig.json](./tsconfig.json) and [tsconfig.worker.json](./tsconfig.worker.json). Both must pass for shared source changes.
 - Miniflare starts workerd and may need permissions unavailable in a restricted sandbox. Report environment failures accurately; do not skip failing tests and claim success.

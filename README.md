@@ -22,7 +22,58 @@ npm test                  # Dominio, SQLite y D1 local (Miniflare)
 npm run test:unit         # Dominio y SQLite, sin iniciar workerd
 npm run test:integration  # Binding D1 local con Miniflare
 npm run typecheck         # Tipos de Node y Workers por separado
+npm run test:frontend     # Cliente HTTP y formularios Vue en jsdom
+npm run build:frontend    # Assets estáticos en dist/frontend
 ```
+
+`npm test` incluye también las pruebas del frontend. `npm run typecheck` comprueba
+Node, Worker y componentes Vue con configuraciones independientes.
+
+## Frontend: acceso y cuenta
+
+[frontend](frontend/) contiene la primera entrega Vue/Bootstrap: login por correo
+o teléfono, registro público, recuperación con código, consulta de cuenta,
+verificación de correo y logout. Conserva el estilo del prototipo HTML facilitado
+el 20-11-2026: marfil, ciruela, coral, títulos serif y logotipo de regalo.
+Los grupos, invitaciones, eventos y destinatarios aún no tienen interfaz.
+
+Después de `npm ci`, iniciar en dos terminales:
+
+```sh
+npm run dev:api
+npm run dev:frontend
+```
+
+Abrir `https://localhost:5173/`. Vite genera un certificado autofirmado únicamente
+para desarrollo; el navegador puede pedir que se confíe explícitamente en él.
+La API local escucha en `127.0.0.1:8787`; Vite envía `/api` a ese servidor sin
+reescribir Origin. `dev:api` fija `APP_ORIGIN=https://localhost:5173` solo para
+esa ejecución. Conservar exactamente ese hostname y puerto para las cookies
+Secure y la comprobación de origen. No ejecutar simultáneamente el antiguo
+`npm run dev` en el mismo puerto. Este proxy solo existe durante desarrollo.
+
+La API necesita una D1 local migrada antes de probar cuentas reales; la aplicación
+no aplica migraciones al arrancar. `npm run db:migrate:local` cambia el estado
+persistente local y debe ejecutarse deliberadamente, no como parte de las pruebas.
+Los tests de integración usan D1 efímera. Para correo, preparar secretos locales
+según la guía de despliegue; no se incluyen cuentas demo ni envíos simulados en la UI.
+
+El navegador llama solo a rutas relativas `/api/...`, usa la cookie HttpOnly
+del servidor y guarda el CSRF únicamente en memoria. `/api/me` restaura la cuenta
+al cargar. No se guardan contraseñas, códigos, sesión o asignaciones en localStorage
+ni sessionStorage. Los códigos se introducen en formularios y viajan en cuerpos
+POST, sin enlaces con tokens. El registro no inicia sesión; la recuperación no
+verifica correo ni autentica. Solo se exige un mínimo de seis caracteres Unicode
+en las contraseñas; apellidos y teléfono son opcionales.
+
+`npm run build:frontend` genera una salida estática independiente. Todavía no se
+ha configurado su alojamiento ni un binding de assets en el Worker: para publicar,
+debe servirse el frontend con `/api` dirigido al Worker bajo el mismo origen HTTPS.
+Publicar los archivos estáticos por separado no configura ese enrutamiento ni CORS.
+
+Las herramientas de Vue necesitan la API de TypeScript 6, por lo que el workspace
+privado de frontend fija ese compilador y lo resuelve explícitamente en su check.
+El backend conserva TypeScript 7. El lockfile raíz instala ambos con `npm ci`.
 
 ## Integración continua y publicación de versiones
 
@@ -72,12 +123,12 @@ cálculo de reintentos y el cifrado autenticado del destinatario. Las pruebas
 usan datos sintéticos. Las pruebas de dominio y SQLite no requieren paquetes;
 la integración local necesita las dependencias de desarrollo, sin cuenta Cloudflare.
 
-La aplicación seguirá usando Vue y Bootstrap. La API se implementará en
+El frontend usa Vue y Bootstrap. La API está implementada en
 TypeScript como Worker, con D1 para persistencia y SendGrid HTTPS para el
 correo. El acceso a la URL publicada será público y la aplicación autenticará
 por su cuenta antes de conceder acceso a cuentas y datos de grupos o eventos.
 
-Quedan pendientes el frontend, la verificación telefónica,
+Quedan pendientes las pantallas de grupos/eventos/invitaciones/destinatarios, la verificación telefónica,
 la gestión adicional de eventos e invitaciones, la entrega duradera de otros
 correos y la publicación. Los avisos de cierre ya tienen bandeja de salida y reintentos.
 El procesamiento programado
