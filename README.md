@@ -24,6 +24,39 @@ npm run test:integration  # Binding D1 local con Miniflare
 npm run typecheck         # Tipos de Node y Workers por separado
 ```
 
+## Integración continua y publicación de versiones
+
+[Validate](.github/workflows/validate.yml) comprueba las PR cuyo destino es `dev`
+o `main` y los cambios subidos a esas dos ramas. Usa Ubuntu y Node 24, instala
+con `npm ci`, comprueba los tipos de Node/Worker y ejecuta la suite completa
+(dominio, SQLite y D1 efímera con workerd). El job se llama `Node 24 validation`.
+No necesita secretos de aplicación, no envía correos reales ni aplica migraciones
+a bases persistentes. Tiene permisos de lectura y un límite de quince minutos;
+una ejecución nueva cancela la anterior del mismo evento y referencia.
+
+El flujo de trabajo previsto es:
+
+1. Crear una rama `feature/...` desde `dev` para una tarea aprobada.
+2. Subirla manualmente: [el workflow existente](.github/workflows/create-pr.yml)
+   crea una PR hacia `dev` cuando corresponde.
+3. Revisar la validación, aprobar y fusionar la PR.
+4. Crear manualmente una PR de `dev` a `main` cuando se prepare una versión;
+   puede agrupar varias tareas. Revisarla, aprobarla y fusionarla.
+5. Crear manualmente una release y su etiqueta desde el commit elegido de `main`.
+
+Aprobar una PR no la fusiona automáticamente. Este workflow tampoco configura
+protección de ramas: para impedir fusiones con pruebas fallidas hay que exigir
+el check `Node 24 validation` en las reglas del repositorio. Eso requiere una
+configuración posterior en GitHub. Una release identifica una versión; desplegarla
+en Cloudflare sigue siendo un paso separado pendiente.
+
+Las PR creadas por un workflow con `GITHUB_TOKEN` pueden requerir que una persona
+con permiso de escritura pulse **Approve workflows to run** antes de iniciar
+la validación. Consultar la [documentación de disparadores de GitHub](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
+No se añaden tokens personales para eludir esa aprobación. La ejecución real
+en GitHub debe verificarse después de subir los cambios; una prueba local no
+certifica el runner remoto.
+
 ## Estado
 
 El código actual cubre el sorteo uniforme, el límite lógico del cierre, el
