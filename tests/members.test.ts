@@ -26,7 +26,10 @@ test('member service distinguishes inaccessible lists and delegates removal with
       return actor !== 'owner' ? 'not-found' : target === actor ? 'owner-protected' : 'ok';
     },
   };
-  const service = new MemberService(store, () => 1000);
+  let redraws = 0;
+  const service = new MemberService(store, { async redrawAfterRemoval(actor, group) {
+    assert.equal(actor, 'owner'); assert.equal(group, 'group'); redraws++;
+  } }, () => 1000);
   assert.equal(await service.list('other', 'group', { limit: 1, cursor: null }), null);
   assert.deepEqual(await service.list('owner', 'empty', { limit: 1, cursor: null }), { members: [], nextCursor: null });
   assert.deepEqual(await service.list('owner', 'group', { limit: 1, cursor: null }), {
@@ -35,4 +38,5 @@ test('member service distinguishes inaccessible lists and delegates removal with
   assert.equal(await service.remove('owner', 'group', 'member'), 'ok');
   assert.equal(await service.remove('owner', 'group', 'owner'), 'owner-protected');
   assert.equal(await service.remove('other', 'group', 'member'), 'not-found');
+  assert.equal(redraws, 1);
 });

@@ -56,9 +56,11 @@ grupos, membresías y la relación opcional de eventos con grupos.
 [DrawRepository](src/persistence/draw-repository.ts) recibe el binding D1 del
 Worker. `save` valida la permutación completa, cifra todos los destinatarios y
 guarda el sorteo mediante un único `DB.batch`, que D1 ejecuta atómicamente.
-Una restricción única permite un solo sorteo por evento: ante un reintento o
-conflicto concurrente, el servicio debe consultar `findByEvent` y reutilizar el
-sorteo existente. No se reemplazan asignaciones. Los errores de base de datos
+La migración inicial permite un solo sorteo por evento. Desde la migración
+[0010_event_draw_lifecycle.sql](migrations/0010_event_draw_lifecycle.sql), se conservan
+versiones por revisión de membresía. El método interno `save` sigue rechazando
+un segundo sorteo del mismo evento; la API usa el servicio de ciclo de vida
+descrito más adelante. No se sobrescriben asignaciones. Los errores de base de datos
 se propagan; no deben tratarse todos como duplicados.
 
 Los destinatarios se almacenan como BLOB AES-GCM, con IV, identificador de
@@ -694,7 +696,75 @@ restablece las lecturas sujetas a la membresía vigente. El método antiguo
 la API pública usa el repositorio de miembros para garantizar la cancelación
 atómica de invitaciones.
 
-Esta tarea no añade migraciones, dependencias, correos, interfaz, transferencia
-de propiedad ni baja voluntaria. Las pruebas en D1 efímera/workerd comprueban
+La incorporación inicial de estas rutas no añadió migraciones, dependencias,
+correos, interfaz, transferencia de propiedad ni baja voluntaria. El ciclo de
+sorteos descrito a continuación sí amplía la persistencia. Las pruebas en D1 efímera/workerd comprueban
 privacidad, permisos, protección del propietario, paginación, rollback,
 concurrencia con aceptación, revocación de lecturas y conservación del cifrado.
+
+## Sorteos y cierre de eventos
+
+La migración [0010_event_draw_lifecycle.sql](migrations/0010_event_draw_lifecycle.sql)
+incorpora el cierre efectivo y versiones de los sorteos. Conserva los IDs, fechas
+y bytes cifrados anteriores; solo adopta como vigente un sorteo anterior completo
+cuyos participantes coincidan con los miembros actuales. Los restantes quedan
+como historial. No se deduce un cierre histórico por tener una fecha programada
+pasada. La fecha de creación del evento sigue siendo inmutable.
+
+- `GET /api/events/<eventId>/draw`: cualquier miembro actual consulta
+  `{ event: { eventId, closedAtMs, drawId, status } }`. Los estados son `pending`,
+  `ready` y `closed`. Un evento abierto sin sorteo actualizado devuelve `drawId: null`.
+  No devuelve participantes, destinatarios ni claves.
+- `POST /api/events/<eventId>/draw`: el propietario solicita el sorteo de todos
+  los miembros actuales, incluido él. No necesita cuerpo. Requiere al menos tres
+  miembros. Repetir la petición sin cambios de membresía reutiliza el mismo sorteo.
+- `POST /api/events/<eventId>/close`: el propietario cierra el evento, incluso
+  antes de la fecha programada. Si falta un sorteo actualizado, lo calcula y lo
+  publica junto con el cierre en una única transacción. Si ya está actualizado,
+  lo conserva. Con menos de tres miembros no cierra.
+
+Ambos POST requieren sesión, Origin HTTPS exacto y `X-CSRF-Token`; responden
+200 con el mismo formato de estado. Un evento inexistente, sin propiedad o
+heredado sin grupo devuelve el mismo 404. Eventos ya cerrados, menos de tres
+miembros o cambios de membresía que impidan publicar tras tres intentos devuelven
+409. Las lecturas requieren membresía (404 si falta); sesiones inválidas devuelven
+401, fallos de Origin/CSRF 403 y métodos incorrectos 405. Todo usa `no-store`.
+
+Las incorporaciones, incluidas las aceptaciones de invitación, invalidan el sorteo
+de los eventos abiertos sin ejecutarlo automáticamente. Así se pueden incorporar
+varias personas antes de solicitar un único nuevo sorteo. La retirada pública de
+un miembro recalcula los eventos abiertos si quedan al menos tres personas;
+con menos, quedan pendientes. Los eventos cerrados mantienen sus participantes
+y asignaciones. Los sorteos anteriores se conservan cifrados y no se sobrescriben.
+La revisión de membresía se incrementa en triggers D1 y se comprueba dentro de
+la escritura del sorteo/cierre para impedir resultados desactualizados.
+
+La retirada confirma primero la revocación de acceso y marca de forma duradera
+los eventos pendientes; después procesa hasta 20 eventos por petición. Si falla
+un recálculo o quedan más eventos, devuelve **503 con la retirada ya realizada**.
+Repetir el mismo DELETE retoma los pendientes sin repetir los sorteos completados.
+Hasta completarlos, los sorteos desactualizados no se muestran como vigentes.
+Este mecanismo requiere reintentar la petición; no es una cola autónoma.
+
+El Worker necesita `DRAW_KEY_ID` (identificador estable) y los secretos
+`DRAW_CIPHER_KEY_HEX` y `DRAW_INDEX_KEY_HEX`: dos claves distintas de 32 bytes,
+codificadas cada una como 64 caracteres hexadecimales. Deben generarse con
+aleatoriedad criptográfica y configurarse como secretos de Worker. Nunca se
+guardan en D1 ni en archivos versionados. Una configuración ausente o inválida
+devuelve 503 cuando sea necesario cifrar. Cada rotación debe usar un ID nuevo;
+conservar las claves antiguas de forma segura para la futura consulta privada.
+El adaptador actual importa únicamente la clave activa para escritura; no
+implementa aún un almacén de claves históricas ni una API de descifrado.
+
+El servicio cifra como máximo 16 asignaciones simultáneamente y publica cada
+sorteo completo en un único batch de `2 + 2N` sentencias, con hasta seis parámetros
+por sentencia. La instantánea y las sentencias siguen creciendo con N: no existe
+una capacidad ilimitada ni una capacidad de producción certificada. Los límites
+de CPU, memoria y duración de consulta siguen aplicándose; consultar los
+[límites oficiales de D1](https://developers.cloudflare.com/d1/platform/limits/)
+antes de publicar o fijar límites de producto.
+
+Las pruebas usan D1 efímera/workerd, claves sintéticas y ningún correo real.
+El programador de cierre automático, los correos y la consulta privada del
+destinatario siguen pendientes. La fecha programada es un vencimiento para ese
+futuro programador; por sí sola no acredita que el evento se haya cerrado.
