@@ -29,13 +29,14 @@ npm run build:frontend    # Assets estáticos en dist/frontend
 `npm test` incluye también las pruebas del frontend. `npm run typecheck` comprueba
 Node, Worker y componentes Vue con configuraciones independientes.
 
-## Frontend: acceso y cuenta
+## Frontend: acceso, cuenta y grupos
 
 [frontend](frontend/) contiene la primera entrega Vue/Bootstrap: login por correo
 o teléfono, registro público, recuperación con código, consulta de cuenta,
 verificación de correo y logout. Conserva el estilo del prototipo HTML facilitado
 el 20-11-2026: marfil, ciruela, coral, títulos serif y logotipo de regalo.
-Los grupos, invitaciones, eventos y destinatarios aún no tienen interfaz.
+La interfaz de grupos permite crear, listar y consultar grupos y sus miembros.
+Invitaciones, retirada de miembros, eventos y destinatarios aún no tienen interfaz.
 
 Después de `npm ci`, iniciar en dos terminales:
 
@@ -74,6 +75,37 @@ Publicar los archivos estáticos por separado no configura ese enrutamiento ni C
 Las herramientas de Vue necesitan la API de TypeScript 6, por lo que el workspace
 privado de frontend fija ese compilador y lo resuelve explícitamente en su check.
 El backend conserva TypeScript 7. El lockfile raíz instala ambos con `npm ci`.
+
+### Grupos y miembros
+
+Tras iniciar sesión, el menú permite alternar entre «Grupos» (`#groups`) y «Mi
+cuenta» (`#account`). El detalle usa `#groups/<id-codificado>`; el ID selecciona
+el recurso, nunca concede permisos. La lista incluye los grupos de los que eres
+miembro y distingue «Propietario» de «Participante». No muestra recuentos ni
+descripciones que la API no proporciona.
+
+La creación admite solo el nombre (entre 1 y 100 caracteres tras quitar espacios
+exteriores). El servidor genera identidad/fecha/propietario y añade al creador
+como miembro. Tras la respuesta se abre el grupo creado. El formulario bloquea
+envíos duplicados mientras hay una solicitud pendiente; no reintenta un POST
+automáticamente ante una respuesta perdida. Si aparece un resultado incierto,
+revisa/actualiza el listado antes de volver a crear el mismo grupo.
+
+Las listas de grupos y miembros solicitan páginas de veinte filas, con cursor
+opaco y controles «Siguiente página», «Volver al principio» y actualización.
+Solo se conserva la página actual. El orden sigue la API por ID, no por nombre
+ni fecha; la paginación no es una instantánea. Los miembros muestran únicamente
+nombre, fecha de incorporación y condición de propietario, sin teléfono/correo.
+Las fechas se presentan en la zona horaria del navegador.
+
+Los clientes de autenticación y grupos tienen contratos separados y comparten
+[el transporte HTTP](frontend/src/http-client.ts), incluida la prueba CSRF en
+memoria. Solo la creación añade CSRF; las lecturas no lo necesitan. El servidor
+comprueba permisos en cada operación. Una respuesta 401 vigente devuelve al login
+y elimina los datos privados de pantalla; un 404 de detalle/miembros elimina
+el detalle y muestra el mismo mensaje para grupo inexistente o inaccesible.
+Las respuestas antiguas no repueblan una vista tras navegar o cambiar de grupo.
+No se añaden acciones de invitar, retirar, editar o borrar en esta entrega.
 
 ## Integración continua y publicación de versiones
 

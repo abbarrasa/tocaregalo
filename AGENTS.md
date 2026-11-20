@@ -25,7 +25,7 @@ Read-only inspection and planning may proceed before approval. A request to cont
 ## Project boundaries
 
 - Repository: `abbarrasa/tocaregalo-sites`, the independent ChatGPT Sites implementation of TocaRegalo. The Symfony application is in another repository; do not introduce Symfony/PHP assumptions here.
-- Stack: Vue and Bootstrap for the frontend, a TypeScript Cloudflare Worker API, D1 persistence, and SendGrid over HTTPS for email. The first frontend delivery covers authentication and account/verification reads; group/event/invitation/recipient screens remain pending. Real email delivery has not been tested.
+- Stack: Vue and Bootstrap for the frontend, a TypeScript Cloudflare Worker API, D1 persistence, and SendGrid over HTTPS for email. The frontend covers authentication, account/verification, group creation/list/detail and read-only member pages; invitation/member-management/event/recipient screens remain pending. Real email delivery has not been tested.
 - Product references are the TocaRegalo v1.2 functional specification and the approved visual prototype. The HTML prototype was supplied outside the repository on 2026-11-20; see the handoff. The specification remains absent. Treat demo logic as a visual reference, not a replacement for approved domain/privacy rules; obtain missing requirements before depending on them.
 - Keep HTTP, application orchestration, domain rules, and persistence responsibilities distinct. The Worker exposes health, public registration/login, authenticated account reads/logout, email-verification and password-recovery routes, authenticated group creation/list/detail, invitation/member operations, event creation/list/detail, owner draw/close operations and private recipient reads. Public login checks a password before internal session issuance.
 
@@ -39,6 +39,7 @@ Read-only inspection and planning may proceed before approval. A request to cont
 - Use strict TypeScript and explicit null/error handling. Avoid `any`, unchecked casts, broad exception swallowing, speculative abstractions, and inheritance added merely to satisfy a pattern.
 - Use the existing ESM style with explicit `.ts` imports and erasable TypeScript syntax. Node executes the test files directly; do not introduce constructs that require an unconfigured transpilation step.
 - Keep browser code in [frontend](./frontend/), outside Worker type inputs. Vue SFCs use the Vite toolchain and a separate strict frontend check. Backend checks retain TypeScript 7; the frontend workspace resolves TypeScript 6 explicitly for Vue tooling. Install all workspaces through the root lockfile, not a separate frontend lockfile.
+- Browser use-case clients depend on the shared [HTTP contract](./frontend/src/http-client.ts), with one in-memory CSRF proof per application instance. Keep group/authentication contracts separate. Encode IDs/cursors, validate response shapes, retain bounded pages, and fence late UI updates/errors when navigating or switching resources. A current 401 clears private UI; missing/inaccessible groups share a generic message. Never infer server permissions from visible controls or retry ambiguous creation automatically.
 
 ## Scalability and persistence
 
