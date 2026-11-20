@@ -1,6 +1,6 @@
 import { onBeforeUnmount, ref, shallowRef } from 'vue';
 import { ApiError, errorMessage } from './api.ts';
-import type { Page } from './group-client.ts';
+import type { Page } from './pagination.ts';
 
 // Holds one bounded page, not a growing cache. Generation fences late responses.
 export function usePage<T>(load: (cursor: string | null) => Promise<Page<T>>, expired: () => void, unavailable: () => void = () => {}) {

@@ -29,14 +29,15 @@ npm run build:frontend    # Assets estáticos en dist/frontend
 `npm test` incluye también las pruebas del frontend. `npm run typecheck` comprueba
 Node, Worker y componentes Vue con configuraciones independientes.
 
-## Frontend: acceso, cuenta y grupos
+## Frontend: acceso, cuenta, grupos e invitaciones
 
 [frontend](frontend/) contiene la primera entrega Vue/Bootstrap: login por correo
 o teléfono, registro público, recuperación con código, consulta de cuenta,
 verificación de correo y logout. Conserva el estilo del prototipo HTML facilitado
 el 20-11-2026: marfil, ciruela, coral, títulos serif y logotipo de regalo.
 La interfaz de grupos permite crear, listar y consultar grupos y sus miembros.
-Invitaciones, retirada de miembros, eventos y destinatarios aún no tienen interfaz.
+Las invitaciones permiten envío/listado/revocación por el propietario y aceptación
+con código. Retirada de miembros, eventos y destinatarios aún no tienen interfaz.
 
 Después de `npm ci`, iniciar en dos terminales:
 
@@ -105,7 +106,37 @@ comprueba permisos en cada operación. Una respuesta 401 vigente devuelve al log
 y elimina los datos privados de pantalla; un 404 de detalle/miembros elimina
 el detalle y muestra el mismo mensaje para grupo inexistente o inaccesible.
 Las respuestas antiguas no repueblan una vista tras navegar o cambiar de grupo.
-No se añaden acciones de invitar, retirar, editar o borrar en esta entrega.
+Las invitaciones se describen a continuación. Retirar miembros, editar o borrar
+grupos siguen fuera de la interfaz actual.
+
+### Invitaciones
+
+El detalle del grupo muestra un panel de invitaciones solo al propietario. Permite
+enviar por correo, consultar páginas de veinte invitaciones (ordenadas por correo)
+y revocar las pendientes mediante confirmación explícita. El listado contiene solo
+correo, fechas y estado: pendiente, caducada o aceptada. No es un historial de envíos.
+Las invitaciones caducan a los siete días; otro envío al mismo correo sustituye el
+código anterior. La revocación es idempotente y nunca retira miembros ya inscritos.
+
+«Aceptar invitación» (`#invitations`) requiere sesión. Introducir el código del
+correo: la dirección almacenada en la cuenta debe coincidir con la invitada.
+La aceptación es de un solo uso, no verifica correo y no crea otra sesión. Después
+se limpia el código y se carga una página nueva del listado de grupos. Los códigos
+no se incluyen en URLs, almacenamiento del navegador ni mensajes de diagnóstico.
+
+El cliente de invitaciones usa el transporte y CSRF compartidos. Envío, aceptación
+y DELETE de revocación requieren CSRF; el listado no. El servidor autoriza cada
+operación independientemente de los botones visibles. Un 404 de administración
+borra el detalle privado y muestra el mismo mensaje de grupo inexistente/inaccesible;
+un 401 vigente devuelve al login. Las respuestas antiguas se descartan también al
+iniciar una mutación, para no restaurar un listado anterior después del cambio.
+
+La API limita el envío a cinco solicitudes por grupo/correo y treinta por propietario
+cada quince minutos. La interfaz bloquea envíos simultáneos y muestra los errores
+de límite, permisos, código y red, sin reintentar operaciones automáticamente.
+Una respuesta 202 significa aceptación por SendGrid, no entrega al buzón. Ante
+resultado incierto, actualizar las invitaciones/grupos antes de repetir una acción;
+reenviar puede invalidar un código anterior. No se han probado buzones reales.
 
 ## Integración continua y publicación de versiones
 

@@ -22,7 +22,9 @@ const auth: AuthClient = {
 };
 async function mount(groups: GroupClient) {
   const host = document.createElement('div'); document.body.append(host);
-  app = createApp(App, { client: auth, groupClient: groups }); app.mount(host);
+  app = createApp(App, { client: auth, groupClient: groups, invitationClient: {
+    async list() { return { items: [], nextCursor: null }; }, async send() {}, async revoke() {}, async accept() {},
+  } }); app.mount(host);
   await vi.waitFor(() => expect(document.querySelector('.loading-state')).toBeNull()); await nextTick();
 }
 function text() { return document.body.textContent ?? ''; }

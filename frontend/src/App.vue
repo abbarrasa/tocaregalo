@@ -3,16 +3,19 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { ApiError, errorMessage, type Account, type AuthClient } from './api.ts';
 import { createClients } from './clients.ts';
 import type { GroupClient } from './group-client.ts';
+import type { InvitationClient } from './invitation-client.ts';
+import AcceptInvitation from './AcceptInvitation.vue';
 import { privatePage } from './navigation.ts';
 import GroupList from './GroupList.vue';
 import GroupDetail from './GroupDetail.vue';
 import AuthForm, { type EntryPage } from './AuthForm.vue';
 import AccountPanel from './AccountPanel.vue';
 import BrandMark from './BrandMark.vue';
-const props = defineProps<{ client?: AuthClient; groupClient?: GroupClient }>();
+const props = defineProps<{ client?: AuthClient; groupClient?: GroupClient; invitationClient?: InvitationClient }>();
 const defaults = createClients();
 const client = props.client ?? defaults.auth;
 const groupClient = props.groupClient ?? defaults.groups;
+const invitationClient = props.invitationClient ?? defaults.invitations;
 const account = ref<Account | null>(null); const loading = ref(true); const busy = ref(false);
 const notice = ref(''); const error = ref(''); const heading = ref<HTMLElement>();
 function readPage(): EntryPage {
@@ -42,6 +45,11 @@ function loginScreen(message: string) {
   privateRoute.value = { kind: 'account' };
   history.replaceState(null, '', '#login'); handledHash = '#login'; notice.value = message; error.value = ''; void focusContent();
 }
+function acceptedInvitation() {
+  busy.value = false; privateRoute.value = { kind: 'groups' };
+  history.replaceState(null, '', '#groups'); handledHash = '#groups';
+  notice.value = 'Invitación aceptada. Ya puedes consultar el grupo en tu listado.'; void focusContent();
+}
 async function refresh() {
   loading.value = true; error.value = '';
   try { account.value = await client.me(); }
@@ -65,11 +73,13 @@ onBeforeUnmount(() => window.removeEventListener('hashchange', navigate));
         <p v-if="notice" role="status" class="alert alert-success my-4">{{ notice }}</p>
         <template v-if="account">
           <nav class="private-nav" aria-label="Menú principal">
-            <a href="#groups" :aria-current="privateRoute.kind !== 'account' ? 'page' : undefined" :aria-disabled="busy">Grupos</a>
+            <a href="#groups" :aria-current="privateRoute.kind === 'groups' || privateRoute.kind === 'group' ? 'page' : undefined" :aria-disabled="busy">Grupos</a>
+            <a href="#invitations" :aria-current="privateRoute.kind === 'invitations' ? 'page' : undefined" :aria-disabled="busy">Aceptar invitación</a>
             <a href="#account" :aria-current="privateRoute.kind === 'account' ? 'page' : undefined" :aria-disabled="busy">Mi cuenta</a>
           </nav>
           <GroupList v-if="privateRoute.kind === 'groups'" :client="groupClient" :actor-id="account.id" @busy="busy = $event" @expired="loginScreen('Tu sesión ha caducado. Vuelve a iniciar sesión.')" />
-          <GroupDetail v-else-if="privateRoute.kind === 'group'" :key="privateRoute.id" :group-id="privateRoute.id" :client="groupClient" :actor-id="account.id" @expired="loginScreen('Tu sesión ha caducado. Vuelve a iniciar sesión.')" />
+          <GroupDetail v-else-if="privateRoute.kind === 'group'" :key="privateRoute.id" :group-id="privateRoute.id" :client="groupClient" :invitation-client="invitationClient" :actor-id="account.id" @busy="busy = $event" @expired="loginScreen('Tu sesión ha caducado. Vuelve a iniciar sesión.')" />
+          <AcceptInvitation v-else-if="privateRoute.kind === 'invitations'" :client="invitationClient" :email="account.email" @busy="busy = $event" @accepted="acceptedInvitation" @expired="loginScreen('Tu sesión ha caducado. Vuelve a iniciar sesión.')" />
           <AccountPanel v-else :account="account" :client="client" @refresh="refresh" @busy="busy = $event"
             @expired="loginScreen('Tu sesión ha caducado. Vuelve a iniciar sesión.')" @logout="loginScreen('Has cerrado sesión.')" />
         </template>
