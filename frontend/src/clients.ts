@@ -4,8 +4,9 @@ import { createHttpClient } from './http-client.ts';
 import { invitationClientFor } from './invitation-client.ts';
 import { eventClientFor } from './event-client.ts';
 import { eventLifecycleClientFor } from './event-lifecycle-client.ts';
+import { recipientClientFor } from './recipient-client.ts';
 
 export function createClients(send: typeof fetch = fetch.bind(globalThis)) {
   const http = createHttpClient(send);
-  return { auth: authClientFor(http), groups: groupClientFor(http), invitations: invitationClientFor(http), events: eventClientFor(http), lifecycle: eventLifecycleClientFor(http) };
+  return { auth: authClientFor(http), groups: groupClientFor(http), invitations: invitationClientFor(http), events: eventClientFor(http), lifecycle: eventLifecycleClientFor(http), recipients: recipientClientFor(http) };
 }
