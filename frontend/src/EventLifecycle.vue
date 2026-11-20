@@ -5,7 +5,7 @@ import type { EventLifecycleClient, EventState } from './event-lifecycle-client.
 import type { GroupClient } from './group-client.ts';
 import { formatEventTime } from './event-time.ts';
 const props = defineProps<{ eventId: string; groupId: string; actorId: string; client: EventLifecycleClient; groups: Pick<GroupClient, 'find'> }>();
-const emit = defineEmits<{ expired: []; unavailable: []; busy: [value: boolean] }>();
+const emit = defineEmits<{ expired: []; unavailable: []; busy: [value: boolean]; working: [value: boolean] }>();
 const state = shallowRef<EventState | null>(null); const owner = ref(false); const loading = ref(false); const busy = ref(false);
 const error = ref(''); const notice = ref(''); const selected = ref<'draw' | 'close' | null>(null);
 const confirmationElement = ref<HTMLElement>(); const messageElement = ref<HTMLElement>(); let trigger: HTMLElement | null = null; let generation = 0;
@@ -13,7 +13,7 @@ const labels = { pending: 'Pendiente de sorteo actualizado', ready: 'Sorteo actu
 function accessFailure(failure: unknown): boolean {
   if (failure instanceof ApiError && (failure.status === 401 || failure.status === 404)) {
     generation++; state.value = null; owner.value = false; selected.value = null; busy.value = false; loading.value = false;
-    emit('busy', false); if (failure.status === 401) emit('expired'); else emit('unavailable'); return true;
+    emit('busy', false); emit('working', false); if (failure.status === 401) emit('expired'); else emit('unavailable'); return true;
   }
   return false;
 }
@@ -24,13 +24,13 @@ async function readCurrent(request: number) {
 }
 async function refresh() {
   if (busy.value) return;
-  const request = ++generation; state.value = null; owner.value = false; selected.value = null; error.value = ''; loading.value = true;
+  const request = ++generation; state.value = null; owner.value = false; selected.value = null; error.value = ''; loading.value = true; emit('working', true);
   try {
     await readCurrent(request);
   } catch (failure) {
     if (request !== generation || accessFailure(failure)) return;
     error.value = errorMessage(failure);
-  } finally { if (request === generation) loading.value = false; }
+  } finally { if (request === generation) { loading.value = false; emit('working', false); } }
 }
 async function ask(operation: 'draw' | 'close', event: Event) {
   if (!owner.value || !state.value || state.value.status === 'closed' || busy.value || loading.value) return;
@@ -41,7 +41,7 @@ function cancel() { selected.value = null; trigger?.focus(); trigger = null; }
 async function execute() {
   const operation = selected.value;
   if (!operation || !owner.value || !state.value || state.value.status === 'closed' || busy.value || loading.value) return;
-  const request = ++generation; busy.value = true; emit('busy', true); state.value = null; error.value = ''; notice.value = '';
+  const request = ++generation; busy.value = true; emit('working', true); emit('busy', true); state.value = null; error.value = ''; notice.value = '';
   try {
     const result = await props.client[operation](props.eventId); if (request !== generation) return;
     state.value = result;
@@ -60,7 +60,7 @@ async function execute() {
     }
   } finally {
     if (request === generation) {
-      selected.value = null; busy.value = false; emit('busy', false); await nextTick(); messageElement.value?.focus();
+      selected.value = null; busy.value = false; emit('busy', false); emit('working', false); await nextTick(); messageElement.value?.focus();
     }
   }
 }

@@ -6,9 +6,13 @@ import { formatEventTime } from './event-time.ts';
 import EventLifecycle from './EventLifecycle.vue';
 import type { EventLifecycleClient } from './event-lifecycle-client.ts';
 import type { GroupClient } from './group-client.ts';
-const props = defineProps<{ eventId: string; client: Pick<EventClient, 'find'>; lifecycle: EventLifecycleClient; groups: Pick<GroupClient, 'find'>; actorId: string }>();
+import PrivateRecipient from './PrivateRecipient.vue';
+import type { RecipientClient } from './recipient-client.ts';
+const props = defineProps<{ eventId: string; client: Pick<EventClient, 'find'>; lifecycle: EventLifecycleClient; groups: Pick<GroupClient, 'find'>; actorId: string; recipients: RecipientClient }>();
 const emit = defineEmits<{ expired: []; busy: [value: boolean] }>();
 const event = shallowRef<GroupEvent | null>(null); const loading = ref(true); const error = ref(''); let generation = 0;
+const recipientPanel = ref<InstanceType<typeof PrivateRecipient>>(); const lifecycleWorking = ref(true);
+function lifecycleActivity(value: boolean) { recipientPanel.value?.clear(); lifecycleWorking.value = value; }
 function unavailable() { generation++; event.value = null; loading.value = false; error.value = 'El evento no existe o ya no tienes acceso.'; emit('busy', false); }
 async function load() {
   const request = ++generation; event.value = null; loading.value = true; error.value = '';
@@ -33,7 +37,8 @@ onMounted(() => { void load(); }); onBeforeUnmount(() => { generation++; });
       <p class="text-muted">Las fechas se muestran en la zona horaria del navegador. La fecha programada es una previsión para el cierre automático y no confirma el cierre efectivo.</p>
       <a :href="'#groups/' + encodeURIComponent(event.groupId) + '/events'" class="btn btn-outline-primary">Ver eventos del grupo</a>
       <EventLifecycle :key="event.id" :event-id="event.id" :group-id="event.groupId" :actor-id="actorId" :groups="groups" :client="lifecycle"
-        @expired="emit('expired')" @unavailable="unavailable" @busy="emit('busy', $event)" />
+        @expired="emit('expired')" @unavailable="unavailable" @busy="emit('busy', $event)" @working="lifecycleActivity" />
+      <PrivateRecipient v-if="!lifecycleWorking" ref="recipientPanel" :event-id="event.id" :client="recipients" @expired="emit('expired')" />
     </div></article>
   </section>
 </template>

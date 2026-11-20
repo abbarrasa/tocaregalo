@@ -39,7 +39,7 @@ La interfaz de grupos permite crear, listar y consultar grupos y sus miembros.
 Las invitaciones permiten envío/listado/revocación por el propietario y aceptación
 con código. El propietario puede retirar miembros con confirmación. Los eventos
 permiten listado, creación, detalle, consulta de estado y sorteo/cierre manual
-confirmados por el propietario. La consulta privada del destinatario sigue pendiente.
+confirmados por el propietario y consulta explícita del destinatario propio.
 
 Después de `npm ci`, iniciar en dos terminales:
 
@@ -179,8 +179,7 @@ Tras crear se abre `#events/<id-codificado>`. El detalle muestra identificador,
 creación y cierre programado, con enlaces de regreso. La fecha programada no se
 presenta como cierre efectivo, aunque haya pasado; el navegador no ejecuta cierres
 ni sorteos. Las fechas se muestran en la zona local del navegador. La gestión de
-sorteos/cierre se describe a continuación; la consulta privada del destinatario
-queda para otra entrega.
+sorteos/cierre y la consulta privada del destinatario se describen a continuación.
 
 El cliente de eventos comparte transporte y CSRF con autenticación; solo el POST
 de creación necesita CSRF. Los listados y detalles validan forma, campos y ámbito
@@ -216,6 +215,36 @@ una respuesta perdida no prueba que la operación se haya deshecho. Si la lectur
 tampoco funciona, las acciones quedan ocultas hasta actualizar el estado. Un 401
 vigente elimina la interfaz privada y un 404 elimina todo el detalle. Las respuestas
 antiguas tras cambiar de evento o abandonar la pantalla se descartan.
+
+### Ver mi destinatario
+
+El detalle incluye «Mi destinatario». No se consulta la asignación automáticamente:
+«Ver mi destinatario» solicita una lectura nueva y muestra únicamente el nombre
+actual devuelto por el servidor. «Ocultar destinatario» elimina el resultado de la
+pantalla y permite cancelar visualmente una lectura pendiente; una respuesta tardía
+no vuelve a mostrarlo. Volver a revelar realiza otro GET. El nombre se representa
+como texto, no como HTML, y no se incluyen datos de contacto, claves ni sobres.
+
+El propietario usa el mismo acceso a su asignación que cualquier participante;
+no existe selector de otra persona o sorteo. La consulta funciona para sorteos
+vigentes abiertos y para participantes de una instantánea cerrada. Se avisa de que
+el destinatario puede cambiar mientras el evento permanezca abierto. La API decide
+la autorización y la versión actual, incluso si la pantalla de estado ha quedado
+desactualizada.
+
+El resultado vive únicamente en el componente, sin URLs, almacenamiento del
+navegador ni registros. Se limpia al ocultar, navegar, actualizar el estado o
+iniciar sorteo/cierre. Durante estas operaciones del ciclo de vida el panel se
+retira; después vuelve oculto, sin una consulta automática. Las lecturas anteriores
+quedan invalidadas. No se bloquea la navegación por un GET del destinatario.
+
+Un 409 indica asignación pendiente o desactualizada; un 401 vigente elimina la
+interfaz privada. Un 404 muestra asignación no disponible sin asumir que todo el
+evento sea inaccesible: un miembro nuevo puede consultar los metadatos de un evento
+cerrado sin pertenecer a su instantánea. Los errores de red/configuración son
+genéricos y no se reintentan automáticamente. El GET utiliza cookies de sesión y
+`no-store`, sin CSRF ni identidades/sorteos elegidos por el navegador. No se han
+verificado aún el aspecto visual ni el flujo de cookies en un navegador real.
 
 ## Integración continua y publicación de versiones
 
