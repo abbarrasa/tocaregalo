@@ -39,6 +39,9 @@ import { RecipientsRepository } from './persistence/recipients-repository.ts';
 import { handleRecipientRequest } from './http/recipient-routes.ts';
 import { ScheduledEventService } from './application/scheduled-event-service.ts';
 import { EventProcessingRepository } from './persistence/event-processing-repository.ts';
+import { DrawNotificationService } from './application/draw-notification-service.ts';
+import { DrawNotificationsRepository } from './persistence/draw-notifications-repository.ts';
+import { SendgridDrawNotificationSender } from './infrastructure/sendgrid-draw-notification-sender.ts';
 
 export interface Env extends RecipientKeySettings {
   DB: D1Database;
@@ -56,6 +59,9 @@ export default {
     const report = await new ScheduledEventService(new EventProcessingRepository(env.DB), lifecycle).run();
     // Aggregate counts only: never log recipients, tokens, keys or raw database errors.
     console.info('Scheduled event processing', JSON.stringify(report));
+    const notifications = await new DrawNotificationService(new DrawNotificationsRepository(env.DB),
+      new SendgridDrawNotificationSender({ apiKey: env.SENDGRID_API_KEY, fromEmail: env.SENDGRID_FROM_EMAIL })).run();
+    console.info('Draw notification processing', JSON.stringify(notifications));
   },
   async fetch(request, env, context) {
     const url = new URL(request.url);

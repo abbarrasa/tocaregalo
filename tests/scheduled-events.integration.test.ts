@@ -25,8 +25,12 @@ test('scheduled Worker processing recovers D1 work in bounded, concurrent-safe b
   const keys = { DRAW_KEY_ID: 'synthetic', DRAW_CIPHER_KEY_HEX: '01'.repeat(32), DRAW_INDEX_KEY_HEX: '02'.repeat(32) };
   const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{ name: 'scheduled-test', modules: true,
     script: await readFile(join(output, 'worker.js'), 'utf8'), compatibilityDate: '2026-11-19', d1Databases: ['DB'],
-    bindings: { APP_ORIGIN: 'https://app.example.test', ...keys },
-    outboundService: async () => { assert.fail('Scheduled event work must not send mail'); },
+    bindings: { APP_ORIGIN: 'https://app.example.test', ...keys,
+      SENDGRID_API_KEY: 'synthetic-only', SENDGRID_FROM_EMAIL: 'sender@example.test' },
+    outboundService: async request => {
+      assert.equal(new URL(request.url).hostname, 'api.sendgrid.com');
+      return new Response(null, { status: 202 });
+    },
   }] }));
   t.after(() => mf.dispose());
   const db = await mf.getD1Database('DB');
@@ -59,6 +63,7 @@ test('scheduled Worker processing recovers D1 work in bounded, concurrent-safe b
   await groups.removeMember('upgrade', 'owner', 'c');
   await db.prepare('INSERT INTO events (id, closure_at_ms, created_at_ms) VALUES (?, ?, 0)').bind('unlinked', 1000).run();
   await applyMigration(db, '0011_scheduled_event_processing.sql');
+  await applyMigration(db, '0012_draw_notifications.sql');
 
   await t.test('upgrade preserves dates and ciphertext and queues only linked open work with an indexed due order', async () => {
     assert.deepEqual(await draws.findRecipient(originalDrawId, 'owner'), encrypted);

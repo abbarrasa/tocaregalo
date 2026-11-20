@@ -37,8 +37,9 @@ correo. El acceso a la URL publicada será público y la aplicación autenticar�
 por su cuenta antes de conceder acceso a cuentas y datos de grupos o eventos.
 
 Quedan pendientes el frontend, la verificación telefónica,
-la gestión adicional de eventos e invitaciones, los correos de eventos y sorteos,
-los reintentos duraderos de correo y la publicación. El procesamiento programado
+la gestión adicional de eventos e invitaciones, la entrega duradera de otros
+correos y la publicación. Los avisos de cierre ya tienen bandeja de salida y reintentos.
+El procesamiento programado
 de eventos está implementado y probado localmente; su configuración remota sigue pendiente.
 La prueba del plazo de 60 segundos debe cronometrar el cierre desde el instante
 previsto en un entorno publicado, sin tráfico de navegador ni sesión abierta.
@@ -766,8 +767,8 @@ de CPU, memoria y duración de consulta siguen aplicándose; consultar los
 antes de publicar o fijar límites de producto.
 
 Las pruebas usan D1 efímera/workerd, claves sintéticas y ningún correo real.
-El programador de cierre automático se describe más adelante; los correos siguen
-pendientes. La fecha programada es un vencimiento, no una prueba de cierre efectivo.
+El programador de cierre automático y los avisos duraderos se describen más adelante.
+La fecha programada es un vencimiento, no una prueba de cierre efectivo.
 
 ## Consulta privada del destinatario
 
@@ -863,7 +864,7 @@ persistan tras los tres intentos del servicio también reciben espera. Los cambi
 de membresía reinician esa espera. Un fallo no impide procesar los demás candidatos.
 Si no puede persistirse el reintento, falla la invocación y el trabajo permanece
 para futuras ejecuciones. Este mecanismo es independiente del límite de seis
-intentos de correo, cuyo envío duradero sigue pendiente.
+intentos fallidos de correo aplicado a los avisos descritos a continuación.
 
 Las ejecuciones simultáneas y los cierres manuales reutilizan los sorteos vigentes.
 Las escrituras de reintento comparan versión del trabajo y revisión de membresía:
@@ -884,4 +885,54 @@ procesamiento, los lotes acumulados, los reintentos y los
 pueden ampliar el retraso. Antes de publicar hay que configurar recursos reales,
 aplicar la migración en el entorno autorizado, desplegar y medir desde el vencimiento
 hasta el cierre confirmado sin tráfico de navegador. Este alcance no realiza esas
-operaciones ni envía correos.
+operaciones. Las pruebas interceptan los envíos; no se ha enviado correo real.
+
+## Avisos duraderos de cierre
+
+La migración [0012_draw_notifications.sql](migrations/0012_draw_notifications.sql)
+añade una bandeja de salida D1. Cada nuevo cierre, manual o automático, encola una
+notificación por participante en la misma transacción. Si falla el alta del aviso,
+se revierte también el cierre y cualquier sorteo creado en ese batch. No se
+generan avisos para cierres históricos ni para sorteos de eventos todavía abiertos.
+La clave única evento/cuenta impide encolar dos veces el mismo aviso.
+
+El correo avisa de que el evento se ha cerrado e indica su identificador para
+consultarlo en TocaRegalo tras iniciar sesión. **No incluye el destinatario asignado**,
+datos de otras personas, credenciales ni un enlace que eluda la autenticación.
+Se usa el correo almacenado de la cuenta, sin exigir una verificación adicional.
+La cola guarda referencias y estado, sin copiar correos ni asignaciones en claro.
+
+Después de procesar cierres y recálculos, el programador selecciona hasta 20 avisos
+por ejecución. Reserva cada aviso justo antes de enviarlo, durante 120 segundos,
+mediante una actualización condicional y un token aleatorio. Antes del envío
+vuelve a comprobar membresía y sorteo cerrado y consulta el correo actual.
+Una retirada cancela atómicamente los avisos pendientes y reservados de esa cuenta
+en el grupo. Reincorporarse no los reactiva. Los ya aceptados no se reenvían.
+Si la retirada ocurre cuando el envío ya está en curso, no puede retirarse ese correo.
+
+Se reutilizan `SENDGRID_API_KEY` y `SENDGRID_FROM_EMAIL`, el transporte HTTPS con
+timeout de diez segundos, sin redirecciones ni seguimiento. Los estados son
+`pending`, `sending`, `accepted`, `failed` y `cancelled`. `accepted` significa que
+SendGrid respondió 202; no prueba entrega en el buzón. Los errores conocidos
+reintentan tras 1, 2, 4, 8 y 16 minutos y paran después del sexto fallo. Las fechas
+marcan el primer instante elegible: la cadencia de Cron y el trabajo acumulado
+pueden retrasar la ejecución. Los fallos de configuración también cuentan.
+
+Si el procesador se interrumpe, otro puede recuperar la reserva al caducar.
+Las confirmaciones y errores comparan el token para no alterar una reserva nueva
+ni un aviso cancelado. Una confirmación tardía puede completar una reserva
+caducada si ningún otro procesador sustituyó su token. Un error al guardar una
+aceptación hace fallar la invocación; no se cuenta como fallo del proveedor.
+
+No existe garantía de entrega exactamente una vez: una aceptación con respuesta
+perdida, un timeout o una reserva que venza con el envío en curso pueden ocasionar
+duplicados al recuperar el trabajo. Las interrupciones de resultado desconocido no
+se cuentan como fallos conocidos. Los logs contienen solo contadores agregados,
+nunca direcciones, asignaciones, tokens ni errores originales del proveedor.
+
+Los avisos no bloquean la respuesta HTTP de cierre ni modifican la consulta privada
+del destinatario. Este alcance no convierte invitaciones, verificación o recuperación
+en envíos duraderos, ni añade interfaz de administración, reenvío manual, webhooks
+de entrega o limpieza por antigüedad. Las credenciales y recursos reales siguen
+pendientes de configuración autorizada. Las pruebas usan D1 efímera/workerd y
+SendGrid simulado; no se han aplicado migraciones persistentes ni enviado correo real.
