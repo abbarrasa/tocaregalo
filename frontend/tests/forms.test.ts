@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp, nextTick, type App as VueApp } from 'vue';
 import App from '../src/App.vue';
+import AccountPanel from '../src/AccountPanel.vue';
+import type { GroupClient } from '../src/group-client.ts';
 import { ApiError, type Account, type AuthClient } from '../src/api.ts';
 
 const account: Account = { id: 'self', displayName: 'Inés', email: 'ines@example.test', lastName: null, phone: null, emailVerifiedAtMs: null };
@@ -22,9 +24,9 @@ function element<T extends HTMLElement>(selector: string, constructor: { new(): 
   if (!(value instanceof constructor)) throw new Error('Missing test element: ' + selector);
   return value;
 }
-async function mount(client: AuthClient) {
+async function mount(client: AuthClient, groupClient?: GroupClient) {
   const host = document.createElement('div'); document.body.append(host);
-  app = createApp(App, { client }); app.mount(host);
+  app = createApp(App, { client, groupClient }); app.mount(host);
   await vi.waitFor(() => expect(document.querySelector('.loading-state')).toBeNull()); await nextTick();
 }
 async function input(id: string, value: string) {
@@ -103,6 +105,42 @@ describe('authentication screens', () => {
     await input('verification-token', 'proof-code'); await submit();
     await vi.waitFor(() => expect(document.body.textContent).toContain('Correo verificado'));
     expect(client.confirmVerification).toHaveBeenCalledWith('proof-code'); expect(client.requestVerification.mock.calls[0]).toEqual([]);
+  });
+  it('unlocks navigation after verification refresh without reloading, including a delayed account read', async () => {
+    const client = clientStub(); client.me.mockResolvedValueOnce(account);
+    let finishRead: ((value: Account) => void) | undefined;
+    client.me.mockImplementationOnce(() => new Promise<Account>(resolve => { finishRead = resolve; }));
+    const groups: GroupClient = {
+      list: vi.fn<GroupClient['list']>().mockResolvedValue({ items: [], nextCursor: null }),
+      create: vi.fn(), find: vi.fn(), members: vi.fn(), removeMember: vi.fn(),
+    };
+    await mount(client, groups);
+    await input('verification-token', 'proof-code'); await submit();
+    await vi.waitFor(() => expect(document.querySelector('.loading-state')).not.toBeNull());
+    expect(client.confirmVerification).toHaveBeenCalledTimes(1);
+    finishRead?.({ ...account, emailVerifiedAtMs: 1000 });
+    await vi.waitFor(() => expect(document.body.textContent).toContain('Correo verificado'));
+    expect(element('a[href="#groups"]', HTMLAnchorElement).getAttribute('aria-disabled')).toBe('false');
+    await page('#groups');
+    await vi.waitFor(() => expect(document.body.textContent).toContain('Todavía no tienes grupos'));
+    expect(groups.list).toHaveBeenCalledWith(null);
+    await page('#account');
+    expect(document.body.textContent).toContain('Correo verificado');
+    expect(client.me).toHaveBeenCalledTimes(2);
+  });
+  it('releases account busy on unmount and ignores a late expired response', async () => {
+    const client = clientStub(); let fail: ((error: Error) => void) | undefined;
+    client.requestVerification.mockImplementation(() => new Promise<void>((_, reject) => { fail = reject; }));
+    const onBusy = vi.fn(); const onExpired = vi.fn();
+    const host = document.createElement('div'); document.body.append(host);
+    app = createApp(AccountPanel, { account, client, onBusy, onExpired }); app.mount(host);
+    [...document.querySelectorAll('button')].find(item => item.textContent === 'Solicitar código')?.click();
+    await nextTick(); expect(onBusy.mock.calls).toEqual([[true]]);
+    app.unmount(); app = undefined;
+    expect(onBusy.mock.calls).toEqual([[true], [false]]);
+    fail?.(new ApiError(401)); await new Promise(resolve => setTimeout(resolve, 0));
+    expect(onExpired).not.toHaveBeenCalled();
+    expect(onBusy.mock.calls).toEqual([[true], [false]]);
   });
   it('clears private account content on session expiry and on successful logout', async () => {
     const client = clientStub(); client.me.mockResolvedValue(account); client.requestVerification.mockRejectedValue(new ApiError(401));

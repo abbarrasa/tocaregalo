@@ -1,6 +1,6 @@
 # Comprobación de navegador y cookies — 2026-11-20
 
-Resultado: los flujos comprobados funcionan contra el Worker local y D1 efímera, con **una incidencia abierta tras confirmar el correo**. No constituye una aprobación para producción.
+Resultado: los flujos comprobados funcionan contra el Worker local y D1 efímera. **La incidencia de navegación tras confirmar el correo quedó corregida y se volvió a comprobar en Chromium** (véase el seguimiento). No constituye una aprobación para producción.
 
 Revisión: `f4cc2b0`, rama `feature/browser-validation`, creada desde `dev` actualizado y limpio. No se modificó código de aplicación ni se realizaron commits, pushes o despliegues.
 
@@ -31,12 +31,14 @@ Revisión: `f4cc2b0`, rama `feature/browser-validation`, creada desde `dev` actu
 | Eventos | Creación 201 sin programación y con fecha futura; fecha pasada rechazada por el formulario. La hora local coincide con el instante guardado y el evento nuevo aparece primero. |
 | Sorteo y cierre | Confirmaciones visibles y enfocadas; ambos POST devuelven 200. El cierre efectivo aparece y desaparecen las acciones del evento cerrado. |
 | Destinatario privado | 409 antes del sorteo; 200 después y tras el cierre. Ocultar y actualizar el estado eliminan el nombre; volver a revelar hace otra lectura. Sin datos de asignación en capturas, URLs o almacenamiento. |
-| Verificación de correo | Solicitud 202 y confirmación 204 mediante código interceptado. El perfil muestra correo verificado, pero aparece la incidencia descrita abajo. |
+| Verificación de correo | En la revisión inicial apareció el bloqueo descrito abajo. Tras la corrección, confirmación 204, perfil verificado y navegación a Grupos y vuelta a Mi cuenta sin recargar. |
 | Recuperación | Solicitud 202 y confirmación 204 mediante código interceptado. No inicia sesión; la contraseña anterior devuelve 401 y la nueva permite login 200. |
 
 En la primera preparación del entorno temporal se omitió la variable de duración de recuperación, por lo que una petición devolvió 503. Se corrigió **el harness temporal**, se reinició con otra D1 efímera y se repitió el flujo satisfactoriamente. No fue un cambio ni un fallo atribuido a la aplicación.
 
-## Incidencia abierta: navegación bloqueada tras verificar el correo
+## Incidencia corregida: navegación bloqueada tras verificar el correo
+
+Reproducción histórica antes de la corrección:
 
 1. Registrar una cuenta, iniciar sesión y solicitar el código de verificación.
 2. Confirmar el código desde «Mi cuenta».
@@ -46,11 +48,17 @@ En la primera preparación del entorno temporal se omitió la variable de duraci
 
 Esperado: liberar el bloqueo del menú al terminar la confirmación y actualización de cuenta, sin recargar. Impacto: interrumpe la navegación hasta recargar; la verificación sí queda aplicada. La captura [verification-navigation-issue.png](./verification-navigation-issue.png) muestra el perfil verificado y el menú deshabilitado.
 
-Pendiente de corrección aprobada. Revisar la coordinación de `busy` durante la actualización/remontaje entre [App.vue](../../../frontend/src/App.vue) y [AccountPanel.vue](../../../frontend/src/AccountPanel.vue). La causa exacta y la regresión deben confirmarse durante esa tarea; esta comprobación no modifica el código.
+### Seguimiento de la corrección — 2026-11-20
+
+Rama `feature/fix-verification-navigation`, creada desde `dev` limpio en `183cc3c`. Dos regresiones fallaron antes de modificar el código: bloqueo retenido tras una actualización de cuenta demorada y falta de liberación al desmontar el panel. [App.vue](../../../frontend/src/App.vue) desmonta el panel al cargar `/api/me`; el `finally` de la operación llega después y su evento ya no se entrega al padre. [AccountPanel.vue](../../../frontend/src/AccountPanel.vue) ahora libera el bloqueo en `onBeforeUnmount`, limpia el código y descarta efectos de respuestas tardías. Las dos regresiones pasan, incluida navegación a Grupos y vuelta sin otra lectura de cuenta.
+
+Se repitió registro, login, solicitud y confirmación con código interceptado en Chromium integrado, Vite HTTPS, Worker real y D1 efímera con migraciones 0001–0012. Confirmación 204, «Correo verificado», enlace Grupos con `aria-disabled="false"`, listado visible y vuelta a Mi cuenta conservando el estado verificado, sin recarga. Se usaron foco y Enter reales; este seguimiento no añade certificación de puntero/táctil ni otros navegadores. La captura anterior se conserva como evidencia histórica del defecto, no del estado corregido.
+
+La cookie seguía siendo Secure/HttpOnly/SameSite=Lax y Path=/; localStorage/sessionStorage vacíos. Tras logout no quedaban cookies de sesión. Se retiró la excepción TLS temporal, se dejó el navegador en blanco y se detuvieron los servidores temporales. No se usó correo real, D1 persistente ni recursos remotos. Validación: `npm test` pasó 165 pruebas backend y 108 frontend (273 en total), tipos Node/Worker/Vue, build y `git diff --check` correctos.
 
 ## Revisión visual y límites
 
-Se inspeccionaron las imágenes de acceso, registro, cuenta, grupo, confirmación de sorteo, evento cerrado y vista de participante. En las pantallas inspeccionadas los textos y controles permanecen legibles, los botones se adaptan al ancho y no se observó desbordamiento horizontal en las mediciones realizadas. Se observaron foco de teclado, validación nativa y distribución móvil. La incidencia del menú impide dar el conjunto por completamente correcto.
+Se inspeccionaron las imágenes de acceso, registro, cuenta, grupo, confirmación de sorteo, evento cerrado y vista de participante. En las pantallas inspeccionadas los textos y controles permanecen legibles, los botones se adaptan al ancho y no se observó desbordamiento horizontal en las mediciones realizadas. Se observaron foco de teclado, validación nativa y distribución móvil. El seguimiento anterior resuelve el bloqueo del menú; las demás limitaciones de esta revisión siguen vigentes.
 
 La automatización de clics devolvió timeouts de hit-testing intermitentes aunque la consulta DOM del punto central identificaba el control. Los flujos se completaron con foco y Enter/Espacio reales de Chromium. No se ha determinado si esa discrepancia procede de la integración del navegador o de otra condición; queda pendiente comprobar puntero/táctil sin esa limitación. Algunas capturas de página completa conservan indicadores de foco o del enlace para saltar al contenido.
 

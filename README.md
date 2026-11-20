@@ -190,8 +190,8 @@ invalidan al crear, navegar o cambiar de recurso. Se bloquean creaciones duplica
 y no se reintenta una creación ambigua automáticamente: actualizar el listado
 antes de repetirla. Las pruebas de componentes usan jsdom y clientes simulados;
 la comprobación local en Chromium se detalla en
-[el informe de navegador](docs/qa/browser-validation/README.md), con una incidencia
-abierta de navegación tras verificar el correo.
+[el informe de navegador](docs/qa/browser-validation/README.md), incluida la corrección
+y repetición del flujo de navegación tras verificar el correo.
 
 ### Sorteo y cierre desde el detalle
 
