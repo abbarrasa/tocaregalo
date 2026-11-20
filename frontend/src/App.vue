@@ -5,17 +5,21 @@ import { createClients } from './clients.ts';
 import type { GroupClient } from './group-client.ts';
 import type { InvitationClient } from './invitation-client.ts';
 import AcceptInvitation from './AcceptInvitation.vue';
-import { privatePage } from './navigation.ts';
+import { privateHash, privatePage } from './navigation.ts';
+import type { EventClient } from './event-client.ts';
+import EventList from './EventList.vue';
+import EventDetail from './EventDetail.vue';
 import GroupList from './GroupList.vue';
 import GroupDetail from './GroupDetail.vue';
 import AuthForm, { type EntryPage } from './AuthForm.vue';
 import AccountPanel from './AccountPanel.vue';
 import BrandMark from './BrandMark.vue';
-const props = defineProps<{ client?: AuthClient; groupClient?: GroupClient; invitationClient?: InvitationClient }>();
+const props = defineProps<{ client?: AuthClient; groupClient?: GroupClient; invitationClient?: InvitationClient; eventClient?: EventClient }>();
 const defaults = createClients();
 const client = props.client ?? defaults.auth;
 const groupClient = props.groupClient ?? defaults.groups;
 const invitationClient = props.invitationClient ?? defaults.invitations;
+const eventClient = props.eventClient ?? defaults.events;
 const account = ref<Account | null>(null); const loading = ref(true); const busy = ref(false);
 const notice = ref(''); const error = ref(''); const heading = ref<HTMLElement>();
 function readPage(): EntryPage {
@@ -31,8 +35,7 @@ function navigate() {
   // A queued hashchange can arrive after replaceState or a previous handler.
   if (location.hash === handledHash) return;
   if (busy.value) {
-    const hash = account.value ? privateRoute.value.kind === 'group' ? '#groups/' + encodeURIComponent(privateRoute.value.id)
-      : '#' + privateRoute.value.kind : '#' + page.value;
+    const hash = account.value ? privateHash(privateRoute.value) : '#' + page.value;
     history.replaceState(null, '', hash); handledHash = hash; return;
   }
   handledHash = location.hash;
@@ -73,12 +76,14 @@ onBeforeUnmount(() => window.removeEventListener('hashchange', navigate));
         <p v-if="notice" role="status" class="alert alert-success my-4">{{ notice }}</p>
         <template v-if="account">
           <nav class="private-nav" aria-label="Menú principal">
-            <a href="#groups" :aria-current="privateRoute.kind === 'groups' || privateRoute.kind === 'group' ? 'page' : undefined" :aria-disabled="busy">Grupos</a>
+            <a href="#groups" :aria-current="['groups', 'group', 'events', 'event'].includes(privateRoute.kind) ? 'page' : undefined" :aria-disabled="busy">Grupos</a>
             <a href="#invitations" :aria-current="privateRoute.kind === 'invitations' ? 'page' : undefined" :aria-disabled="busy">Aceptar invitación</a>
             <a href="#account" :aria-current="privateRoute.kind === 'account' ? 'page' : undefined" :aria-disabled="busy">Mi cuenta</a>
           </nav>
           <GroupList v-if="privateRoute.kind === 'groups'" :client="groupClient" :actor-id="account.id" @busy="busy = $event" @expired="loginScreen('Tu sesión ha caducado. Vuelve a iniciar sesión.')" />
           <GroupDetail v-else-if="privateRoute.kind === 'group'" :key="privateRoute.id" :group-id="privateRoute.id" :client="groupClient" :invitation-client="invitationClient" :actor-id="account.id" @busy="busy = $event" @expired="loginScreen('Tu sesión ha caducado. Vuelve a iniciar sesión.')" />
+          <EventList v-else-if="privateRoute.kind === 'events'" :key="privateRoute.groupId" :group-id="privateRoute.groupId" :actor-id="account.id" :client="eventClient" :groups="groupClient" @busy="busy = $event" @expired="loginScreen('Tu sesión ha caducado. Vuelve a iniciar sesión.')" />
+          <EventDetail v-else-if="privateRoute.kind === 'event'" :key="privateRoute.id" :event-id="privateRoute.id" :client="eventClient" @expired="loginScreen('Tu sesión ha caducado. Vuelve a iniciar sesión.')" />
           <AcceptInvitation v-else-if="privateRoute.kind === 'invitations'" :client="invitationClient" :email="account.email" @busy="busy = $event" @accepted="acceptedInvitation" @expired="loginScreen('Tu sesión ha caducado. Vuelve a iniciar sesión.')" />
           <AccountPanel v-else :account="account" :client="client" @refresh="refresh" @busy="busy = $event"
             @expired="loginScreen('Tu sesión ha caducado. Vuelve a iniciar sesión.')" @logout="loginScreen('Has cerrado sesión.')" />
