@@ -142,7 +142,7 @@ test('authenticated group API runs against the bundled Worker and D1', async t =
     const method = await mf.dispatchFetch(origin + '/api/groups/' + createdId, { method: 'DELETE', headers: as('owner') });
     assert.equal(method.status, 405);
     assert.equal(method.headers.get('Allow'), 'GET');
-    assert.equal((await mf.dispatchFetch(origin + '/api/groups/' + createdId + '/members', { headers: as('owner') })).status, 404);
+    assert.equal((await mf.dispatchFetch(origin + '/api/groups/' + createdId + '/members/unknown/extra', { headers: as('owner') })).status, 404);
   });
 
   await t.test('invalid JSON, names and oversized bodies cannot create groups', async () => {

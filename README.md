@@ -133,8 +133,9 @@ permisos de propietario, aislamiento entre grupos, revocación de acceso, claves
 externas y migración desde datos preexistentes. Las operaciones de grupos y
 eventos se validan a nivel de persistencia. La creación y consulta de grupos
 también están conectadas a las rutas HTTP descritas más abajo. Los eventos
-disponen de creación, listado por grupo y consulta individual autenticados; la gestión de miembros
-sigue siendo interna.
+disponen de creación, listado por grupo y consulta individual autenticados.
+Los miembros tienen listado y retirada autenticados según las reglas descritas
+al final del documento; la provisión directa sigue siendo interna.
 
 ## Sesiones
 
@@ -598,8 +599,8 @@ de entrega ni envío de correo probado en un buzón real.
 
 Las pruebas interceptan todo envío y usan D1 efímera/workerd, incluyendo registro
 público posterior a la invitación, login y aceptación. La interfaz, los enlaces
-automáticos, la retirada de miembros por HTTP y la limpieza de invitaciones
-caducadas quedan para otros alcances. El listado y la revocación se describen
+automáticos y la limpieza de invitaciones caducadas quedan para otros alcances.
+El listado y la revocación se describen
 a continuación.
 
 ### Administrar invitaciones
@@ -647,6 +648,53 @@ las respuestas no-store y el límite JSON de 16 KiB. La colección ahora admite
 
 El índice existente por grupo/correo permite paginar sin ordenación temporal;
 no se han añadido migraciones ni dependencias. La interfaz, el historial, el
-aviso de cancelación por correo y la retirada de miembros por HTTP siguen
-pendientes. Las pruebas comprueban estados, permisos, paginación, rollback y
+aviso de cancelación por correo siguen pendientes. Las pruebas comprueban
+estados, permisos, paginación, rollback y
 carreras de aceptación/reenvío con la revocación en D1 efímera/workerd.
+
+## Miembros de grupos
+
+`GET /api/groups/<groupId>/members` permite a cualquier miembro actual consultar
+los miembros del grupo. Devuelve `{ members, nextCursor }`, ordenado por ID de
+cuenta ascendente, con `limit` de 20 por defecto y máximo 50. Cada elemento
+incluye únicamente `accountId`, `displayName`, `joinedAtMs` e `isOwner`.
+No se incluyen correo, teléfono, apellidos ni credenciales. La identidad del
+consultante siempre procede de la sesión, sin aceptar un actor del navegador.
+
+La paginación usa el último ID de cuenta como cursor, codificado para URL.
+Comprueba membresía y obtiene la página en la misma consulta SQL; recupera como
+máximo 51 filas utilizando los índices existentes. Un cursor borrado o ajeno
+no concede acceso ni impide continuar desde esa posición. Una página agotada
+devuelve 200 con lista vacía y cursor nulo; un grupo inexistente o sin membresía
+devuelve el mismo 404. Se mantienen los límites y validación de paginación
+habituales, las respuestas no-store y 401 para sesiones inválidas.
+
+`DELETE /api/groups/<groupId>/members/<accountId>` requiere sesión del propietario,
+Origin HTTPS configurado y `X-CSRF-Token`. No necesita cuerpo. Devuelve 204 al
+retirar o repetir la retirada de una cuenta ausente. Un grupo inexistente y uno
+sin propiedad comparten 404. El propietario no puede retirarse: devuelve 409
+sin alterar su membresía ni sus invitaciones. Los métodos incorrectos devuelven
+405 con Allow; los fallos de Origin/CSRF devuelven 403, y una configuración de
+origen inválida impide retirar con 503.
+
+La operación cancela las invitaciones activas sin consumir para el correo
+almacenado de la cuenta y elimina su membresía en un único batch D1, con la
+propiedad comprobada en SQL. Si falla el borrado, se revierte también la
+cancelación. Las invitaciones caducadas y consumidas se conservan. La cancelación
+se aplica incluso si la membresía ya estaba ausente, para que una aceptación
+concurrente de un código anterior no permita entrar después de la retirada.
+Una invitación emitida posteriormente puede permitir una nueva incorporación;
+esta operación no es un bloqueo permanente de la cuenta.
+
+Retirar un miembro revoca sus consultas de grupo, eventos, miembros y asignación
+privada. Conserva íntegros los sorteos y asignaciones cifrados, no elimina la
+cuenta ni sus sesiones y no afecta a otros grupos. Una reincorporación posterior
+restablece las lecturas sujetas a la membresía vigente. El método antiguo
+`GroupsRepository.removeMember` permanece como operación interna de bajo nivel;
+la API pública usa el repositorio de miembros para garantizar la cancelación
+atómica de invitaciones.
+
+Esta tarea no añade migraciones, dependencias, correos, interfaz, transferencia
+de propiedad ni baja voluntaria. Las pruebas en D1 efímera/workerd comprueban
+privacidad, permisos, protección del propietario, paginación, rollback,
+concurrencia con aceptación, revocación de lecturas y conservación del cifrado.
