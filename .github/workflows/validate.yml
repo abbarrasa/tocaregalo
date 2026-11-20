@@ -38,3 +38,6 @@ jobs:
 
       - name: Run complete test suite
         run: npm test
+
+      - name: Build frontend
+        run: npm run build:frontend

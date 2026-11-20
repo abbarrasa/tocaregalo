@@ -2,7 +2,8 @@
 
 This runbook prepares a future authorized deployment. No real account, domain,
 D1 database, keys or sender have been configured by this work. A GitHub release
-does not deploy the Worker. The Vue/Bootstrap frontend is still pending.
+does not deploy the Worker. The Vue/Bootstrap authentication/account frontend
+builds to `dist/frontend`; other screens and production asset hosting are pending.
 
 ## Inputs and configuration
 
@@ -21,6 +22,9 @@ Keep the existing compatibility date until a separately tested upgrade.
 without a path). Cookies are Secure/HttpOnly/host-only/SameSite=Lax; the current
 API assumes frontend and API share an origin and enables no CORS. A separate
 Sites hostname requires an approved topology/authentication design before use.
+The Vite development proxy does not provide production routing. The current
+Worker has no static asset binding; configure/review shared-origin static hosting
+and `/api` routing before publishing the frontend build.
 Preserve the server-controlled `CF-Connecting-IP` header for rate limiting.
 
 Non-secret lifetimes in seconds: `SESSION_TTL_SECONDS=86400`,

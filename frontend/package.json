@@ -1,0 +1,7 @@
+{
+  "name": "@tocaregalo/frontend",
+  "private": true,
+  "type": "module",
+  "scripts": { "typecheck": "node typecheck.cjs -p ../tsconfig.frontend.json" },
+  "devDependencies": { "typescript": "6.0.3", "vue-tsc": "3.3.14" }
+}
