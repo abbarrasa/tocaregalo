@@ -10,7 +10,7 @@ export async function readJson(response: Response): Promise<unknown> {
   try { return await response.json(); } catch { throw new ApiError(502); }
 }
 export interface HttpClient {
-  request(path: string, body?: unknown, csrf?: boolean): Promise<Response>;
+  request(path: string, body?: unknown, csrf?: boolean, method?: 'DELETE'): Promise<Response>;
   setCsrf(token: string | null): void;
 }
 
@@ -20,7 +20,7 @@ export function createHttpClient(send: typeof fetch = fetch.bind(globalThis)): H
   let generation = 0;
   return {
     setCsrf(token) { csrfToken = token; generation++; },
-    async request(path, body, csrf = false) {
+    async request(path, body, csrf = false, method) {
       if (csrf && !csrfToken) throw new ApiError(401);
       const requestGeneration = generation;
       const headers = new Headers();
@@ -28,7 +28,7 @@ export function createHttpClient(send: typeof fetch = fetch.bind(globalThis)): H
       if (csrf && csrfToken) headers.set('X-CSRF-Token', csrfToken);
       let response: Response;
       try {
-        response = await send(path, { method: body === undefined ? 'GET' : 'POST', headers,
+        response = await send(path, { method: method ?? (body === undefined ? 'GET' : 'POST'), headers,
           body: body === undefined ? undefined : JSON.stringify(body), credentials: 'same-origin',
           cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(15_000) });
       } catch { throw new ApiError(0); }

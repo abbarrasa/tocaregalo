@@ -23,5 +23,11 @@ body{margin:0}h1,h2{font-family:Georgia,serif;font-weight:500;letter-spacing:-.0
 .member-row h3 { overflow-wrap: anywhere; }
 .member-row p { font-size: .875rem; }
 .back-link { font-weight: 650; }
+.acceptance-screen { max-width: 760px; }
+.acceptance-screen h1 { font-size: clamp(2rem, 4vw, 3.3rem); }
+.invitation-send-form { max-width: 540px; }
+.invitation-list h3 { font-size: 1rem; }
+.owner-invitations h2 { font-size: 1.85rem; }
+.revocation-confirmation { padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--soft); overflow-wrap: anywhere; }
 @media (max-width: 900px) { .groups-layout { grid-template-columns: 1fr; } .create-group-card { max-width: 600px; width: 100%; } }
 @media (max-width: 690px) { .groups-screen { padding-top: 24px; } .groups-welcome { padding: 26px; } .group-cards { grid-template-columns: 1fr; } }

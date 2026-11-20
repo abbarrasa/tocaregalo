@@ -4,13 +4,14 @@ import { ApiError, errorMessage } from './api.ts';
 import type { Group, GroupClient } from './group-client.ts';
 import { usePage } from './use-page.ts';
 import PageControls from './PageControls.vue';
-const props = defineProps<{ groupId: string; actorId: string; client: GroupClient }>();
-const emit = defineEmits<{ expired: [] }>();
+import OwnerInvitations from './OwnerInvitations.vue';
+import type { InvitationClient } from './invitation-client.ts';
+const props = defineProps<{ groupId: string; actorId: string; client: GroupClient; invitationClient: InvitationClient }>();
+const emit = defineEmits<{ expired: []; busy: [value: boolean] }>();
 const group = shallowRef<Group | null>(null); const groupLoading = ref(false); const groupError = ref('');
 const unavailable = 'El grupo no existe o ya no tienes acceso.';
-const members = usePage(after => props.client.members(props.groupId, after), () => emit('expired'), () => {
-  group.value = null; groupError.value = unavailable;
-});
+function hideUnavailable() { members.clear(); group.value = null; groupError.value = unavailable; emit('busy', false); }
+const members = usePage(after => props.client.members(props.groupId, after), () => emit('expired'), hideUnavailable);
 const { data, loading, error, cursor, fetchPage } = members;
 let generation = 0;
 async function loadGroup() {
@@ -27,7 +28,7 @@ async function loadGroup() {
   } finally { if (request === generation) groupLoading.value = false; }
 }
 watch(() => props.groupId, () => { void loadGroup(); }, { immediate: true });
-onBeforeUnmount(() => { generation++; });
+onBeforeUnmount(() => { generation++; emit('busy', false); });
 function date(value: number): string {
   const instant = new Date(value);
   return Number.isNaN(instant.getTime()) ? 'Fecha no disponible' : new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium' }).format(instant);
@@ -55,6 +56,8 @@ function date(value: number): string {
         </template>
         <PageControls :cursor="cursor" :next-cursor="data?.nextCursor ?? null" :loading="loading" @restart="fetchPage()" @next="fetchPage(data?.nextCursor ?? null)" />
       </section>
+      <OwnerInvitations v-if="group.ownerAccountId === actorId" :key="group.id" :group-id="group.id" :client="invitationClient"
+        @busy="emit('busy', $event)" @expired="emit('expired')" @unavailable="hideUnavailable" />
     </template>
   </section>
 </template>
