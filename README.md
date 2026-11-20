@@ -38,8 +38,8 @@ el 20-11-2026: marfil, ciruela, coral, títulos serif y logotipo de regalo.
 La interfaz de grupos permite crear, listar y consultar grupos y sus miembros.
 Las invitaciones permiten envío/listado/revocación por el propietario y aceptación
 con código. El propietario puede retirar miembros con confirmación. Los eventos
-permiten listado, creación y detalle; sorteo, cierre manual y consulta del
-destinatario aún no tienen interfaz.
+permiten listado, creación, detalle, consulta de estado y sorteo/cierre manual
+confirmados por el propietario. La consulta privada del destinatario sigue pendiente.
 
 Después de `npm ci`, iniciar en dos terminales:
 
@@ -179,7 +179,8 @@ Tras crear se abre `#events/<id-codificado>`. El detalle muestra identificador,
 creación y cierre programado, con enlaces de regreso. La fecha programada no se
 presenta como cierre efectivo, aunque haya pasado; el navegador no ejecuta cierres
 ni sorteos. Las fechas se muestran en la zona local del navegador. La gestión de
-sorteos/cierre y la consulta privada del destinatario quedan para otra entrega.
+sorteos/cierre se describe a continuación; la consulta privada del destinatario
+queda para otra entrega.
 
 El cliente de eventos comparte transporte y CSRF con autenticación; solo el POST
 de creación necesita CSRF. Los listados y detalles validan forma, campos y ámbito
@@ -189,6 +190,32 @@ invalidan al crear, navegar o cambiar de recurso. Se bloquean creaciones duplica
 y no se reintenta una creación ambigua automáticamente: actualizar el listado
 antes de repetirla. Las pruebas de componentes usan jsdom y clientes simulados;
 la comprobación visual, móvil y de cookies en navegador real sigue pendiente.
+
+### Sorteo y cierre desde el detalle
+
+El panel «Sorteo y cierre» consulta el estado del servidor: pendiente de sorteo
+actualizado, sorteo actualizado o cerrado. Muestra el cierre efectivo únicamente
+cuando lo devuelve el servidor, sin deducirlo de la fecha programada. Los miembros
+pueden consultar y actualizar el estado; solo el propietario ve las acciones de
+sorteo/cierre de un evento abierto. No se muestran destinatarios, claves ni
+identidades de asignaciones. No hay procesamiento automático desde el navegador.
+
+Ambas acciones requieren confirmación explícita. Participan todos los miembros,
+incluido el propietario, y se necesitan al menos tres. Solicitar el sorteo sin
+cambios de membresía reutiliza el existente. El cierre puede adelantarse a la
+fecha programada y crea o reutiliza un sorteo actualizado, fijando las asignaciones
+de forma irreversible. Los eventos cerrados no muestran más acciones. La API
+comprueba siempre los permisos y el estado, con independencia de los controles.
+
+Los POST se envían sin cuerpo, con la sesión y CSRF compartidos. Las respuestas
+se validan por evento, estado, sorteo y cierre coherentes. Mientras se procesa una
+acción se bloquean duplicados y navegación. Un conflicto 409 puede indicar cierre,
+menos de tres miembros o cambios concurrentes. Ante errores de mutación se consulta
+de nuevo propiedad y estado mediante lecturas, sin repetir el POST automáticamente:
+una respuesta perdida no prueba que la operación se haya deshecho. Si la lectura
+tampoco funciona, las acciones quedan ocultas hasta actualizar el estado. Un 401
+vigente elimina la interfaz privada y un 404 elimina todo el detalle. Las respuestas
+antiguas tras cambiar de evento o abandonar la pantalla se descartan.
 
 ## Integración continua y publicación de versiones
 

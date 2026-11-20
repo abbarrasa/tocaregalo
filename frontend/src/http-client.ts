@@ -10,7 +10,7 @@ export async function readJson(response: Response): Promise<unknown> {
   try { return await response.json(); } catch { throw new ApiError(502); }
 }
 export interface HttpClient {
-  request(path: string, body?: unknown, csrf?: boolean, method?: 'DELETE'): Promise<Response>;
+  request(path: string, body?: unknown, csrf?: boolean, method?: 'DELETE' | 'POST'): Promise<Response>;
   setCsrf(token: string | null): void;
 }
 
