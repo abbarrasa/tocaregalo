@@ -8,7 +8,7 @@ export class EventLifecycleRepository implements EventLifecycleStore {
 
   async snapshot(eventId: string, actorAccountId: string, ownerOnly: boolean): Promise<EventSnapshot | null> {
     const rows = (await this.db.prepare(`SELECT e.id AS eventId, e.group_id AS groupId,
-      e.closed_at_ms AS closedAtMs, e.current_draw_id AS currentDrawId,
+      e.closed_at_ms AS closedAtMs, e.current_draw_id AS currentDrawId, e.closure_at_ms AS closureAtMs,
       e.draw_membership_revision AS drawRevision, g.membership_revision AS revision,
       ${ownerOnly ? 'm.account_id' : 'NULL'} AS memberId
       FROM events e JOIN groups g ON g.id = e.group_id ${ownerOnly ? 'JOIN group_members m ON m.group_id = g.id' : ''}
@@ -23,12 +23,13 @@ export class EventLifecycleRepository implements EventLifecycleStore {
   }
 
   async publish(snapshot: EventSnapshot, actorAccountId: string, drawId: string,
-    assignments: readonly ProtectedAssignment[], nowMs: number, close: boolean): Promise<boolean> {
+    assignments: readonly ProtectedAssignment[], nowMs: number, close: boolean, dueAtMs: number | null = null): Promise<boolean> {
     const statements = [this.db.prepare(`INSERT INTO draws (id, event_id, created_at_ms, membership_revision)
       SELECT ?, e.id, ?, g.membership_revision FROM events e JOIN groups g ON g.id = e.group_id
       WHERE e.id = ? AND e.group_id = ? AND g.owner_account_id = ? AND g.membership_revision = ? AND e.closed_at_ms IS NULL
+      AND (? IS NULL OR (e.closure_at_ms IS NOT NULL AND e.closure_at_ms <= ?))
       AND (e.draw_membership_revision IS NULL OR e.draw_membership_revision <> g.membership_revision)`)
-      .bind(drawId, nowMs, snapshot.eventId, snapshot.groupId, actorAccountId, snapshot.revision)];
+      .bind(drawId, nowMs, snapshot.eventId, snapshot.groupId, actorAccountId, snapshot.revision, dueAtMs, dueAtMs)];
     for (const { giverId, envelope } of assignments) {
       statements.push(this.db.prepare(`INSERT INTO draw_participants (draw_id, member_id)
         SELECT id, ? FROM draws WHERE id = ?`).bind(giverId, drawId));
@@ -44,12 +45,14 @@ export class EventLifecycleRepository implements EventLifecycleStore {
     return result[result.length - 1].results.length === 1;
   }
 
-  async close(snapshot: EventSnapshot, actorAccountId: string, nowMs: number): Promise<boolean> {
+  async close(snapshot: EventSnapshot, actorAccountId: string, nowMs: number, dueAtMs: number | null = null): Promise<boolean> {
     return (await this.db.prepare(`UPDATE events SET closed_at_ms = ?, redraw_required = 0
       WHERE id = ? AND group_id = ? AND closed_at_ms IS NULL AND current_draw_id = ? AND draw_membership_revision = ?
+      AND (? IS NULL OR (closure_at_ms IS NOT NULL AND closure_at_ms <= ?))
       AND EXISTS (SELECT 1 FROM groups g WHERE g.id = events.group_id
         AND g.owner_account_id = ? AND g.membership_revision = ?)
-      RETURNING id`).bind(nowMs, snapshot.eventId, snapshot.groupId, snapshot.currentDrawId, snapshot.revision, actorAccountId, snapshot.revision).first()) !== null;
+      RETURNING id`).bind(nowMs, snapshot.eventId, snapshot.groupId, snapshot.currentDrawId, snapshot.revision,
+        dueAtMs, dueAtMs, actorAccountId, snapshot.revision).first()) !== null;
   }
 
   async pendingRedraws(groupId: string, actorAccountId: string, afterId: string | null): Promise<string[]> {

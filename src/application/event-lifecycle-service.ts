@@ -7,8 +7,8 @@ export type ProtectedAssignment = Readonly<{ giverId: string; envelope: Recipien
 export interface EventLifecycleStore {
   snapshot(eventId: string, actorAccountId: string, ownerOnly: boolean): Promise<EventSnapshot | null>;
   publish(snapshot: EventSnapshot, actorAccountId: string, drawId: string,
-    assignments: readonly ProtectedAssignment[], nowMs: number, close: boolean): Promise<boolean>;
-  close(snapshot: EventSnapshot, actorAccountId: string, nowMs: number): Promise<boolean>;
+    assignments: readonly ProtectedAssignment[], nowMs: number, close: boolean, dueAtMs?: number | null): Promise<boolean>;
+  close(snapshot: EventSnapshot, actorAccountId: string, nowMs: number, dueAtMs?: number | null): Promise<boolean>;
   pendingRedraws(groupId: string, actorAccountId: string, afterId: string | null): Promise<string[]>;
 }
 
@@ -26,6 +26,17 @@ export class EventLifecycleService {
   }
 
   async execute(actorAccountId: string, eventId: string, close = false): Promise<LifecycleResult> {
+    return this.run(actorAccountId, eventId, close, null);
+  }
+
+  // Trusted scheduler entry point; owner identity comes from the D1 job selection,
+  // not from an HTTP request or a fabricated user session.
+  async closeScheduled(ownerAccountId: string, eventId: string, dueAtMs: number): Promise<LifecycleResult> {
+    requireTimestamp(dueAtMs);
+    return this.run(ownerAccountId, eventId, true, dueAtMs);
+  }
+
+  private async run(actorAccountId: string, eventId: string, close: boolean, dueAtMs: number | null): Promise<LifecycleResult> {
     // Retry a membership race a bounded number of times; never overwrite another committed revision.
     for (let attempt = 0; attempt < 3; attempt++) {
       const snapshot = await this.store.snapshot(eventId, actorAccountId, true);
@@ -33,9 +44,11 @@ export class EventLifecycleService {
       if (snapshot.closedAtMs !== null) return { kind: 'closed' };
       if (snapshot.memberIds.length < 3) return { kind: 'insufficient-members' };
       const nowMs = this.now(); requireTimestamp(nowMs);
+      const cutoff = dueAtMs === null ? null : Math.min(nowMs, dueAtMs);
+      if (cutoff !== null && (snapshot.closureAtMs === null || snapshot.closureAtMs > cutoff)) return { kind: 'not-due' };
       if (drawState(snapshot).status === 'ready') {
         if (!close) return { kind: 'ok', state: drawState(snapshot) };
-        if (await this.store.close(snapshot, actorAccountId, nowMs)) {
+        if (await this.store.close(snapshot, actorAccountId, nowMs, cutoff)) {
           return { kind: 'ok', state: { ...drawState(snapshot), status: 'closed', closedAtMs: nowMs } };
         }
         continue;
@@ -51,7 +64,7 @@ export class EventLifecycleService {
           envelope: await encryptRecipient(key, { drawId, giverId: assignment.giverId }, assignment.recipientId),
         }))));
       }
-      if (await this.store.publish(snapshot, actorAccountId, drawId, assignments, nowMs, close)) {
+      if (await this.store.publish(snapshot, actorAccountId, drawId, assignments, nowMs, close, cutoff)) {
         return { kind: 'ok', state: { eventId, drawId, closedAtMs: close ? nowMs : null, status: close ? 'closed' : 'ready' } };
       }
     }

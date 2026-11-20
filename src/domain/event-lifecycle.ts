@@ -1,6 +1,7 @@
 export type EventSnapshot = Readonly<{
   eventId: string; groupId: string; revision: number; closedAtMs: number | null;
   currentDrawId: string | null; drawRevision: number | null; memberIds: readonly string[];
+  closureAtMs: number | null;
 }>;
 
 export type EventDrawState = Readonly<{
@@ -10,7 +11,7 @@ export type EventDrawState = Readonly<{
 
 export type LifecycleResult =
   | { kind: 'ok'; state: EventDrawState }
-  | { kind: 'not-found' | 'closed' | 'insufficient-members' | 'conflict' };
+  | { kind: 'not-found' | 'closed' | 'insufficient-members' | 'conflict' | 'not-due' };
 
 export function drawState(snapshot: EventSnapshot): EventDrawState {
   const closed = snapshot.closedAtMs !== null;

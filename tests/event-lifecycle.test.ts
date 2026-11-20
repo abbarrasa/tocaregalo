@@ -6,7 +6,7 @@ import { decryptRecipient } from '../src/domain/recipient-protection.ts';
 import { loadRecipientKey, RecipientKeyUnavailable } from '../src/infrastructure/recipient-key.ts';
 
 const snapshot: EventSnapshot = { eventId: 'event', groupId: 'group', revision: 1,
-  closedAtMs: null, currentDrawId: null, drawRevision: null, memberIds: ['owner', 'a', 'b'] };
+  closedAtMs: null, closureAtMs: null, currentDrawId: null, drawRevision: null, memberIds: ['owner', 'a', 'b'] };
 
 test('draw state hides stale assignments and keeps closed snapshots independent of current membership', () => {
   assert.equal(drawState(snapshot).status, 'pending');
