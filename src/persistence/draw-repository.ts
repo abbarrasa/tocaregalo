@@ -73,8 +73,8 @@ export class DrawRepository {
     return decodeEnvelope(row);
   }
 
-  // For the future authenticated API: only the session's own assignment is returned,
-  // and only while the account remains a member of the event's group.
+  // Internal membership-scoped historical lookup. Public reads additionally
+  // validate lifecycle currency through RecipientsRepository.
   async findRecipientForAccount(drawId: string, actorAccountId: string): Promise<RecipientEnvelope | null> {
     const row = await this.db.prepare(`SELECT a.key_id, a.iv, a.ciphertext, a.recipient_index
       FROM assignments a JOIN draws d ON d.id = a.draw_id

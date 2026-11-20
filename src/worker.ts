@@ -32,8 +32,11 @@ import { MembersRepository } from './persistence/members-repository.ts';
 import { handleMemberRequest } from './http/member-routes.ts';
 import { EventLifecycleService } from './application/event-lifecycle-service.ts';
 import { EventLifecycleRepository } from './persistence/event-lifecycle-repository.ts';
-import { loadRecipientKey, type RecipientKeySettings } from './infrastructure/recipient-key.ts';
+import { loadRecipientDecryptionKey, loadRecipientKey, type RecipientKeySettings } from './infrastructure/recipient-key.ts';
 import { handleEventLifecycleRequest } from './http/event-lifecycle-routes.ts';
+import { RecipientService } from './application/recipient-service.ts';
+import { RecipientsRepository } from './persistence/recipients-repository.ts';
+import { handleRecipientRequest } from './http/recipient-routes.ts';
 
 export interface Env extends RecipientKeySettings {
   DB: D1Database;
@@ -53,6 +56,11 @@ export default {
     }
     try {
       const sessions = new SessionService(new SessionsRepository(env.DB));
+      if (/^\/api\/events\/[^/]+\/recipient$/.test(url.pathname)) {
+        return await handleRecipientRequest(request, { sessions,
+          recipients: new RecipientService(new RecipientsRepository(env.DB), id => loadRecipientDecryptionKey(env, id)),
+        });
+      }
       const lifecycle = new EventLifecycleService(new EventLifecycleRepository(env.DB), () => loadRecipientKey(env));
       if (/^\/api\/events\/[^/]+\/(draw|close)$/.test(url.pathname)) {
         return await handleEventLifecycleRequest(request, { lifecycle, sessions, applicationOrigin: env.APP_ORIGIN });
