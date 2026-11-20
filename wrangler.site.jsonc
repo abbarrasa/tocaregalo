@@ -1,0 +1,27 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tocaregalo-site",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-11-19",
+  "workers_dev": false,
+  "assets": {
+    "directory": "./dist/frontend",
+    "not_found_handling": "none",
+    "run_worker_first": ["/api", "/api/*", "/health"]
+  },
+  "triggers": { "crons": ["* * * * *"] },
+  "vars": {
+    "APP_ORIGIN": "https://localhost:8787",
+    "SESSION_TTL_SECONDS": "86400",
+    "EMAIL_VERIFICATION_TTL_SECONDS": "86400",
+    "PASSWORD_RECOVERY_TTL_SECONDS": "1800"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tocaregalo-local",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

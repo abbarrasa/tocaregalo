@@ -39,5 +39,5 @@ jobs:
       - name: Run complete test suite
         run: npm test
 
-      - name: Build frontend
-        run: npm run build:frontend
+      - name: Package same-origin site without deployment
+        run: npm run build:site

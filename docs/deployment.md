@@ -2,8 +2,9 @@
 
 This runbook prepares a future authorized deployment. No real account, domain,
 D1 database, keys or sender have been configured by this work. A GitHub release
-does not deploy the Worker. The Vue/Bootstrap authentication/account frontend
-builds to `dist/frontend`; other screens and production asset hosting are pending.
+does not deploy the Worker. The implemented Vue/Bootstrap screens build to
+`dist/frontend`. Same-origin asset/API packaging is configured and tested locally;
+real hosting, account/database/domain bindings, secrets and delivery remain pending.
 
 ## Inputs and configuration
 
@@ -22,10 +23,42 @@ Keep the existing compatibility date until a separately tested upgrade.
 without a path). Cookies are Secure/HttpOnly/host-only/SameSite=Lax; the current
 API assumes frontend and API share an origin and enables no CORS. A separate
 Sites hostname requires an approved topology/authentication design before use.
-The Vite development proxy does not provide production routing. The current
-Worker has no static asset binding; configure/review shared-origin static hosting
-and `/api` routing before publishing the frontend build.
+The Vite development proxy does not provide production routing. For the compiled
+site, [wrangler.site.jsonc](../wrangler.site.jsonc) supplies native Worker Static
+Assets routing. Assets are served directly; `/api`, `/api/*` and `/health` run the
+existing Worker first, even if a static file collides with those paths. There is
+no script-level asset binding or public asset fallback in the API. Hash navigation
+needs no SPA fallback: `not_found_handling=none` preserves missing-route errors.
+Unknown API paths return API 404 responses, not `index.html`, including browser
+navigation requests. Static resources are public; private data still requires
+the existing session API. No CORS, Origin, CSRF or cookie policy changes are made.
 Preserve the server-controlled `CF-Connecting-IP` header for rate limiting.
+
+## Local packaging and routing validation
+
+`npm run build:site` builds the frontend, then runs Wrangler with
+`--config wrangler.site.jsonc --dry-run --outdir dist/worker`. Only `dist/frontend`
+is public; the Worker bundle in `dist/worker` is outside that assets directory.
+Build immediately before packaging to avoid stale assets. The separate
+[API-only config](../wrangler.jsonc) remains usable without a frontend build.
+Both configs are local templates with placeholder D1 IDs, not deployment targets.
+Review common runtime settings in both when changing them; they do not inherit
+configuration from each other. CI packages the combined site without deployment.
+
+[site-hosting.integration.test.ts](../tests/site-hosting.integration.test.ts)
+builds current frontend source, dry-runs the site config and runs the real bundled
+Worker with Miniflare/workerd static routing and migrated ephemeral D1. It checks
+HTML/HEAD, JS/CSS/SVG types, missing routes, reserved-path collisions, health,
+unauthenticated no-store JSON, method checks and Origin rejection. It does not
+certify remote routing, TLS, cookie delivery or an actual deployment. Existing
+[browser evidence](./qa/browser-validation/README.md) used the Vite proxy and must
+not be represented as browser verification of a published combined site.
+
+Routing follows the official [Static Assets configuration](https://developers.cloudflare.com/workers/static-assets/binding/)
+(reviewed 2026-11-20). Before future publication, copy/review the combined site
+template into the explicit target config and replace local resource identifiers,
+origin and routes. Preserve all runtime lifetimes, encryption/mail secrets and
+Cron configuration; do not point staging at production D1.
 
 Non-secret lifetimes in seconds: `SESSION_TTL_SECONDS=86400`,
 `EMAIL_VERIFICATION_TTL_SECONDS=86400`, `PASSWORD_RECOVERY_TTL_SECONDS=1800`.
@@ -48,7 +81,7 @@ mail before enabling production Cron or creating real closures.
 ## Release sequence for a future authorized operation
 
 1. Select the reviewed `main` commit/release; confirm CI and run `npm ci`,
-   `npm run typecheck`, `npm test` and `git diff --check` locally.
+   `npm run typecheck`, `npm test`, `npm run build:site` and `git diff --check` locally.
 2. Review target configuration/account/database and the existing migration list.
    Use the installed Wrangler, an explicit `--config TARGET_CONFIG` and the
    intended database name for every remote operation. Create D1 only if it does
@@ -62,7 +95,8 @@ mail before enabling production Cron or creating real closures.
    --remote --config TARGET_CONFIG` only in the authorized window. Fresh databases
    need all migrations in order. Do not edit applied migrations. All twelve
    migrations through 0012 are required by the current scheduled handler.
-5. Provision the reviewed Worker bindings/secrets and HTTPS routing. Bundle using
+5. Provision the reviewed Worker bindings/secrets and HTTPS routing. Build current
+   frontend assets using `npm run build:frontend`, then bundle using
    `wrangler deploy --dry-run --config TARGET_CONFIG --outdir OUTPUT_DIRECTORY`.
    A successful dry run validates packaging only; it does not validate remote
    bindings, secret values, mail delivery or publish anything.
