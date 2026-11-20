@@ -57,6 +57,14 @@ No se añaden tokens personales para eludir esa aprobación. La ejecución real
 en GitHub debe verificarse después de subir los cambios; una prueba local no
 certifica el runner remoto.
 
+## Preparación del despliegue
+
+La [guía de operación y despliegue](docs/deployment.md) detalla los datos pendientes,
+la configuración HTTPS/D1/secretos, la secuencia de migración y publicación,
+las comprobaciones en staging y los límites de recuperación. Incluye consultas
+SQL de diagnóstico agregado para trabajos y avisos. Preparar esta guía no implica
+haber desplegado recursos ni validado correo o Cron reales.
+
 ## Estado
 
 El código actual cubre el sorteo uniforme, el límite lógico del cierre, el
