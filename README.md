@@ -29,7 +29,7 @@ npm run build:frontend    # Assets estáticos en dist/frontend
 `npm test` incluye también las pruebas del frontend. `npm run typecheck` comprueba
 Node, Worker y componentes Vue con configuraciones independientes.
 
-## Frontend: acceso, cuenta, grupos e invitaciones
+## Frontend: acceso, cuenta, grupos, invitaciones y eventos
 
 [frontend](frontend/) contiene la primera entrega Vue/Bootstrap: login por correo
 o teléfono, registro público, recuperación con código, consulta de cuenta,
@@ -37,8 +37,9 @@ verificación de correo y logout. Conserva el estilo del prototipo HTML facilita
 el 20-11-2026: marfil, ciruela, coral, títulos serif y logotipo de regalo.
 La interfaz de grupos permite crear, listar y consultar grupos y sus miembros.
 Las invitaciones permiten envío/listado/revocación por el propietario y aceptación
-con código. El propietario puede retirar miembros con confirmación. Eventos y
-destinatarios aún no tienen interfaz.
+con código. El propietario puede retirar miembros con confirmación. Los eventos
+permiten listado, creación y detalle; sorteo, cierre manual y consulta del
+destinatario aún no tienen interfaz.
 
 Después de `npm ci`, iniciar en dos terminales:
 
@@ -155,6 +156,39 @@ de límite, permisos, código y red, sin reintentar operaciones automáticamente
 Una respuesta 202 significa aceptación por SendGrid, no entrega al buzón. Ante
 resultado incierto, actualizar las invitaciones/grupos antes de repetir una acción;
 reenviar puede invalidar un código anterior. No se han probado buzones reales.
+
+### Eventos
+
+Desde el detalle de un grupo, «Ver eventos del grupo» abre
+`#groups/<id-codificado>/events`. Los miembros actuales pueden consultar páginas
+de veinte eventos, conservando el orden de la API: creación descendente e ID
+descendente como desempate. Se conserva solo la página actual y el cursor se
+trata como opaco. Actualizar o volver al principio permite reiniciar el listado;
+la paginación no constituye una instantánea.
+
+Solo el propietario ve el formulario de creación. Se envía únicamente
+`closureAtMs`: `null` sin programación o un instante UTC en milisegundos. La fecha
+y hora se introducen en la zona del navegador, indicada junto al campo. Se
+rechazan fechas imposibles y horas inexistentes por cambio de horario; para una
+hora repetida se utiliza su primera ocurrencia. El navegador comprueba que sea
+futura y el servidor vuelve a validarlo con su propio reloj. El servidor genera
+el identificador, la fecha de creación inmutable y la vinculación con el grupo.
+No se añaden nombres, descripciones ni participantes propios al modelo existente.
+
+Tras crear se abre `#events/<id-codificado>`. El detalle muestra identificador,
+creación y cierre programado, con enlaces de regreso. La fecha programada no se
+presenta como cierre efectivo, aunque haya pasado; el navegador no ejecuta cierres
+ni sorteos. Las fechas se muestran en la zona local del navegador. La gestión de
+sorteos/cierre y la consulta privada del destinatario quedan para otra entrega.
+
+El cliente de eventos comparte transporte y CSRF con autenticación; solo el POST
+de creación necesita CSRF. Los listados y detalles validan forma, campos y ámbito
+de las respuestas. Un 401 vigente elimina la interfaz privada; los 404 muestran
+mensajes genéricos de recurso inexistente/inaccesible. Las lecturas anteriores se
+invalidan al crear, navegar o cambiar de recurso. Se bloquean creaciones duplicadas
+y no se reintenta una creación ambigua automáticamente: actualizar el listado
+antes de repetirla. Las pruebas de componentes usan jsdom y clientes simulados;
+la comprobación visual, móvil y de cookies en navegador real sigue pendiente.
 
 ## Integración continua y publicación de versiones
 

@@ -81,6 +81,7 @@ function date(value: number): string {
       <header class="groups-welcome mt-4"><p class="eyebrow">UN GRUPO, MUCHAS ILUSIONES</p><h1>{{ group.name }}</h1>
         <p><span class="status-pill" :class="{ verified: group.ownerAccountId === actorId }">{{ group.ownerAccountId === actorId ? 'Propietario' : 'Participante' }}</span><span class="ms-3">Creado el {{ date(group.createdAtMs) }}</span></p>
       </header>
+      <a class="btn btn-primary mb-4" :href="'#groups/' + encodeURIComponent(group.id) + '/events'">Ver eventos del grupo</a>
       <section aria-labelledby="members-title" :aria-busy="loading" class="members-section">
         <div class="d-flex justify-content-between align-items-center gap-3 mb-3"><h2 id="members-title">Miembros del grupo</h2><button class="btn btn-outline-primary" :disabled="loading || removing || invitationBusy" @click="selected = null; fetchPage()">Actualizar miembros</button></div>
         <p v-if="removalNotice" ref="noticeElement" class="alert alert-info" role="status" tabindex="-1">{{ removalNotice }}</p>
