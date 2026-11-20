@@ -126,7 +126,8 @@ indisponibilidad previa. Ante 503 o pérdida de respuesta, la interfaz explica l
 incertidumbre y consulta el estado, sin repetir el DELETE automáticamente ni
 afirmar que todos los eventos se han recalculado. El listado de miembros no permite
 certificar el estado del recálculo. La confirmación y su cancelación gestionan el
-foco de teclado; la verificación en navegador real sigue pendiente.
+foco de teclado. La comprobación local de Chromium y sus límites se recogen en
+[el informe de navegador](docs/qa/browser-validation/README.md).
 
 ### Invitaciones
 
@@ -188,7 +189,9 @@ mensajes genéricos de recurso inexistente/inaccesible. Las lecturas anteriores 
 invalidan al crear, navegar o cambiar de recurso. Se bloquean creaciones duplicadas
 y no se reintenta una creación ambigua automáticamente: actualizar el listado
 antes de repetirla. Las pruebas de componentes usan jsdom y clientes simulados;
-la comprobación visual, móvil y de cookies en navegador real sigue pendiente.
+la comprobación local en Chromium se detalla en
+[el informe de navegador](docs/qa/browser-validation/README.md), con una incidencia
+abierta de navegación tras verificar el correo.
 
 ### Sorteo y cierre desde el detalle
 
@@ -244,7 +247,8 @@ evento sea inaccesible: un miembro nuevo puede consultar los metadatos de un eve
 cerrado sin pertenecer a su instantánea. Los errores de red/configuración son
 genéricos y no se reintentan automáticamente. El GET utiliza cookies de sesión y
 `no-store`, sin CSRF ni identidades/sorteos elegidos por el navegador. No se han
-verificado aún el aspecto visual ni el flujo de cookies en un navegador real.
+certificado todos los navegadores ni el entorno de producción. La comprobación
+local en Chromium está en [el informe de navegador](docs/qa/browser-validation/README.md).
 
 ## Integración continua y publicación de versiones
 
