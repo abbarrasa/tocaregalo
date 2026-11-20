@@ -14,6 +14,7 @@ export type RecipientKey = Readonly<{
   cipher: CryptoKey;
   index: CryptoKey;
 }>;
+export type RecipientDecryptionKey = Pick<RecipientKey, 'id' | 'cipher'>;
 
 function scopeBytes(scope: AssignmentScope, keyId: string): Uint8Array<ArrayBuffer> {
   return new Uint8Array(encoder.encode(JSON.stringify(['tocaregalo/recipient/v1', keyId, scope.drawId, scope.giverId])));
@@ -46,7 +47,7 @@ export async function encryptRecipient(
 }
 
 export async function decryptRecipient(
-  keys: ReadonlyMap<string, RecipientKey>,
+  keys: ReadonlyMap<string, RecipientDecryptionKey>,
   scope: AssignmentScope,
   envelope: RecipientEnvelope,
 ): Promise<string> {

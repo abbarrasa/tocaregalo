@@ -752,9 +752,9 @@ codificadas cada una como 64 caracteres hexadecimales. Deben generarse con
 aleatoriedad criptográfica y configurarse como secretos de Worker. Nunca se
 guardan en D1 ni en archivos versionados. Una configuración ausente o inválida
 devuelve 503 cuando sea necesario cifrar. Cada rotación debe usar un ID nuevo;
-conservar las claves antiguas de forma segura para la futura consulta privada.
-El adaptador actual importa únicamente la clave activa para escritura; no
-implementa aún un almacén de claves históricas ni una API de descifrado.
+conservar las claves antiguas de forma segura para consultar eventos anteriores.
+La carga de escritura mantiene la clave activa; la consulta privada descrita
+más adelante permite claves anteriores conservadas en secretos.
 
 El servicio cifra como máximo 16 asignaciones simultáneamente y publica cada
 sorteo completo en un único batch de `2 + 2N` sentencias, con hasta seis parámetros
@@ -765,6 +765,65 @@ de CPU, memoria y duración de consulta siguen aplicándose; consultar los
 antes de publicar o fijar límites de producto.
 
 Las pruebas usan D1 efímera/workerd, claves sintéticas y ningún correo real.
-El programador de cierre automático, los correos y la consulta privada del
-destinatario siguen pendientes. La fecha programada es un vencimiento para ese
+El programador de cierre automático y los correos siguen pendientes.
+La fecha programada es un vencimiento para ese
 futuro programador; por sí sola no acredita que el evento se haya cerrado.
+
+## Consulta privada del destinatario
+
+`GET /api/events/<eventId>/recipient` requiere una sesión y membresía actual en
+el grupo. Devuelve únicamente:
+
+```json
+{
+  "drawId": "<current-draw-id>",
+  "recipient": { "accountId": "<recipient-account-id>", "displayName": "<current-name>" }
+}
+```
+
+Cada participante, incluido el propietario, consulta exclusivamente su propia
+asignación. Los parámetros de actor, participante, sorteo o destinatario enviados
+por el navegador no permiten elegir otra asignación. No se devuelven correo,
+teléfono, apellidos, credenciales, claves ni sobres cifrados. El nombre corresponde
+al perfil actual del destinatario, no a una instantánea histórica de su nombre.
+
+La consulta se permite con sorteo actualizado en eventos abiertos y cerrados.
+En eventos abiertos, el destinatario puede cambiar al recalcular el sorteo.
+Si no existe sorteo vigente o ha quedado desactualizado, devuelve 409. Un evento
+inexistente, inaccesible o heredado sin grupo devuelve el mismo 404. También
+devuelve 404 a un miembro nuevo que no participó en el sorteo cerrado. Retirar
+un miembro revoca su acceso; si se reincorpora, puede recuperar el acceso a los
+sorteos vigentes en los que participó. Un participante que conserve acceso a un
+evento cerrado puede seguir viendo a su destinatario aunque este haya dejado
+el grupo.
+
+La primera consulta SQL comprueba membresía, versión vigente y asignación propia.
+Tras descifrar con AES-GCM, otra consulta revalida esos permisos y la misma versión
+y resuelve el nombre del destinatario, exigiendo que perteneciera a la instantánea.
+Si la versión cambia durante el descifrado, responde 409; si se pierde la membresía,
+404. La comprobación final define el estado observado por la lectura; las
+incorporaciones posteriores pueden volver a invalidar un sorteo abierto.
+Se realizan dos lecturas SQL acotadas, sin cargar el listado de participantes.
+
+La clave activa usa `DRAW_KEY_ID` y `DRAW_CIPHER_KEY_HEX`. Para conservar acceso a
+eventos cifrados antes de una rotación, configurar también el secreto de Worker
+`DRAW_PREVIOUS_CIPHER_KEYS_JSON`, con este formato (los valores son marcadores):
+
+```json
+[{ "id": "<previous-key-id>", "cipherHex": "<64-hex-characters>" }]
+```
+
+Cada entrada contiene una clave AES de 32 bytes en hexadecimal y su ID original.
+Los IDs deben ser únicos y no repetir el activo. Se importa únicamente la clave
+seleccionada como no extraíble y con permiso de descifrado. Esta lectura no usa
+claves HMAC; su conservación para otros procesos sigue su política correspondiente.
+Una clave ausente o configuración inválida devuelve 503 genérico. Un fallo de
+autenticación AES-GCM o datos corruptos devuelve 500 genérico, sin intentar otra
+asignación ni revelar detalles criptográficos. No se han configurado claves reales.
+
+Sesiones inválidas devuelven 401; IDs vacíos o mal codificados, 400; métodos
+distintos de GET, 405 con `Allow: GET`. Las respuestas usan `Cache-Control: no-store`,
+sin ampliar CORS ni emitir cookies. Al ser una lectura, no requiere Origin ni CSRF.
+No genera sorteos, cierres ni correos. No se añaden migraciones ni dependencias.
+Las pruebas usan claves sintéticas y D1 efímera/workerd para verificar aislamiento,
+rotación, revocación, datos manipulados y cambios concurrentes.

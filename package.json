@@ -7,7 +7,7 @@
   },
   "scripts": {
     "test": "node --test tests/*.test.ts",
-    "test:unit": "node --test tests/domain.test.ts tests/recipient-protection.test.ts tests/persistence.test.ts tests/session.test.ts tests/authentication.test.ts tests/email-verification.test.ts tests/password-recovery.test.ts tests/groups.test.ts tests/events.test.ts tests/event-lifecycle.test.ts tests/invitations.test.ts tests/members.test.ts",
+    "test:unit": "node --test tests/domain.test.ts tests/recipient-protection.test.ts tests/recipients.test.ts tests/persistence.test.ts tests/session.test.ts tests/authentication.test.ts tests/email-verification.test.ts tests/password-recovery.test.ts tests/groups.test.ts tests/events.test.ts tests/event-lifecycle.test.ts tests/invitations.test.ts tests/members.test.ts",
     "test:integration": "node --test tests/*.integration.test.ts",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.worker.json",
     "dev": "wrangler dev --local",
