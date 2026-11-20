@@ -37,6 +37,8 @@ import { handleEventLifecycleRequest } from './http/event-lifecycle-routes.ts';
 import { RecipientService } from './application/recipient-service.ts';
 import { RecipientsRepository } from './persistence/recipients-repository.ts';
 import { handleRecipientRequest } from './http/recipient-routes.ts';
+import { ScheduledEventService } from './application/scheduled-event-service.ts';
+import { EventProcessingRepository } from './persistence/event-processing-repository.ts';
 
 export interface Env extends RecipientKeySettings {
   DB: D1Database;
@@ -49,6 +51,12 @@ export interface Env extends RecipientKeySettings {
 }
 
 export default {
+  async scheduled(_controller, env) {
+    const lifecycle = new EventLifecycleService(new EventLifecycleRepository(env.DB), () => loadRecipientKey(env));
+    const report = await new ScheduledEventService(new EventProcessingRepository(env.DB), lifecycle).run();
+    // Aggregate counts only: never log recipients, tokens, keys or raw database errors.
+    console.info('Scheduled event processing', JSON.stringify(report));
+  },
   async fetch(request, env, context) {
     const url = new URL(request.url);
     if (request.method === 'GET' && url.pathname === '/health') {

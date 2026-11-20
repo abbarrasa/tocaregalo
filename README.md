@@ -38,8 +38,8 @@ por su cuenta antes de conceder acceso a cuentas y datos de grupos o eventos.
 
 Quedan pendientes el frontend, la verificación telefónica,
 la gestión adicional de eventos e invitaciones, los correos de eventos y sorteos,
-el procesamiento desatendido de cierres y reintentos
-y la publicación. Las pruebas de calendario aquí ejercitan funciones de dominio.
+los reintentos duraderos de correo y la publicación. El procesamiento programado
+de eventos está implementado y probado localmente; su configuración remota sigue pendiente.
 La prueba del plazo de 60 segundos debe cronometrar el cierre desde el instante
 previsto en un entorno publicado, sin tráfico de navegador ni sesión abierta.
 Si Sites no expone un programador con esa cadencia y latencia, el procesamiento
@@ -744,7 +744,8 @@ los eventos pendientes; después procesa hasta 20 eventos por petición. Si fall
 un recálculo o quedan más eventos, devuelve **503 con la retirada ya realizada**.
 Repetir el mismo DELETE retoma los pendientes sin repetir los sorteos completados.
 Hasta completarlos, los sorteos desactualizados no se muestran como vigentes.
-Este mecanismo requiere reintentar la petición; no es una cola autónoma.
+La petición puede reintentarse de inmediato. El programador descrito más adelante
+también recupera los pendientes de forma autónoma una vez desplegado.
 
 El Worker necesita `DRAW_KEY_ID` (identificador estable) y los secretos
 `DRAW_CIPHER_KEY_HEX` y `DRAW_INDEX_KEY_HEX`: dos claves distintas de 32 bytes,
@@ -757,7 +758,7 @@ La carga de escritura mantiene la clave activa; la consulta privada descrita
 más adelante permite claves anteriores conservadas en secretos.
 
 El servicio cifra como máximo 16 asignaciones simultáneamente y publica cada
-sorteo completo en un único batch de `2 + 2N` sentencias, con hasta seis parámetros
+sorteo completo en un único batch de `2 + 2N` sentencias, con hasta nueve parámetros
 por sentencia. La instantánea y las sentencias siguen creciendo con N: no existe
 una capacidad ilimitada ni una capacidad de producción certificada. Los límites
 de CPU, memoria y duración de consulta siguen aplicándose; consultar los
@@ -765,9 +766,8 @@ de CPU, memoria y duración de consulta siguen aplicándose; consultar los
 antes de publicar o fijar límites de producto.
 
 Las pruebas usan D1 efímera/workerd, claves sintéticas y ningún correo real.
-El programador de cierre automático y los correos siguen pendientes.
-La fecha programada es un vencimiento para ese
-futuro programador; por sí sola no acredita que el evento se haya cerrado.
+El programador de cierre automático se describe más adelante; los correos siguen
+pendientes. La fecha programada es un vencimiento, no una prueba de cierre efectivo.
 
 ## Consulta privada del destinatario
 
@@ -827,3 +827,61 @@ sin ampliar CORS ni emitir cookies. Al ser una lectura, no requiere Origin ni CS
 No genera sorteos, cierres ni correos. No se añaden migraciones ni dependencias.
 Las pruebas usan claves sintéticas y D1 efímera/workerd para verificar aislamiento,
 rotación, revocación, datos manipulados y cambios concurrentes.
+
+## Procesamiento programado de eventos
+
+El manejador `scheduled` del Worker está configurado con `* * * * *` en
+[wrangler.jsonc](wrangler.jsonc), una ejecución por minuto en UTC mediante
+[Cron Triggers](https://developers.cloudflare.com/workers/configuration/cron-triggers/).
+La configuración está preparada en el repositorio; no se ha desplegado ni activado
+un programador remoto. No depende de navegador, sesión de usuario o tráfico HTTP.
+No se añade un endpoint público para ejecutar el procesamiento.
+
+Cada ejecución procesa como máximo 20 cierres vencidos y 20 recálculos pendientes.
+Los cierres van primero; se usan las fechas del reloj del servidor, no una fecha
+de activación proporcionada por el llamante. Solo se cierran eventos abiertos con
+fecha no nula ya alcanzada y al menos tres miembros actuales. El vencimiento se
+revalida dentro del SQL que publica el sorteo/cierre, junto con propiedad y revisión
+de membresía. El propietario conserva la posibilidad de cerrar anticipadamente.
+Un evento vencido con menos de tres miembros queda pendiente; al alcanzar tres,
+puede cerrarse en una ejecución posterior. Los eventos sin fecha solo se recalculan
+si tienen trabajo pendiente; no se cierran automáticamente.
+
+La migración [0011_scheduled_event_processing.sql](migrations/0011_scheduled_event_processing.sql)
+añade `event_processing_jobs`, con un trabajo por evento/tipo, versión, etapa de
+reintento y próxima fecha. Incorpora los eventos abiertos existentes y mantiene
+el trabajo mediante triggers en la misma transacción que la membresía o el evento.
+Una retirada encola recálculos; añadir miembros reinicia el trabajo existente pero
+no crea un recálculo automático por sí solo. Publicar un sorteo elimina su recálculo
+pendiente y cerrar elimina ambos tipos. Eliminar el evento elimina sus trabajos.
+El índice por tipo/fecha/ID permite consultar lotes acotados por próxima fecha.
+
+Si un evento falla, se conserva para reintentar tras 1, 2, 4, 8 y después 15 minutos,
+manteniendo ese último intervalo sin abandonar el evento. La etapa almacenada se
+satura en cinco; no cuenta el total de intentos. Los conflictos de membresía que
+persistan tras los tres intentos del servicio también reciben espera. Los cambios
+de membresía reinician esa espera. Un fallo no impide procesar los demás candidatos.
+Si no puede persistirse el reintento, falla la invocación y el trabajo permanece
+para futuras ejecuciones. Este mecanismo es independiente del límite de seis
+intentos de correo, cuyo envío duradero sigue pendiente.
+
+Las ejecuciones simultáneas y los cierres manuales reutilizan los sorteos vigentes.
+Las escrituras de reintento comparan versión del trabajo y revisión de membresía:
+un fallo antiguo no puede retrasar trabajo nuevo ni recrear uno completado.
+Los logs del programador contienen solo contadores `closed`, `redrawn`, `deferred`
+y `failed`, sin destinatarios, secretos ni errores originales. Que la invocación
+termine correctamente no significa que todos los eventos hayan terminado: deben
+revisarse esos contadores y el trabajo pendiente.
+
+Las pruebas ejecutan el manejador real con Miniflare/workerd y D1 efímera, además
+de probar límites de lote, reintentos, rollback, migración y concurrencia. No se
+han aplicado migraciones a la base persistente ni a D1 remota. La ejecución requiere
+las claves de escritura ya descritas cuando deba generar un sorteo nuevo.
+
+La cadencia de un minuto **no certifica el objetivo de 60 segundos**. El tiempo de
+procesamiento, los lotes acumulados, los reintentos y los
+[límites de Workers](https://developers.cloudflare.com/workers/platform/limits/)
+pueden ampliar el retraso. Antes de publicar hay que configurar recursos reales,
+aplicar la migración en el entorno autorizado, desplegar y medir desde el vencimiento
+hasta el cierre confirmado sin tráfico de navegador. Este alcance no realiza esas
+operaciones ni envía correos.
