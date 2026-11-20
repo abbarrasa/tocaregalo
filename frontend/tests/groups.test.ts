@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp, nextTick, type App as VueApp } from 'vue';
 import App from '../src/App.vue';
+import GroupDetail from '../src/GroupDetail.vue';
 import { ApiError, type Account, type AuthClient } from '../src/api.ts';
 import type { Group, GroupClient, Member, Page } from '../src/group-client.ts';
 
@@ -14,16 +15,17 @@ function stub() {
     list: vi.fn<GroupClient['list']>().mockResolvedValue({ items: [own, other], nextCursor: null }),
     create: vi.fn<GroupClient['create']>().mockResolvedValue(own), find: vi.fn<GroupClient['find']>().mockResolvedValue(own),
     members: vi.fn<GroupClient['members']>().mockResolvedValue({ items: members, nextCursor: null }),
+    removeMember: vi.fn<GroupClient['removeMember']>().mockResolvedValue(undefined),
   };
 }
 const auth: AuthClient = {
   async me() { return account; }, async login() {}, async register() {}, async recover() {}, async reset() {},
   async requestVerification() {}, async confirmVerification() {}, async logout() {},
 };
-async function mount(groups: GroupClient) {
+async function mount(groups: GroupClient, invitationList = vi.fn().mockResolvedValue({ items: [], nextCursor: null })) {
   const host = document.createElement('div'); document.body.append(host);
   app = createApp(App, { client: auth, groupClient: groups, invitationClient: {
-    async list() { return { items: [], nextCursor: null }; }, async send() {}, async revoke() {}, async accept() {},
+    list: invitationList, async send() {}, async revoke() {}, async accept() {},
   } }); app.mount(host);
   await vi.waitFor(() => expect(document.querySelector('.loading-state')).toBeNull()); await nextTick();
 }
@@ -48,6 +50,71 @@ beforeEach(() => { history.replaceState(null, '', '/#groups'); });
 afterEach(() => { app?.unmount(); app = undefined; document.body.replaceChildren(); });
 
 describe('group screens', () => {
+  it('does not expose removal controls to another participant', async () => {
+    history.replaceState(null, '', '/#groups/other'); const client = stub(); client.find.mockResolvedValue(other);
+    client.members.mockResolvedValue({ items: [{ accountId: 'p', displayName: 'Ana', joinedAtMs: 0, isOwner: false }], nextCursor: null });
+    await mount(client); await vi.waitFor(() => expect(text()).toContain('Ana'));
+    expect(text()).not.toContain('Retirar'); expect(client.removeMember).not.toHaveBeenCalled();
+  });
+  it('ignores an obsolete invitation failure after removal refreshes the panel', async () => {
+    history.replaceState(null, '', '/#groups/own'); const client = stub(); const old = deferred<{ items: []; nextCursor: null }>();
+    const invitationList = vi.fn().mockReturnValueOnce(old.promise).mockResolvedValue({ items: [], nextCursor: null });
+    client.members.mockResolvedValueOnce({ items: [{ accountId: 'p', displayName: 'Ana', joinedAtMs: 0, isOwner: false }], nextCursor: null })
+      .mockResolvedValue({ items: members, nextCursor: null });
+    await mount(client, invitationList); await vi.waitFor(() => expect(text()).toContain('Ana'));
+    button('Retirar Ana').click(); await nextTick(); button('Confirmar retirada').click();
+    await vi.waitFor(() => expect(invitationList).toHaveBeenCalledTimes(2)); old.reject(new ApiError(401));
+    await nextTick(); await nextTick(); expect(text()).toContain('Retirada procesada'); expect(text()).not.toContain('Tu sesión ha caducado');
+  });
+  it('confirms removal, protects the owner and refreshes members without duplicate submissions', async () => {
+    history.replaceState(null, '', '/#groups/own'); const client = stub(); const pending = deferred<void>();
+    const person = { accountId: 'person', displayName: 'Ana', joinedAtMs: 2, isOwner: false };
+    client.members.mockResolvedValueOnce({ items: [...members, person], nextCursor: null })
+      .mockResolvedValue({ items: members, nextCursor: null }); client.removeMember.mockReturnValue(pending.promise);
+    const invitationList = vi.fn().mockResolvedValue({ items: [], nextCursor: null });
+    await mount(client, invitationList); await vi.waitFor(() => expect(text()).toContain('Ana'));
+    expect([...document.querySelectorAll('button')].filter(b => b.textContent?.startsWith('Retirar'))).toHaveLength(1);
+    button('Retirar Ana').click(); await nextTick(); expect(client.removeMember).not.toHaveBeenCalled();
+    expect(document.activeElement?.id).toBe('remove-member-title'); button('Cancelar').click(); await nextTick();
+    expect(document.activeElement).toBe(button('Retirar Ana'));
+    button('Retirar Ana').click(); await nextTick(); button('Confirmar retirada').click(); button('Confirmar retirada').click();
+    await nextTick(); expect(client.removeMember).toHaveBeenCalledExactlyOnceWith('own', 'person');
+    expect(document.querySelector('.owner-invitations')).toBeNull();
+    pending.resolve(); await vi.waitFor(() => expect(text()).toContain('Retirada procesada'));
+    await vi.waitFor(() => expect(document.querySelector('.owner-invitations')).not.toBeNull());
+    expect(invitationList).toHaveBeenCalledTimes(2);
+    expect(client.members).toHaveBeenLastCalledWith('own', null); expect(text()).not.toContain('Ana');
+  });
+  it.each([503, 0])('checks state after an ambiguous removal (%s) without repeating DELETE', async status => {
+    history.replaceState(null, '', '/#groups/own'); const client = stub();
+    client.members.mockResolvedValueOnce({ items: [{ accountId: 'p', displayName: 'Ana', joinedAtMs: 0, isOwner: false }], nextCursor: null })
+      .mockResolvedValue({ items: members, nextCursor: null }); client.removeMember.mockRejectedValue(new ApiError(status));
+    await mount(client); await vi.waitFor(() => expect(text()).toContain('Ana'));
+    button('Retirar Ana').click(); await nextTick(); button('Confirmar retirada').click();
+    await vi.waitFor(() => expect(text()).toContain('La retirada puede haberse aplicado'));
+    await vi.waitFor(() => expect(client.members).toHaveBeenCalledTimes(2));
+    expect(client.removeMember).toHaveBeenCalledTimes(1); expect(text()).not.toContain('Ana');
+  });
+  it.each([401, 404, 409])('handles removal authorization and owner conflict (%s)', async status => {
+    history.replaceState(null, '', '/#groups/own'); const client = stub();
+    client.members.mockResolvedValue({ items: [{ accountId: 'p', displayName: 'Ana', joinedAtMs: 0, isOwner: false }], nextCursor: null });
+    client.removeMember.mockRejectedValue(new ApiError(status)); await mount(client);
+    await vi.waitFor(() => expect(text()).toContain('Ana')); button('Retirar Ana').click(); await nextTick(); button('Confirmar retirada').click();
+    await vi.waitFor(() => expect(text()).toContain(status === 401 ? 'Tu sesión ha caducado' : status === 404 ? 'no existe o ya no tienes acceso' : 'El propietario no se puede retirar'));
+    if (status !== 409) { expect(text()).not.toContain('Ana'); expect(document.querySelector('.owner-invitations')).toBeNull(); }
+  });
+  it('ignores a late removal error after the detail unmounts', async () => {
+    const client = stub(); const removal = deferred<void>(); const expired = vi.fn();
+    client.members.mockResolvedValue({ items: [{ accountId: 'p', displayName: 'Ana', joinedAtMs: 0, isOwner: false }], nextCursor: null });
+    client.removeMember.mockReturnValue(removal.promise);
+    const host = document.createElement('div'); document.body.append(host);
+    app = createApp(GroupDetail, { groupId: 'own', actorId: 'self', client, onExpired: expired,
+      invitationClient: { async list() { return { items: [], nextCursor: null }; }, async send() {}, async revoke() {}, async accept() {} } });
+    app.mount(host); await vi.waitFor(() => expect(text()).toContain('Ana'));
+    button('Retirar Ana').click(); await nextTick(); button('Confirmar retirada').click(); await nextTick();
+    app.unmount(); app = undefined; removal.reject(new ApiError(401)); await nextTick(); await nextTick();
+    expect(expired).not.toHaveBeenCalled(); expect(client.members).toHaveBeenCalledTimes(1); expect(text()).not.toContain('Ana');
+  });
   it('lists owner/member roles, replaces each bounded page and can restart', async () => {
     const client = stub(); client.list.mockResolvedValueOnce({ items: [own, other], nextCursor: 'next' })
       .mockResolvedValueOnce({ items: [], nextCursor: null });

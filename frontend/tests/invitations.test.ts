@@ -16,6 +16,7 @@ function clients() {
     create: vi.fn<GroupClient['create']>(),
     find: vi.fn<GroupClient['find']>().mockResolvedValue({ id: 'g', name: 'Friends', ownerAccountId: 'self', createdAtMs: 1 }),
     members: vi.fn<GroupClient['members']>().mockResolvedValue({ items: [], nextCursor: null }),
+    removeMember: vi.fn<GroupClient['removeMember']>().mockResolvedValue(undefined),
   };
   const invitations = {
     list: vi.fn<InvitationClient['list']>().mockResolvedValue({ items: [pending], nextCursor: null }),

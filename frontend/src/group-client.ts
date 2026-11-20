@@ -9,6 +9,7 @@ export interface GroupClient {
   create(name: string): Promise<Group>;
   find(id: string): Promise<Group>;
   members(id: string, cursor: string | null): Promise<Page<Member>>;
+  removeMember(id: string, accountId: string): Promise<void>;
 }
 function group(value: unknown): Group {
   if (!isRecord(value) || typeof value.id !== 'string' || !value.id.trim()
@@ -35,5 +36,9 @@ export function groupClientFor(http: HttpClient): GroupClient {
       if (!isRecord(value)) throw new ApiError(502); return group(value.group);
     },
     async members(id, cursor) { return page(await readJson(await http.request(groupId(id) + '/members' + query(cursor))), 'members', member, cursor); },
+    async removeMember(id, accountId) {
+      const response = await http.request(groupId(id) + '/members/' + encodeURIComponent(accountId), undefined, true, 'DELETE');
+      await response.body?.cancel();
+    },
   };
 }
