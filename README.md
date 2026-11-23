@@ -443,6 +443,10 @@ Rutas implementadas:
 - `POST /api/logout`: requiere la cookie, una cabecera `Origin` idéntica a
   `APP_ORIGIN` y `X-CSRF-Token` con el valor devuelto por `/api/me`. Revoca solo
   esa sesión y elimina su cookie mediante una respuesta 204.
+- `PATCH /api/me/profile`: actualiza nombre, apellidos, correo y teléfono de la
+  cuenta derivada de la sesión. El mismo endpoint acepta un cambio de contraseña
+  con `currentPassword` y `newPassword`; al cambiar contraseña revoca todas las
+  sesiones. Cambiar el correo lo marca como no verificado e invalida retos activos.
 - Sin sesión válida se devuelve 401; un fallo de CSRF devuelve 403; un origen
   configurado incorrectamente impide el cierre y devuelve 503. Un método
   incorrecto devuelve 405. Las respuestas de sesión llevan `Cache-Control: no-store`.

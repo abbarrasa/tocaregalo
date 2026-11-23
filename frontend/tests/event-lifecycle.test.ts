@@ -12,7 +12,8 @@ const group = { id: 'g', name: 'Friends', ownerAccountId: 'self', createdAtMs: 0
 const auth: AuthClient = {
   async me() { return { id: 'self', displayName: 'Self', email: 's@example.test', lastName: null, phone: null, emailVerifiedAtMs: null }; },
   startSocialLogin() {},
-  async login() {}, async register() {}, async recover() {}, async reset() {}, async requestVerification() {}, async confirmVerification() {}, async logout() {},
+  async login() {}, async register() {}, async recover() {}, async reset() {}, async requestVerification() {}, async confirmVerification() {},
+  async updateProfile() { return { account: { id: 'self', displayName: 'Self', email: 's@example.test', lastName: null, phone: null, emailVerifiedAtMs: null }, passwordChanged: false }; }, async logout() {},
 };
 function stubs() {
   return { lifecycle: {

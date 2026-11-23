@@ -1,7 +1,12 @@
 import { normalizedName } from './validation.ts';
 
 export class AuthInputError extends Error {
-  constructor() { super('Invalid authentication input.'); this.name = 'AuthInputError'; }
+  readonly fields: Record<string, string>;
+  constructor(fields: Record<string, string> = {}) {
+    super('Invalid authentication input.');
+    this.name = 'AuthInputError';
+    this.fields = fields;
+  }
 }
 
 export function normalizeEmail(value: string): string {
@@ -56,15 +61,69 @@ export type Registration = Readonly<{
 
 export function registrationInput(value: unknown): Registration {
   const input = authObject(value);
-  const lastName = input.lastName === undefined || input.lastName === null || input.lastName === ''
-    ? null : name(input.lastName);
-  const phone = input.phone === undefined || input.phone === null || input.phone === ''
-    ? null : normalizePhone(text(input.phone));
-  return { email: normalizeEmail(text(input.email)), password: passwordInput(input.password),
-    name: name(input.name), lastName, phone };
+  const fields: Record<string, string> = {};
+  let email = '';
+  let password = '';
+  let displayName = '';
+  let lastName: string | null = null;
+  let phone: string | null = null;
+  try { displayName = name(input.name); } catch { fields.name = 'El nombre debe tener entre 1 y 100 caracteres.'; }
+  try { email = normalizeEmail(text(input.email)); } catch { fields.email = 'Introduce un correo electrónico válido.'; }
+  try { password = passwordInput(input.password); } catch { fields.password = 'La contraseña debe tener al menos seis caracteres.'; }
+  try {
+    lastName = input.lastName === undefined || input.lastName === null || input.lastName === ''
+      ? null : name(input.lastName);
+  } catch { fields.lastName = 'Los apellidos deben tener como máximo 100 caracteres.'; }
+  try {
+    phone = input.phone === undefined || input.phone === null || input.phone === ''
+      ? null : normalizePhone(text(input.phone));
+  } catch { fields.phone = 'Introduce un teléfono internacional válido que empiece por +.'; }
+  if (Object.keys(fields).length) throw new AuthInputError(fields);
+  return { email, password, name: displayName, lastName, phone };
 }
 
 export function loginInput(value: unknown): { identifier: string; password: string } {
   const input = authObject(value);
   return { identifier: normalizeLoginIdentifier(text(input.identifier)), password: passwordInput(input.password) };
+}
+
+export type ProfileUpdate = Readonly<{
+  name: string;
+  lastName: string | null;
+  email: string;
+  phone: string | null;
+  currentPassword: string | null;
+  newPassword: string | null;
+}>;
+
+export function profileUpdateInput(value: unknown): ProfileUpdate {
+  const input = authObject(value);
+  const fields: Record<string, string> = {};
+  let displayName = '';
+  let lastName: string | null = null;
+  let email = '';
+  let phone: string | null = null;
+  let newPassword: string | null = null;
+  let currentPassword: string | null = null;
+  try { displayName = name(input.name); } catch { fields.name = 'El nombre debe tener entre 1 y 100 caracteres.'; }
+  try {
+    lastName = input.lastName === undefined || input.lastName === null || input.lastName === ''
+      ? null : name(input.lastName);
+  } catch { fields.lastName = 'Los apellidos deben tener como máximo 100 caracteres.'; }
+  try { email = normalizeEmail(text(input.email)); } catch { fields.email = 'Introduce un correo electrónico válido.'; }
+  try {
+    phone = input.phone === undefined || input.phone === null || input.phone === ''
+      ? null : normalizePhone(text(input.phone));
+  } catch { fields.phone = 'Introduce un teléfono internacional válido que empiece por +.'; }
+  try {
+    newPassword = input.newPassword === undefined || input.newPassword === null || input.newPassword === ''
+      ? null : passwordInput(input.newPassword);
+  } catch { fields.newPassword = 'La nueva contraseña debe tener al menos seis caracteres.'; }
+  try {
+    currentPassword = input.currentPassword === undefined || input.currentPassword === null
+      ? null : text(input.currentPassword);
+  } catch { fields.currentPassword = 'Introduce la contraseña actual.'; }
+  if (newPassword !== null && currentPassword === null) fields.currentPassword = 'Introduce la contraseña actual.';
+  if (Object.keys(fields).length) throw new AuthInputError(fields);
+  return { name: displayName, lastName, email, phone, currentPassword, newPassword };
 }

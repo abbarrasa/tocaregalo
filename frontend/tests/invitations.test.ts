@@ -10,7 +10,7 @@ const account: Account = { id: 'self', email: 'self@example.test', displayName: 
 const pending: Invitation = { email: 'guest@example.test', createdAtMs: 1, expiresAtMs: 900000, status: 'pending' };
 let app: VueApp | undefined;
 function clients() {
-  const auth: AuthClient = { async me() { return account; }, startSocialLogin() {}, async login() {}, async register() {}, async recover() {}, async reset() {}, async requestVerification() {}, async confirmVerification() {}, async logout() {} };
+  const auth: AuthClient = { async me() { return account; }, startSocialLogin() {}, async login() {}, async register() {}, async recover() {}, async reset() {}, async requestVerification() {}, async confirmVerification() {}, async updateProfile() { return { account, passwordChanged: false }; }, async logout() {} };
   const groups = {
     list: vi.fn<GroupClient['list']>().mockResolvedValue({ items: [], nextCursor: null }),
     create: vi.fn<GroupClient['create']>(),

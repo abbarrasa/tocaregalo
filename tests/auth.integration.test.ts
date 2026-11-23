@@ -30,7 +30,7 @@ test('bundled Worker registration and login run real Argon2id against D1', async
   }] }));
   t.after(() => mf.dispose());
   const db = await mf.getD1Database('DB');
-  for (const name of ['0001_draws.sql', '0002_accounts_groups.sql', '0003_sessions.sql', '0004_public_auth.sql', '0005_email_verification.sql']) {
+  for (const name of ['0001_draws.sql', '0002_accounts_groups.sql', '0003_sessions.sql', '0004_public_auth.sql', '0005_email_verification.sql', '0006_password_recovery.sql', '0013_social_auth.sql']) {
     // These migrations are plain DDL without embedded semicolons.
     const sql = await readFile(new URL('../migrations/' + name, import.meta.url), 'utf8');
     await db.batch(sql.split(';').map(s => s.trim()).filter(Boolean).map(s => db.prepare(s)));
@@ -117,6 +117,41 @@ test('bundled Worker registration and login run real Argon2id against D1', async
     })).status, 409);
   });
 
+  await t.test('authenticated profile updates use session identity, CSRF and credential revocation', async () => {
+    const login = await post('/api/login', { identifier: alice.email, password: alice.password });
+    assert.equal(login.status, 200);
+    const cookie = login.headers.get('Set-Cookie')?.split(';')[0];
+    assert.ok(cookie);
+    const csrf = authObject(await login.json()).csrfToken;
+    assert.ok(typeof csrf === 'string');
+    const patch = (body: unknown, extraHeaders: Record<string, string> = {}) => mf.dispatchFetch(origin + '/api/me/profile', {
+      method: 'PATCH',
+      headers: { Origin: origin, Cookie: cookie, 'X-CSRF-Token': csrf, 'Content-Type': 'application/json', ...extraHeaders },
+      body: JSON.stringify(body),
+    });
+    assert.equal((await patch({
+      name: ' Alice Updated ',
+      email: 'alice-updated@example.test',
+      phone: '+34 (612) 345-679',
+    })).status, 200);
+    const me = await mf.dispatchFetch(origin + '/api/me', { headers: { Cookie: cookie } });
+    const updated = await accountFrom(me);
+    assert.equal(updated.displayName, 'Alice Updated');
+    assert.equal(updated.email, 'alice-updated@example.test');
+    assert.equal(updated.phone, '+34612345679');
+    assert.equal(updated.emailVerifiedAtMs, null);
+    assert.equal((await patch({
+      name: 'Alice Updated',
+      email: 'alice-updated@example.test',
+      currentPassword: alice.password,
+      newPassword: 'new-password',
+    })).status, 200);
+    assert.equal((await mf.dispatchFetch(origin + '/api/me', { headers: { Cookie: cookie } })).status, 401);
+    assert.equal((await post('/api/login', {
+      identifier: 'alice-updated@example.test', password: 'new-password',
+    })).status, 200);
+  });
+
   await t.test('minimum six and no password-specific maximum are honored by HTTP', async () => {
     assert.equal((await post('/api/register', { ...alice, password: '12345' })).status, 400);
     assert.equal((await post('/api/register', { email: 'missing@example.test', password: '123456' })).status, 400);
@@ -125,6 +160,16 @@ test('bundled Worker registration and login run real Argon2id against D1', async
       assert.equal((await post('/api/register', { email, name: 'Policy', password })).status, 201);
       assert.equal((await post('/api/login', { identifier: email, password })).status, 200);
     }
+  });
+
+  await t.test('invalid registration and profile inputs expose field-scoped public errors', async () => {
+    const registration = await post('/api/register', {
+      email: 'invalid', name: '', phone: '612345678', password: '123',
+    });
+    assert.equal(registration.status, 400);
+    const body = authObject(await registration.json());
+    assert.equal(body.code, 'validation_error');
+    assert.deepEqual(authObject(body.fields).name, 'El nombre debe tener entre 1 y 100 caracteres.');
   });
 
   await t.test('wrong origins, methods and malformed or oversized JSON are rejected before hashing', async () => {

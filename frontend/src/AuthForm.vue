@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, reactive, ref } from 'vue';
-import { errorMessage, type AuthClient } from './api.ts';
+import { ApiError, errorMessage, type AuthClient } from './api.ts';
+import { fieldError } from './form-errors.ts';
 
 export type EntryPage = 'login' | 'register' | 'recover' | 'reset';
 const props = defineProps<{ page: EntryPage; client: AuthClient }>();
@@ -8,6 +9,7 @@ const emit = defineEmits<{ authenticated: []; registered: []; reset: []; busy: [
 const values = reactive<Record<string, string>>({ identifier: '', name: '', lastName: '', email: '', phone: '', password: '', confirm: '', token: '' });
 const busy = ref(false); const error = ref(''); const sent = ref(false); const errorElement = ref<HTMLElement>();
 const socialProviders = [{ id: 'google', label: 'Continuar con Google' }] as const;
+const fieldErrors = ref<Record<string, string>>({});
 class FormInputError extends Error {}
 const titles = { login: 'Iniciar sesión', register: 'Crea tu cuenta', recover: 'Recuperar contraseña', reset: 'Nueva contraseña' };
 type Field = { id: string; label: string; type?: string; autocomplete?: string; required?: boolean; hint?: string };
@@ -27,7 +29,7 @@ const fields = computed<Field[]>(() => {
 });
 async function submit() {
   if (busy.value) return;
-  error.value = ''; busy.value = true; emit('busy', true);
+  error.value = ''; fieldErrors.value = {}; busy.value = true; emit('busy', true);
   try {
     if (props.page === 'register' || props.page === 'reset') {
       if ([...values.password].length < 6) throw new FormInputError('Usa al menos seis caracteres en la contraseña.');
@@ -43,8 +45,17 @@ async function submit() {
     if (props.page === 'reset') { await props.client.reset(values.token.trim(), values.password); emit('reset'); }
     values.password = ''; values.confirm = ''; values.token = '';
   } catch (failure) {
-    error.value = failure instanceof FormInputError ? failure.message
-      : errorMessage(failure, props.page === 'reset' ? 'El código no es válido, ha caducado o ya se utilizó.' : undefined);
+    if (failure instanceof ApiError) fieldErrors.value = { ...failure.fields };
+    if (failure instanceof FormInputError) {
+      const message = failure.message;
+      if (message.includes('seis caracteres')) fieldErrors.value.password = message;
+      if (message.includes('coincidir')) fieldErrors.value.confirm = message;
+      error.value = message;
+    } else if (Object.keys(fieldErrors.value).length) {
+      error.value = 'Revisa los campos indicados.';
+    } else {
+      error.value = errorMessage(failure, props.page === 'reset' ? 'El código no es válido, ha caducado o ya se utilizó.' : undefined);
+    }
     await nextTick(); errorElement.value?.focus();
   } finally { busy.value = false; emit('busy', false); }
 }
@@ -79,8 +90,12 @@ function startSocialLogin(provider: 'google') {
           <label :for="field.id" class="form-label">{{ field.label }}</label>
           <input :id="field.id" :name="field.id" v-model="values[field.id]" :type="field.type ?? 'text'"
             class="form-control" :required="field.required" :autocomplete="field.autocomplete"
-            :aria-describedby="field.hint ? `${field.id}-hint` : undefined" :spellcheck="field.id === 'token' ? false : undefined">
+            :class="{ 'is-invalid': fieldError(fieldErrors, field.id) }"
+            :aria-invalid="fieldError(fieldErrors, field.id) ? 'true' : undefined"
+            :aria-describedby="[field.hint ? `${field.id}-hint` : '', fieldError(fieldErrors, field.id) ? `${field.id}-error` : ''].filter(Boolean).join(' ') || undefined"
+            :spellcheck="field.id === 'token' ? false : undefined">
           <div v-if="field.hint" :id="`${field.id}-hint`" class="form-text">{{ field.hint }}</div>
+          <div v-if="fieldError(fieldErrors, field.id)" :id="`${field.id}-error`" class="invalid-feedback d-block">{{ fieldError(fieldErrors, field.id) }}</div>
         </div>
         <p v-if="error" ref="errorElement" class="alert alert-danger" role="alert" tabindex="-1">{{ error }}</p>
         <button type="submit" class="btn btn-primary w-100">{{ busy ? 'Un momento…' : ({ login: 'Entrar', register: 'Crear cuenta', recover: 'Solicitar instrucciones', reset: 'Guardar contraseña' })[page] }}</button>

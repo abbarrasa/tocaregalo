@@ -51,9 +51,13 @@ export async function handleAuthRequest(request: Request, dependencies: AuthRout
       'Set-Cookie': sessionCookie(issued.token, Math.max(1, Math.floor(remainingMs / 1000))),
     });
   } catch (error) {
-    if (error instanceof AuthInputError) return json({ error: 'Invalid authentication input' }, 400);
+    if (error instanceof AuthInputError) return json({
+      error: 'Invalid authentication input', code: 'validation_error', fields: error.fields,
+    }, 400);
     if (error instanceof AuthBodyError) return json({ error: error.message }, error.status);
-    if (error instanceof RegistrationConflictError) return json({ error: 'Registration unavailable' }, 409);
+    if (error instanceof RegistrationConflictError) return json({
+      error: 'Registration unavailable', code: 'profile_conflict', fields: error.fields,
+    }, 409);
     throw error;
   }
 }

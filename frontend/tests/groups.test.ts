@@ -21,7 +21,8 @@ function stub() {
 const auth: AuthClient = {
   async me() { return account; }, async login() {}, async register() {}, async recover() {}, async reset() {},
   startSocialLogin() {},
-  async requestVerification() {}, async confirmVerification() {}, async logout() {},
+  async requestVerification() {}, async confirmVerification() {},
+  async updateProfile() { return { account, passwordChanged: false }; }, async logout() {},
 };
 async function mount(groups: GroupClient, invitationList = vi.fn().mockResolvedValue({ items: [], nextCursor: null })) {
   const host = document.createElement('div'); document.body.append(host);
