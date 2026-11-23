@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "feature": {
+      "source": "../ai-skills",
+      "sourceType": "local",
+      "computedHash": "6290c01f26a1b7eacdf1d22110668a7f2bd85e5414bf2d2837246902ca9b2679",
+      "installMode": "copy"
+    }
+  }
+}
