@@ -158,8 +158,11 @@ export default {
         accounts: new AccountsRepository(env.DB),
         applicationOrigin: env.APP_ORIGIN,
       });
-    } catch {
+    } catch (error) {
       // Fail closed without including database details or credentials in the response.
+      console.error('Unhandled Worker request failure', JSON.stringify({
+        name: error instanceof Error ? error.name : 'unknown',
+      }));
       return Response.json({ error: 'Internal server error' }, {
         status: 500, headers: { 'Cache-Control': 'no-store' },
       });

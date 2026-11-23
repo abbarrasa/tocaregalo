@@ -18,6 +18,13 @@ export class OAuthStatesRepository {
     return row ? 'consumed' : null;
   }
 
+  async find(stateHash: string, provider: 'google', nowMs: number): Promise<boolean> {
+    const row = await this.db.prepare(`SELECT state_hash AS stateHash FROM oauth_states
+      WHERE state_hash = ? AND provider = ? AND created_at_ms <= ? AND expires_at_ms > ?`)
+      .bind(stateHash, provider, nowMs, nowMs).first<{ stateHash: string }>();
+    return !!row;
+  }
+
   async deleteExpired(nowMs: number): Promise<void> {
     await this.db.batch([this.db.prepare('DELETE FROM oauth_states WHERE expires_at_ms <= ?').bind(nowMs)]);
   }

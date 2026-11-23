@@ -10,9 +10,11 @@ export type SocialIdentity = Readonly<{
 
 export class SocialAuthError extends Error {
   readonly status: number;
-  constructor(status = 401) {
+  readonly stage: 'invalid' | 'provider' | 'jwks' | 'configuration';
+  constructor(status = 401, stage: 'invalid' | 'provider' | 'jwks' | 'configuration' = 'invalid') {
     super(status === 503 ? 'Social authentication unavailable.' : 'Social authentication failed.');
     this.status = status;
+    this.stage = stage;
   }
 }
 

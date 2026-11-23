@@ -45,15 +45,21 @@ export async function handleSocialAuthRequest(request: Request, dependencies: So
     const code = url.searchParams.get('code');
     if (!state || !code) return json({ error: 'Invalid social authentication request' }, 400);
     const stateHash = await sha256Base64Url(state);
-    const consumed = await dependencies.oauthStates.consume(stateHash, 'google', (dependencies.now ?? Date.now)());
-    if (!consumed) return json({ error: 'Invalid social authentication request' }, 400);
+    const stateExists = await dependencies.oauthStates.find(stateHash, 'google', (dependencies.now ?? Date.now)());
+    if (!stateExists) return json({ error: 'Invalid social authentication request' }, 400);
     let identity;
     try {
       identity = await dependencies.google.exchange(code);
     } catch (error) {
-      if (error instanceof SocialAuthError) return json({ error: 'Social authentication unavailable' }, error.status);
+      if (error instanceof SocialAuthError) {
+        console.error('Google social token exchange failed', JSON.stringify({ status: error.status, stage: error.stage }));
+        return json({ error: 'Social authentication unavailable' }, error.status);
+      }
+      console.error('Google social token exchange failed', JSON.stringify({ error: 'unexpected' }));
       throw error;
     }
+    const consumed = await dependencies.oauthStates.consume(stateHash, 'google', (dependencies.now ?? Date.now)());
+    if (!consumed) return json({ error: 'Invalid social authentication request' }, 400);
     const seconds = Number(dependencies.sessionTtlSeconds);
     if (!Number.isSafeInteger(seconds) || seconds < 1 || !Number.isSafeInteger(seconds * 1000)) {
       return json({ error: 'Authentication unavailable' }, 503);

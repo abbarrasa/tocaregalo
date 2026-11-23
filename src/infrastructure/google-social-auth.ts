@@ -13,10 +13,14 @@ function jwkImport(jwk: Jwk): Promise<CryptoKey> {
 }
 
 function decodeJsonPart(part: string): Record<string, unknown> {
-  const normalized = part.replace(/-/g, '+').replace(/_/g, '/');
-  const padded = normalized.padEnd(normalized.length + ((4 - normalized.length % 4) % 4), '=');
-  const bytes = Uint8Array.from(atob(padded), char => char.charCodeAt(0));
-  return JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>;
+  try {
+    const normalized = part.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(normalized.length + ((4 - normalized.length % 4) % 4), '=');
+    const bytes = Uint8Array.from(atob(padded), char => char.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>;
+  } catch {
+    throw new SocialAuthError();
+  }
 }
 
 export class GoogleSocialAuth {
@@ -29,7 +33,7 @@ export class GoogleSocialAuth {
 
   constructor(settings: GoogleSettings, fetchImpl: typeof fetch = fetch) {
     this.settings = settings;
-    this.fetchImpl = fetchImpl;
+    this.fetchImpl = fetchImpl.bind(globalThis);
   }
 
   configured(): boolean {
@@ -51,23 +55,39 @@ export class GoogleSocialAuth {
   }
 
   async exchange(code: string): Promise<SocialIdentity> {
-    if (!this.configured()) throw new SocialAuthError(503);
-    const body = new URLSearchParams({
-      code,
-      client_id: this.settings.GOOGLE_CLIENT_ID!,
-      client_secret: this.settings.GOOGLE_CLIENT_SECRET!,
-      redirect_uri: this.settings.GOOGLE_REDIRECT_URI!,
-      grant_type: 'authorization_code',
-    });
-    const tokenResponse = await this.fetchImpl(this.tokenEndpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
-      body,
-    });
-    if (!tokenResponse.ok) throw new SocialAuthError();
-    const tokens = await tokenResponse.json() as Record<string, unknown>;
-    if (typeof tokens.id_token !== 'string') throw new SocialAuthError();
-    return this.verifyIdToken(tokens.id_token);
+    if (!this.configured()) throw new SocialAuthError(503, 'configuration');
+    try {
+      const body = [
+        ['code', code],
+        ['client_id', this.settings.GOOGLE_CLIENT_ID!],
+        ['client_secret', this.settings.GOOGLE_CLIENT_SECRET!],
+        ['redirect_uri', this.settings.GOOGLE_REDIRECT_URI!],
+        ['grant_type', 'authorization_code'],
+      ].map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&');
+      const tokenResponse = await this.fetchImpl(this.tokenEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+        body,
+      });
+      if (!tokenResponse.ok) {
+        console.error('Google token exchange rejected', JSON.stringify({ status: tokenResponse.status }));
+        throw new SocialAuthError(401, 'provider');
+      }
+      const tokens = await tokenResponse.json() as Record<string, unknown>;
+      if (typeof tokens.id_token !== 'string') throw new SocialAuthError();
+      return await this.verifyIdToken(tokens.id_token);
+    } catch (error) {
+      if (error instanceof SocialAuthError) throw error;
+      if (error instanceof Error) {
+        console.error('Google token endpoint fetch failed', JSON.stringify({
+          name: error.name,
+          message: error.message.slice(0, 200),
+        }));
+      } else {
+        console.error('Google token endpoint fetch failed', JSON.stringify({ name: 'unknown' }));
+      }
+      throw new SocialAuthError(503, 'provider');
+    }
   }
 
   private async verifyIdToken(idToken: string): Promise<SocialIdentity> {
@@ -84,7 +104,10 @@ export class GoogleSocialAuth {
     if (typeof claims.name !== 'string' || !claims.name) throw new SocialAuthError();
 
     const jwksResponse = await this.fetchImpl(this.jwksEndpoint, { headers: { Accept: 'application/json' } });
-    if (!jwksResponse.ok) throw new SocialAuthError(503);
+    if (!jwksResponse.ok) {
+      console.error('Google JWKS request rejected', JSON.stringify({ status: jwksResponse.status }));
+      throw new SocialAuthError(503, 'jwks');
+    }
     const jwks = await jwksResponse.json() as { keys?: Jwk[] };
     const jwk = jwks.keys?.find(key => key.kid === header.kid && key.kty === 'RSA' && key.alg === 'RS256');
     if (!jwk) throw new SocialAuthError();
