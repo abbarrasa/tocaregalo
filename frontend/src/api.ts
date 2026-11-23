@@ -10,6 +10,7 @@ export type RegistrationInput = Readonly<{
 }>;
 export interface AuthClient {
   me(): Promise<Account>;
+  startSocialLogin(provider: 'google'): void;
   login(identifier: string, password: string): Promise<void>;
   register(input: RegistrationInput): Promise<void>;
   recover(identifier: string): Promise<void>;
@@ -17,6 +18,11 @@ export interface AuthClient {
   requestVerification(): Promise<void>;
   confirmVerification(token: string): Promise<void>;
   logout(): Promise<void>;
+}
+
+export function socialLoginPath(provider: 'google'): string {
+  if (provider !== 'google') throw new ApiError(400);
+  return `/api/auth/${provider}/start`;
 }
 
 function nullableString(value: unknown): value is string | null { return value === null || typeof value === 'string'; }
@@ -37,6 +43,9 @@ export function authClientFor(http: HttpClient): AuthClient {
     const response = await http.request(path, body, csrf); await response.body?.cancel();
   }
   return {
+    startSocialLogin(provider) {
+      globalThis.location.assign(socialLoginPath(provider));
+    },
     async me() {
       const value = await readJson(await http.request('/api/me'));
       if (!object(value) || !account(value.account) || typeof value.csrfToken !== 'string' || !value.csrfToken) {

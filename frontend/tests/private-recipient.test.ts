@@ -8,6 +8,7 @@ const ready: EventState = { eventId: 'e', status: 'ready', drawId: 'draw', close
 const assignment: OwnRecipient = { drawId: 'draw', recipient: { accountId: 'person', displayName: 'Ana <privado>' } };
 const auth: AuthClient = {
   async me() { return { id: 'self', displayName: 'Self', email: 's@example.test', lastName: null, phone: null, emailVerifiedAtMs: null }; },
+  startSocialLogin() {},
   async login() {}, async register() {}, async recover() {}, async reset() {}, async requestVerification() {}, async confirmVerification() {}, async logout() {},
 };
 function stubs() {

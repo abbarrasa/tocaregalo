@@ -42,6 +42,11 @@ import { EventProcessingRepository } from './persistence/event-processing-reposi
 import { DrawNotificationService } from './application/draw-notification-service.ts';
 import { DrawNotificationsRepository } from './persistence/draw-notifications-repository.ts';
 import { SendgridDrawNotificationSender } from './infrastructure/sendgrid-draw-notification-sender.ts';
+import { GoogleSocialAuth } from './infrastructure/google-social-auth.ts';
+import { SocialAuthService } from './application/social-auth-service.ts';
+import { SocialAccountsRepository } from './persistence/social-accounts-repository.ts';
+import { OAuthStatesRepository } from './persistence/oauth-states-repository.ts';
+import { handleSocialAuthRequest } from './http/social-auth-routes.ts';
 
 export interface Env extends RecipientKeySettings {
   DB: D1Database;
@@ -51,6 +56,9 @@ export interface Env extends RecipientKeySettings {
   PASSWORD_RECOVERY_TTL_SECONDS: string;
   SENDGRID_API_KEY?: string;
   SENDGRID_FROM_EMAIL?: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  GOOGLE_REDIRECT_URI?: string;
 }
 
 export default {
@@ -91,6 +99,21 @@ export default {
           invitations: new InvitationService(new InvitationsRepository(env.DB),
             new SendgridInvitationSender({ apiKey: env.SENDGRID_API_KEY, fromEmail: env.SENDGRID_FROM_EMAIL }),
             new AuthRateLimiter(new AuthCountersRepository(env.DB))),
+        });
+      }
+      if (url.pathname === '/api/auth/google/start' || url.pathname === '/api/auth/google/callback') {
+        return await handleSocialAuthRequest(request, {
+          google: new GoogleSocialAuth({
+            GOOGLE_CLIENT_ID: env.GOOGLE_CLIENT_ID,
+            GOOGLE_CLIENT_SECRET: env.GOOGLE_CLIENT_SECRET,
+            GOOGLE_REDIRECT_URI: env.GOOGLE_REDIRECT_URI,
+          }),
+          oauthStates: new OAuthStatesRepository(env.DB),
+          socialAuth: new SocialAuthService(
+            new SocialAccountsRepository(env.DB), sessions,
+          ),
+          applicationOrigin: env.APP_ORIGIN,
+          sessionTtlSeconds: env.SESSION_TTL_SECONDS,
         });
       }
       if (/^\/api\/groups\/[^/]+\/events$/.test(url.pathname) || url.pathname.startsWith('/api/events/')) {
@@ -135,8 +158,11 @@ export default {
         accounts: new AccountsRepository(env.DB),
         applicationOrigin: env.APP_ORIGIN,
       });
-    } catch {
+    } catch (error) {
       // Fail closed without including database details or credentials in the response.
+      console.error('Unhandled Worker request failure', JSON.stringify({
+        name: error instanceof Error ? error.name : 'unknown',
+      }));
       return Response.json({ error: 'Internal server error' }, {
         status: 500, headers: { 'Cache-Control': 'no-store' },
       });

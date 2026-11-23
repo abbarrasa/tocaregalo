@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ApiError, createAuthClient, errorMessage } from '../src/api.ts';
+import { ApiError, createAuthClient, errorMessage, socialLoginPath } from '../src/api.ts';
 
 const account = { id: 'self', email: 'self@example.test', displayName: 'Self', lastName: null, phone: null, emailVerifiedAtMs: null };
 describe('same-origin authentication client', () => {
+  it('starts Google through a fixed relative OAuth route', async () => {
+    expect(socialLoginPath('google')).toBe('/api/auth/google/start');
+  });
   it('uses only relative paths, preserves exact passwords and adds CSRF only to protected requests', async () => {
     const requests: Array<{ path: string; options: RequestInit }> = [];
     const client = createAuthClient(async (path, options = {}) => {

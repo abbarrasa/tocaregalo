@@ -21,6 +21,7 @@ Last updated: 2026-11-23. Dated handoff — verify current `git status` and file
   - `0010_event_draw_lifecycle.sql`: membership revisions, draw versions, `pending`/`ready`/`closed` lifecycle, immutable closed snapshots.
   - `0011_scheduled_event_processing.sql`: `event_processing_jobs` (`close`/`redraw`), version + group-revision fences, capped backoff `1 -> 2 -> 4 -> 8 -> 15` min (stage saturates at 5).
   - `0012_draw_notifications.sql`: closure notification outbox, 120s fenced leases, max 6 known failures (`1 -> 2 -> 4 -> 8 -> 16` min).
+  - `0013_social_auth.sql`: Google identities keyed by `(provider, subject)`, linked accounts and short-lived OAuth state hashes.
 - **Backend (`src/`):** `worker.ts` wires `domain/`, `application/`, `persistence/` (shared `PersistenceDatabase` in `src/persistence/d1.ts`), and `infrastructure/` (Argon2id via `@noble/hashes`, Web Crypto AES-GCM/HMAC, SendGrid HTTPS).
 - **Frontend (`frontend/src/`):** `App.vue`, `AuthForm.vue`, `AccountPanel.vue`, `GroupList.vue`, `GroupDetail.vue`, `OwnerInvitations.vue`, `AcceptInvitation.vue`, `EventList.vue`, `EventDetail.vue`, `EventLifecycle.vue`, `PrivateRecipient.vue`, `PageControls.vue`, `BrandMark.vue`, `http-client.ts`, `clients.ts`, `api.ts`, `group-client.ts`, `invitation-client.ts`, `event-client.ts`, `event-lifecycle-client.ts`, `recipient-client.ts`, `event-time.ts`, `pagination.ts`, `navigation.ts`, `use-page.ts`.
 
