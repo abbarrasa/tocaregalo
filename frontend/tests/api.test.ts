@@ -6,6 +6,24 @@ describe('same-origin authentication client', () => {
   it('starts Google through a fixed relative OAuth route', async () => {
     expect(socialLoginPath('google')).toBe('/api/auth/google/start');
   });
+  it('updates profile only through the relative CSRF-protected PATCH route', async () => {
+    const requests: Array<{ path: string; options: RequestInit }> = [];
+    const client = createAuthClient(async (path, options = {}) => {
+      requests.push({ path: String(path), options });
+      if (path === '/api/me') return Response.json({ account, csrfToken: 'profile-proof' });
+      return Response.json({ account: { ...account, displayName: 'Updated' }, passwordChanged: false });
+    });
+    await client.me();
+    await client.updateProfile({
+      name: 'Updated', email: account.email, lastName: 'Example', phone: '+34612345678',
+    });
+    expect(requests[1].path).toBe('/api/me/profile');
+    expect(requests[1].options.method).toBe('PATCH');
+    expect(new Headers(requests[1].options.headers).get('X-CSRF-Token')).toBe('profile-proof');
+    expect(JSON.parse(String(requests[1].options.body))).toEqual({
+      name: 'Updated', email: account.email, lastName: 'Example', phone: '+34612345678',
+    });
+  });
   it('uses only relative paths, preserves exact passwords and adds CSRF only to protected requests', async () => {
     const requests: Array<{ path: string; options: RequestInit }> = [];
     const client = createAuthClient(async (path, options = {}) => {
@@ -45,6 +63,24 @@ describe('same-origin authentication client', () => {
     const offline = createAuthClient(async () => { throw new Error('private-network-detail'); });
     await expect(offline.me()).rejects.toMatchObject({ status: 0 });
     expect(errorMessage(new Error('private-network-detail'))).not.toContain('private');
+  });
+  it('preserves structured field errors from API responses without exposing provider details', async () => {
+    const client = createAuthClient(async () => Response.json({
+      error: 'Invalid authentication input',
+      code: 'validation_error',
+      fields: {
+        email: 'Introduce un correo electrónico válido.',
+        phone: 'Introduce un teléfono internacional válido.',
+      },
+    }, { status: 400 }));
+    await expect(client.register({ name: 'Self', email: 'invalid', password: '123456' })).rejects.toMatchObject({
+      status: 400,
+      code: 'validation_error',
+      fields: {
+        email: 'Introduce un correo electrónico válido.',
+        phone: 'Introduce un teléfono internacional válido.',
+      },
+    });
   });
   it('sends recovery and confirmation codes in POST bodies, never in URLs or browser storage', async () => {
     const send = vi.fn<typeof fetch>(async () => new Response(null, { status: 204 }));

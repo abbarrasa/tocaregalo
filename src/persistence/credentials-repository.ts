@@ -16,7 +16,10 @@ export class CredentialsRepository implements CredentialStore {
       ]);
     } catch (error) {
       if (error instanceof Error && /UNIQUE constraint failed: accounts\.(email|phone)\b/.test(error.message)) {
-        throw new RegistrationConflictError();
+        const fields: Record<string, string> = {};
+        if (/accounts\.email\b/.test(error.message)) fields.email = 'Este correo electrónico ya está asociado a otra cuenta.';
+        if (/accounts\.phone\b/.test(error.message)) fields.phone = 'Este teléfono ya está asociado a otra cuenta.';
+        throw new RegistrationConflictError(fields);
       }
       throw error;
     }

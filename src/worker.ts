@@ -47,6 +47,8 @@ import { SocialAuthService } from './application/social-auth-service.ts';
 import { SocialAccountsRepository } from './persistence/social-accounts-repository.ts';
 import { OAuthStatesRepository } from './persistence/oauth-states-repository.ts';
 import { handleSocialAuthRequest } from './http/social-auth-routes.ts';
+import { ProfileService } from './application/profile-service.ts';
+import { handleProfileRequest } from './http/profile-routes.ts';
 
 export interface Env extends RecipientKeySettings {
   DB: D1Database;
@@ -151,6 +153,14 @@ export default {
           limiter: new AuthRateLimiter(new AuthCountersRepository(env.DB)),
           applicationOrigin: env.APP_ORIGIN,
           sessionTtlSeconds: env.SESSION_TTL_SECONDS,
+        });
+      }
+      if (url.pathname === '/api/me/profile') {
+        const accounts = new AccountsRepository(env.DB);
+        return await handleProfileRequest(request, {
+          sessions,
+          profiles: new ProfileService(accounts, new Argon2PasswordHasher()),
+          applicationOrigin: env.APP_ORIGIN,
         });
       }
       return await handleSessionRequest(request, {

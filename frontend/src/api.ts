@@ -8,6 +8,11 @@ export type Account = Readonly<{
 export type RegistrationInput = Readonly<{
   name: string; email: string; password: string; lastName?: string; phone?: string;
 }>;
+export type ProfileUpdateInput = Readonly<{
+  name: string; email: string; lastName?: string; phone?: string;
+  currentPassword?: string; newPassword?: string;
+}>;
+export type ProfileUpdateResult = Readonly<{ account: Account; passwordChanged: boolean }>;
 export interface AuthClient {
   me(): Promise<Account>;
   startSocialLogin(provider: 'google'): void;
@@ -17,6 +22,7 @@ export interface AuthClient {
   reset(token: string, newPassword: string): Promise<void>;
   requestVerification(): Promise<void>;
   confirmVerification(token: string): Promise<void>;
+  updateProfile(input: ProfileUpdateInput): Promise<ProfileUpdateResult>;
   logout(): Promise<void>;
 }
 
@@ -59,6 +65,12 @@ export function authClientFor(http: HttpClient): AuthClient {
     async reset(token, newPassword) { await post('/api/password-recovery/confirm', { token, newPassword }); },
     async requestVerification() { await post('/api/email-verification/request', {}, true); },
     async confirmVerification(token) { await post('/api/email-verification/confirm', { token }); },
+    async updateProfile(input) {
+      const response = await http.request('/api/me/profile', input, true, 'PATCH');
+      const value = await readJson(response);
+      if (!object(value) || !account(value.account) || typeof value.passwordChanged !== 'boolean') throw new ApiError(502);
+      return { account: value.account, passwordChanged: value.passwordChanged };
+    },
     async logout() { await post('/api/logout', {}, true); http.setCsrf(null); },
   };
 }

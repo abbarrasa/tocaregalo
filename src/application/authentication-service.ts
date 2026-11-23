@@ -2,7 +2,12 @@ import type { Registration } from '../domain/authentication.ts';
 import type { SessionService } from './session-service.ts';
 
 export class RegistrationConflictError extends Error {
-  constructor() { super('Registration unavailable.'); this.name = 'RegistrationConflictError'; }
+  readonly fields: Record<string, string>;
+  constructor(fields: Record<string, string> = {}) {
+    super('Registration unavailable.');
+    this.name = 'RegistrationConflictError';
+    this.fields = fields;
+  }
 }
 
 export type RegisteredAccount = Readonly<{

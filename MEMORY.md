@@ -29,6 +29,8 @@ Last updated: 2026-11-23. Dated handoff — verify current `git status` and file
 
 - **Test runner & DB helpers:** Node >=24 (`node:sqlite` + native TS execution). Use `tests/helpers/migrations.ts` when fixtures load migrations with `-- statement-breakpoint` triggers (`0008+`). Integration tests run against ephemeral Miniflare/workerd D1, not persistent local D1 (`npm run db:migrate:local`) or remote D1.
 - **Pinned versions to respect:** `@noble/hashes` `2.4.0`, `miniflare` `5.20261118.0-beta` (`convertV4MiniflareOptions`), root TS 7 vs. frontend workspace TS 6 (`frontend/typecheck.cjs`).
+- **Profile updates:** `PATCH /api/me/profile` is session/CSRF-scoped; email changes invalidate verification/recovery, and password changes require the current password and revoke all sessions.
+- **Field errors:** Registration/profile APIs return `{ code, fields }`; the frontend maps these entries to accessible control-level Spanish messages.
 - **Workstation path note:** If `node` is missing from a restricted agent PATH, check existing Node >=24 installations (e.g., `/home/albertusko/.nvm/versions/node/v24.22.2/bin/node`) rather than installing a second runtime.
 
 ## Pending & unverified items

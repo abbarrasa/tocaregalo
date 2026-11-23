@@ -17,6 +17,7 @@ function clientStub() {
     reset: vi.fn<AuthClient['reset']>().mockResolvedValue(undefined),
     requestVerification: vi.fn<AuthClient['requestVerification']>().mockResolvedValue(undefined),
     confirmVerification: vi.fn<AuthClient['confirmVerification']>().mockResolvedValue(undefined),
+    updateProfile: vi.fn<AuthClient['updateProfile']>().mockResolvedValue({ account, passwordChanged: false }),
     logout: vi.fn<AuthClient['logout']>().mockResolvedValue(undefined),
   };
 }
@@ -40,6 +41,27 @@ beforeEach(() => { history.replaceState(null, '', '/#login'); localStorage.clear
 afterEach(() => { app?.unmount(); app = undefined; document.body.replaceChildren(); });
 
 describe('authentication screens', () => {
+  it('opens and validates the profile editor, including password confirmation', async () => {
+    const client = clientStub(); client.me.mockResolvedValue(account); await mount(client);
+    const button = [...document.querySelectorAll('button')].find(item => item.textContent === 'Modificar datos');
+    button?.click(); await nextTick();
+    await input('profile-name', 'Inés Modificada');
+    await input('profile-phone', '+34612345678');
+    await input('profile-new-password', '123456');
+    await input('profile-confirm-password', '654321');
+    await input('profile-current-password', 'abcdef');
+    const form = [...document.querySelectorAll('form')].find(item => item.textContent?.includes('Guardar datos'));
+    form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await vi.waitFor(() => expect(document.body.textContent).toContain('contraseñas nuevas'));
+    expect(client.updateProfile).not.toHaveBeenCalled();
+    await input('profile-phone', 'invalid');
+    await input('profile-new-password', '');
+    await input('profile-confirm-password', '');
+    await input('profile-current-password', '');
+    form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await vi.waitFor(() => expect(document.body.textContent).toContain('teléfono internacional'));
+    expect(client.updateProfile).not.toHaveBeenCalled();
+  });
   it('offers Google only on login and starts its OAuth route through the auth client', async () => {
     const client = clientStub(); await mount(client);
     const google = [...document.querySelectorAll('button')].find(item => item.textContent?.includes('Continuar con Google'));
@@ -49,6 +71,19 @@ describe('authentication screens', () => {
     expect(client.startSocialLogin).toHaveBeenCalledWith('google');
     await page('#register');
     expect([...document.querySelectorAll('button')].some(item => item.textContent?.includes('Continuar con Google'))).toBe(false);
+  });
+  it('shows server field errors next to registration inputs', async () => {
+    const client = clientStub();
+    client.register.mockRejectedValue(new ApiError(400, 'validation_error', {
+      email: 'Introduce un correo electrónico válido.',
+      password: 'La contraseña debe tener al menos seis caracteres.',
+    }));
+    await mount(client); await page('#register');
+    await input('name', 'Inés'); await input('email', 'invalid');
+    await input('password', '123456'); await input('confirm', '123456'); submit();
+    await vi.waitFor(() => expect(document.querySelector('#email')?.classList.contains('is-invalid')).toBe(true));
+    expect(document.querySelector('#email')?.getAttribute('aria-invalid')).toBe('true');
+    expect(document.body.textContent).toContain('correo electrónico válido');
   });
   it('registers without optional fields, preserves six Unicode characters and returns to login without issuing a session', async () => {
     const client = clientStub(); await mount(client); await page('#register');

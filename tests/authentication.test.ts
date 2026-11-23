@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { AuthInputError, loginInput, passwordInput, registrationInput } from '../src/domain/authentication.ts';
+import { AuthInputError, loginInput, passwordInput, profileUpdateInput, registrationInput } from '../src/domain/authentication.ts';
 import { Argon2PasswordHasher } from '../src/infrastructure/argon2-password-hasher.ts';
 
 test('password policy is only a minimum of six characters, without trimming or a specific maximum', () => {
@@ -42,4 +42,38 @@ test('Argon2id uses independent salts and verifies the exact password with fixed
   assert.equal(await passwords.verify('  abcdef  ', first), false);
   assert.equal(await passwords.verify('anything', null), false);
   await assert.rejects(passwords.verify('abcdef', first.replace('m=19456', 'm=999999999')));
+});
+
+test('profile updates reuse registration validation and require the current password for password changes', () => {
+  assert.deepEqual(profileUpdateInput({
+    name: ' Alice ',
+    lastName: ' Example ',
+    email: ' ALICE@EXAMPLE.TEST ',
+    phone: '+34 (612) 345-678',
+  }), {
+    name: 'Alice',
+    lastName: 'Example',
+    email: 'alice@example.test',
+    phone: '+34612345678',
+    currentPassword: null,
+    newPassword: null,
+  });
+  assert.deepEqual(profileUpdateInput({
+    name: 'Alice',
+    email: 'alice@example.test',
+    currentPassword: 'old-password',
+    newPassword: '  new😀password  ',
+  }).newPassword, '  new😀password  ');
+  assert.throws(() => profileUpdateInput({
+    name: 'Alice',
+    email: 'alice@example.test',
+    newPassword: 'new-password',
+  }), AuthInputError);
+  assert.throws(
+    () => profileUpdateInput({ name: '', email: 'invalid', phone: '612345678' }),
+    (error: unknown) => error instanceof AuthInputError
+      && error.fields.name !== undefined
+      && error.fields.email !== undefined
+      && error.fields.phone !== undefined,
+  );
 });

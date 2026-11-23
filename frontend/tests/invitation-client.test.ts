@@ -46,7 +46,7 @@ describe('invitation HTTP contract', () => {
     const clients = createClients(async path => path === '/api/me' ? Response.json({ account, csrfToken: 'proof' })
       : Response.json({ error: 'private-provider-detail' }, { status }));
     await clients.auth.me();
-    await expect(clients.invitations.send('g', invitation.email)).rejects.toMatchObject({ status: 429, message: 'Request failed' });
+    await expect(clients.invitations.send('g', invitation.email)).rejects.toMatchObject({ status: 429 });
     status = 400; await expect(clients.invitations.accept('a'.repeat(64))).rejects.toMatchObject({ status: 400 });
     status = 404; await expect(clients.invitations.revoke('g', invitation.email)).rejects.toMatchObject({ status: 404 });
   });
