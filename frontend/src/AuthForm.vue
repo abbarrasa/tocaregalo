@@ -17,7 +17,10 @@ const fields = computed<Field[]>(() => {
   const password: Field = { id: 'password', label: props.page === 'reset' ? 'Nueva contraseña' : 'Contraseña', type: 'password', required: true,
     autocomplete: props.page === 'login' ? 'current-password' : 'new-password', hint: props.page === 'login' ? undefined : 'Usa al menos seis caracteres.' };
   const confirmation: Field = { id: 'confirm', label: 'Confirmar contraseña', type: 'password', required: true, autocomplete: 'new-password' };
-  if (props.page === 'login') return [{ id: 'identifier', label: 'Correo o teléfono', required: true, autocomplete: 'username' }, password];
+  if (props.page === 'login') return [{
+    id: 'identifier', label: 'Correo o teléfono', required: true, autocomplete: 'username',
+    hint: 'Para teléfonos españoles puedes escribir 612345678 o +34612345678.',
+  }, password];
   if (props.page === 'recover') return [{ id: 'identifier', label: 'Correo o teléfono de tu cuenta', required: true, autocomplete: 'username', hint: 'Enviaremos las instrucciones al correo guardado en la cuenta, si corresponde.' }];
   if (props.page === 'reset') return [{ id: 'token', label: 'Código de recuperación', required: true, autocomplete: 'off', hint: 'Copia el código recibido por correo.' }, password, confirmation];
   return [

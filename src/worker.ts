@@ -61,6 +61,7 @@ export interface Env extends RecipientKeySettings {
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   GOOGLE_REDIRECT_URI?: string;
+  LOCAL_COUNTRY_PHONE_PREFIX?: string;
 }
 
 export default {
@@ -153,6 +154,7 @@ export default {
           limiter: new AuthRateLimiter(new AuthCountersRepository(env.DB)),
           applicationOrigin: env.APP_ORIGIN,
           sessionTtlSeconds: env.SESSION_TTL_SECONDS,
+          localCountryPhonePrefix: env.LOCAL_COUNTRY_PHONE_PREFIX,
         });
       }
       if (url.pathname === '/api/me/profile') {

@@ -519,7 +519,11 @@ respuesta de registro puede revelar que alguno de los identificadores ya existe;
 el login devuelve el mismo 401 para cuenta inexistente o contraseña incorrecta.
 
 `POST /api/login` acepta `{ "identifier": "persona@example.test", "password": "abcdef" }`.
-`identifier` puede ser correo o teléfono internacional. Una contraseña correcta
+`identifier` puede ser correo o teléfono internacional. Si el teléfono omite el
+prefijo, el prefijo local configurado mediante `LOCAL_COUNTRY_PHONE_PREFIX`
+se añade automáticamente; el valor por defecto es `+34`. Por ejemplo,
+`612345678`, `34 612345678` y `+34612345678` representan el mismo número.
+Una contraseña correcta
 genera una sesión nueva y devuelve `{ csrfToken }` junto a la cookie HttpOnly;
 el token de sesión no se devuelve en el JSON. `SESSION_TTL_SECONDS` vale `86400`
 en la configuración local y debe ser un entero positivo. El logout no afecta

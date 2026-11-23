@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { AuthInputError, loginInput, passwordInput, profileUpdateInput, registrationInput } from '../src/domain/authentication.ts';
+import { AuthInputError, loginInput, normalizeNationalOrInternationalPhone, passwordInput, profileUpdateInput, registrationInput } from '../src/domain/authentication.ts';
 import { Argon2PasswordHasher } from '../src/infrastructure/argon2-password-hasher.ts';
 
 test('password policy is only a minimum of six characters, without trimming or a specific maximum', () => {
@@ -29,6 +29,18 @@ test('registration requires email, name and password; optional fields normalize 
     { email: 'a@example.test', name: 'A', password: 'abcdef', phone: '612345678' }]) {
     assert.throws(() => registrationInput(value), AuthInputError);
   }
+});
+
+test('national phone login accepts the Spanish prefix optionally and preserves explicit international prefixes', () => {
+  assert.equal(normalizeNationalOrInternationalPhone('612345678'), '+34612345678');
+  assert.equal(normalizeNationalOrInternationalPhone('34 612345678'), '+34612345678');
+  assert.equal(normalizeNationalOrInternationalPhone('+34612345678'), '+34612345678');
+  assert.equal(normalizeNationalOrInternationalPhone('+1 (202) 555-0100'), '+12025550100');
+  assert.equal(loginInput({ identifier: '612345678', password: 'abcdef' }).identifier, '+34612345678');
+  assert.equal(loginInput({ identifier: '34 612345678', password: 'abcdef' }).identifier, '+34612345678');
+  assert.equal(loginInput({ identifier: '+34 612345678', password: 'abcdef' }).identifier, '+34612345678');
+  assert.equal(loginInput({ identifier: '+1 2025550100', password: 'abcdef' }).identifier, '+12025550100');
+  assert.throws(() => normalizeNationalOrInternationalPhone('12abc345'), AuthInputError);
 });
 
 test('Argon2id uses independent salts and verifies the exact password with fixed bounded parameters', async () => {

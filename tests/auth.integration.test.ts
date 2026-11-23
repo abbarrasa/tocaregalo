@@ -108,6 +108,11 @@ test('bundled Worker registration and login run real Argon2id against D1', async
     assert.equal(account.lastName, 'Example');
     const loggedIn = await post('/api/login', { identifier: '+34 612-345-678', password: '123456' });
     assert.equal(loggedIn.status, 200);
+    const national = await post('/api/login', { identifier: '612345678', password: '123456' });
+    assert.equal(national.status, 200);
+    const countryPrefix = await post('/api/login', { identifier: '34 612345678', password: '123456' });
+    assert.equal(countryPrefix.status, 200);
+    assert.equal((await post('/api/login', { identifier: '612345678abc', password: '123456' })).status, 400);
     const bobCookie = loggedIn.headers.get('Set-Cookie')?.split(';')[0];
     assert.ok(bobCookie);
     const me = await mf.dispatchFetch(origin + '/api/me', { headers: { Cookie: bobCookie } });
