@@ -10,6 +10,7 @@ interface AuthRouteDependencies {
   limiter: AuthRateLimiter;
   applicationOrigin: string;
   sessionTtlSeconds: string;
+  localCountryPhonePrefix?: string;
   now?: () => number;
 }
 
@@ -27,7 +28,9 @@ export async function handleAuthRequest(request: Request, dependencies: AuthRout
   try {
     const body = await readAuthBody(request);
     const operation = path === '/api/register' ? 'register' : 'login';
-    const input = operation === 'register' ? registrationInput(body) : loginInput(body);
+    const input = operation === 'register'
+      ? registrationInput(body)
+      : loginInput(body, dependencies.localCountryPhonePrefix);
     // Cloudflare sets/overwrites this header on inbound requests. Missing IPs share a fail-closed bucket.
     const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
     const identifier = 'identifier' in input ? input.identifier : undefined;

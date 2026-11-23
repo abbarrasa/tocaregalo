@@ -21,8 +21,20 @@ export function normalizePhone(value: string): string {
   return phone;
 }
 
-export function normalizeLoginIdentifier(value: string): string {
-  return value.includes('@') ? normalizeEmail(value) : normalizePhone(value);
+export function normalizeLoginIdentifier(value: string, defaultPrefix = '+34'): string {
+  if (value.includes('@')) return normalizeEmail(value);
+  return normalizeNationalOrInternationalPhone(value, defaultPrefix);
+}
+
+export function normalizeNationalOrInternationalPhone(value: string, defaultPrefix = '+34'): string {
+  const trimmed = value.trim();
+  const compact = trimmed.replace(/[\s()-]/g, '');
+  const prefix = /^\+[1-9][0-9]{1,14}$/.test(defaultPrefix) ? defaultPrefix : '+34';
+  if (compact.startsWith('+')) return normalizePhone(compact);
+  if (!/^\d+$/.test(compact)) throw new AuthInputError();
+  if (compact.startsWith(prefix.slice(1)) && compact.length > 4) return normalizePhone('+' + compact);
+  if (compact.length >= 6 && compact.length <= 15) return normalizePhone(prefix + compact);
+  throw new AuthInputError();
 }
 
 function text(value: unknown): string {
@@ -82,9 +94,9 @@ export function registrationInput(value: unknown): Registration {
   return { email, password, name: displayName, lastName, phone };
 }
 
-export function loginInput(value: unknown): { identifier: string; password: string } {
+export function loginInput(value: unknown, defaultPrefix = '+34'): { identifier: string; password: string } {
   const input = authObject(value);
-  return { identifier: normalizeLoginIdentifier(text(input.identifier)), password: passwordInput(input.password) };
+  return { identifier: normalizeLoginIdentifier(text(input.identifier), defaultPrefix), password: passwordInput(input.password) };
 }
 
 export type ProfileUpdate = Readonly<{

@@ -41,6 +41,11 @@ beforeEach(() => { history.replaceState(null, '', '/#login'); localStorage.clear
 afterEach(() => { app?.unmount(); app = undefined; document.body.replaceChildren(); });
 
 describe('authentication screens', () => {
+  it('explains that Spanish phones can omit the country prefix', async () => {
+    const client = clientStub(); await mount(client);
+    expect(document.body.textContent).toContain('612345678');
+    expect(document.body.textContent).toContain('+34612345678');
+  });
   it('opens and validates the profile editor, including password confirmation', async () => {
     const client = clientStub(); client.me.mockResolvedValue(account); await mount(client);
     const button = [...document.querySelectorAll('button')].find(item => item.textContent === 'Modificar datos');
