@@ -11,6 +11,7 @@ const closed: EventState = { ...ready, status: 'closed', closedAtMs: 2000 };
 const group = { id: 'g', name: 'Friends', ownerAccountId: 'self', createdAtMs: 0 };
 const auth: AuthClient = {
   async me() { return { id: 'self', displayName: 'Self', email: 's@example.test', lastName: null, phone: null, emailVerifiedAtMs: null }; },
+  startSocialLogin() {},
   async login() {}, async register() {}, async recover() {}, async reset() {}, async requestVerification() {}, async confirmVerification() {}, async logout() {},
 };
 function stubs() {

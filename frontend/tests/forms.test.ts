@@ -10,6 +10,7 @@ let app: VueApp | undefined;
 function clientStub() {
   return {
     me: vi.fn<AuthClient['me']>().mockRejectedValue(new ApiError(401)),
+    startSocialLogin: vi.fn<AuthClient['startSocialLogin']>(),
     login: vi.fn<AuthClient['login']>().mockResolvedValue(undefined),
     register: vi.fn<AuthClient['register']>().mockResolvedValue(undefined),
     recover: vi.fn<AuthClient['recover']>().mockResolvedValue(undefined),
@@ -39,6 +40,16 @@ beforeEach(() => { history.replaceState(null, '', '/#login'); localStorage.clear
 afterEach(() => { app?.unmount(); app = undefined; document.body.replaceChildren(); });
 
 describe('authentication screens', () => {
+  it('offers Google only on login and starts its OAuth route through the auth client', async () => {
+    const client = clientStub(); await mount(client);
+    const google = [...document.querySelectorAll('button')].find(item => item.textContent?.includes('Continuar con Google'));
+    expect(google).toBeTruthy();
+    google?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await nextTick();
+    expect(client.startSocialLogin).toHaveBeenCalledWith('google');
+    await page('#register');
+    expect([...document.querySelectorAll('button')].some(item => item.textContent?.includes('Continuar con Google'))).toBe(false);
+  });
   it('registers without optional fields, preserves six Unicode characters and returns to login without issuing a session', async () => {
     const client = clientStub(); await mount(client); await page('#register');
     expect(element('#phone', HTMLInputElement).required).toBe(false);

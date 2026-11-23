@@ -7,6 +7,7 @@ const props = defineProps<{ page: EntryPage; client: AuthClient }>();
 const emit = defineEmits<{ authenticated: []; registered: []; reset: []; busy: [value: boolean] }>();
 const values = reactive<Record<string, string>>({ identifier: '', name: '', lastName: '', email: '', phone: '', password: '', confirm: '', token: '' });
 const busy = ref(false); const error = ref(''); const sent = ref(false); const errorElement = ref<HTMLElement>();
+const socialProviders = [{ id: 'google', label: 'Continuar con Google' }] as const;
 class FormInputError extends Error {}
 const titles = { login: 'Iniciar sesión', register: 'Crea tu cuenta', recover: 'Recuperar contraseña', reset: 'Nueva contraseña' };
 type Field = { id: string; label: string; type?: string; autocomplete?: string; required?: boolean; hint?: string };
@@ -47,12 +48,25 @@ async function submit() {
     await nextTick(); errorElement.value?.focus();
   } finally { busy.value = false; emit('busy', false); }
 }
+function startSocialLogin(provider: 'google') {
+  props.client.startSocialLogin(provider);
+}
 </script>
 
 <template>
   <div>
     <p class="eyebrow">UN REGALO EMPIEZA CON UNA ILUSIÓN</p>
     <h2>{{ titles[page] }}</h2>
+    <div v-if="page === 'login'" class="mt-4">
+      <button v-for="provider in socialProviders" :key="provider.id" type="button"
+        class="btn btn-outline-primary w-100 mb-3" :disabled="busy"
+        @click="startSocialLogin(provider.id)">
+        {{ provider.label }}
+      </button>
+      <div class="d-flex align-items-center gap-3 my-3" aria-hidden="true">
+        <hr class="flex-grow-1"><span class="text-muted small">o</span><hr class="flex-grow-1">
+      </div>
+    </div>
     <p class="text-muted mt-3" v-if="page === 'login'">Entra y sigue preparando tu próxima sorpresa.</p>
     <p class="text-muted mt-3" v-else-if="page === 'register'">Tu próximo intercambio empieza aquí.</p>
     <p class="text-muted mt-3" v-else-if="page === 'reset'">Introduce el código de tu correo y elige una contraseña nueva.</p>

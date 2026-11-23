@@ -613,6 +613,18 @@ por HTTPS. Antes de probar envíos reales se necesitan:
 En local se pueden proporcionar los valores de SendGrid en `.dev.vars`, que
 está excluido de Git. No copiar secretos a documentación, pruebas ni logs. La
 configuración versionada solo incluye la duración y los valores locales existentes.
+
+### Configurar Google
+
+El login social usa OAuth 2.0 Authorization Code con Google. Antes de habilitarlo
+se necesitan una credencial web de Google y:
+
+- `GOOGLE_CLIENT_ID`: identificador público OAuth.
+- `GOOGLE_CLIENT_SECRET`: secreto OAuth, proporcionado solo al Worker.
+- `GOOGLE_REDIRECT_URI`: URL exacta `APP_ORIGIN + /api/auth/google/callback`.
+
+Registrar el callback como URI autorizada en Google. En local se pueden guardar
+los secretos en `.dev.vars`; no añadirlos a Wrangler, documentación o código.
 En el futuro despliegue habrá que configurar el secreto y el remitente reales;
 no se han creado ni modificado recursos remotos.
 
