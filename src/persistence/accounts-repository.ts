@@ -132,13 +132,15 @@ export class AccountsRepository implements ProfileStore {
     const credentialArgs: (string | number)[] = passwordHash !== null && credential !== null
       ? [accountId, passwordHash, credential.revision + 1]
       : [];
-    statements.push(
-      this.db.prepare(`UPDATE social_accounts SET email = ?
-        WHERE account_id = ? AND email = ? AND EXISTS (
-          SELECT 1 FROM accounts a
-          WHERE a.id = social_accounts.account_id AND a.email = ?${credentialSuffix}
-        )`).bind(input.email, accountId, previousEmail, input.email, ...credentialArgs),
-    );
+    if (input.email !== previousEmail) {
+      statements.push(
+        this.db.prepare(`UPDATE social_accounts SET email = ?
+          WHERE account_id = ? AND email = ? AND EXISTS (
+            SELECT 1 FROM accounts a
+            WHERE a.id = social_accounts.account_id AND a.email = ?${credentialSuffix}
+          )`).bind(input.email, accountId, previousEmail, input.email, ...credentialArgs),
+      );
+    }
     try {
       const result = await this.db.batch(statements);
       const accountResultIndex = (credentialUpdateIndex >= 0 ? credentialUpdateIndex + 1 : 0) + challengeDeleteCount;

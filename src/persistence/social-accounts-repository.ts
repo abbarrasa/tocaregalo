@@ -4,9 +4,18 @@ import { normalizeEmail, AuthInputError } from '../domain/authentication.ts';
 import { normalizedName } from '../domain/validation.ts';
 import type { PersistenceDatabase } from './d1.ts';
 
-export class UnverifiedAccountAdoptionError extends Error {
+export class SocialAccountAdoptionError extends Error {
   constructor() {
     super('Account ownership must be recovered before linking.');
+    this.name = 'SocialAccountAdoptionError';
+  }
+}
+
+// Backward-compatible alias: historically this error name implied only "unverified",
+// but adoption can be rejected for multiple reasons. Prefer SocialAccountAdoptionError.
+export class UnverifiedAccountAdoptionError extends SocialAccountAdoptionError {
+  constructor() {
+    super();
     this.name = 'UnverifiedAccountAdoptionError';
   }
 }

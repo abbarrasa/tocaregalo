@@ -4,7 +4,6 @@ import { SocialAuthService } from '../application/social-auth-service.ts';
 import { OAuthStatesRepository } from '../persistence/oauth-states-repository.ts';
 import { applicationOrigin } from './application-origin.ts';
 import { sessionCookie } from './session-cookie.ts';
-import { UnverifiedAccountAdoptionError } from '../persistence/social-accounts-repository.ts';
 
 interface SocialAuthDependencies {
   google: GoogleSocialAuth;
@@ -16,7 +15,7 @@ interface SocialAuthDependencies {
 }
 
 function json(body: unknown, status: number, headers: Record<string, string> = {}): Response {
-  return Response.json(body, { status, headers: { 'Cache-Control': 'no-store', ...headers } });
+  return Response.json(body, { status, headers: { ...headers, 'Cache-Control': 'no-store' } });
 }
 
 function randomUrlPart(bytes: number): string {
