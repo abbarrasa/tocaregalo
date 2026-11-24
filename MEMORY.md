@@ -4,7 +4,7 @@ Last updated: 2026-11-23. Dated handoff — verify current `git status` and file
 
 ## Product & architectural baseline
 
-- **Repository & scope:** `abbarrasa/tocaregalo-sites` (independent TypeScript + Vue 3 + Bootstrap 5 + Cloudflare Workers + D1 + SendGrid HTTPS implementation; Symfony lives in a separate repo). The v1.2 spec is not yet present; `/home/albertusko/Proyectos/TocaRegalo.html` (read 2026-11-20) is a visual reference only, not a replacement for backend/privacy rules.
+- **Repository & scope:** `abbarrasa/tocaregalo-sites` (independent TypeScript + Vue 3 + Bootstrap 5 + Cloudflare Workers + D1 + Resend HTTPS implementation; Symfony lives in a separate repo). The v1.2 spec is not yet present; `/home/albertusko/Proyectos/TocaRegalo.html` (read 2026-11-20) is a visual reference only, not a replacement for backend/privacy rules.
 - **Same-origin routing:** API (`/api`, `/api/*`, `/health`) runs on the Worker; static assets (`dist/frontend`) use hash routing (`#groups`, `#account`, `#invitations`, `#groups/<id>/events`, `#events/<id>`) with `not_found_handling=none` in `wrangler.site.jsonc` and `Cache-Control: no-store` on API responses.
 
 ## Key modules & migrations
@@ -22,7 +22,7 @@ Last updated: 2026-11-23. Dated handoff — verify current `git status` and file
   - `0011_scheduled_event_processing.sql`: `event_processing_jobs` (`close`/`redraw`), version + group-revision fences, capped backoff `1 -> 2 -> 4 -> 8 -> 15` min (stage saturates at 5).
   - `0012_draw_notifications.sql`: closure notification outbox, 120s fenced leases, max 6 known failures (`1 -> 2 -> 4 -> 8 -> 16` min).
   - `0013_social_auth.sql`: Google identities keyed by `(provider, subject)`, linked accounts and short-lived OAuth state hashes.
-- **Backend (`src/`):** `worker.ts` wires `domain/`, `application/`, `persistence/` (shared `PersistenceDatabase` in `src/persistence/d1.ts`), and `infrastructure/` (Argon2id via `@noble/hashes`, Web Crypto AES-GCM/HMAC, SendGrid HTTPS).
+- **Backend (`src/`):** `worker.ts` wires `domain/`, `application/`, `persistence/` (shared `PersistenceDatabase` in `src/persistence/d1.ts`), and `infrastructure/` (Argon2id via `@noble/hashes`, Web Crypto AES-GCM/HMAC, Resend HTTPS).
 - **Frontend (`frontend/src/`):** `App.vue`, `AuthForm.vue`, `AccountPanel.vue`, `GroupList.vue`, `GroupDetail.vue`, `OwnerInvitations.vue`, `AcceptInvitation.vue`, `EventList.vue`, `EventDetail.vue`, `EventLifecycle.vue`, `PrivateRecipient.vue`, `PageControls.vue`, `BrandMark.vue`, `http-client.ts`, `clients.ts`, `api.ts`, `group-client.ts`, `invitation-client.ts`, `event-client.ts`, `event-lifecycle-client.ts`, `recipient-client.ts`, `event-time.ts`, `pagination.ts`, `navigation.ts`, `use-page.ts`.
 
 ## Test & environment notes
@@ -32,10 +32,10 @@ Last updated: 2026-11-23. Dated handoff — verify current `git status` and file
 - **Profile updates:** `PATCH /api/me/profile` is session/CSRF-scoped; email changes invalidate verification/recovery, and password changes require the current password and revoke all sessions.
 - **Field errors:** Registration/profile APIs return `{ code, fields }`; the frontend maps these entries to accessible control-level Spanish messages.
 - **Phone login:** National phone identifiers are normalized with `LOCAL_COUNTRY_PHONE_PREFIX`, default `+34`; explicit international prefixes remain unchanged.
-- **SendGrid development:** Use `SENDGRID_SANDBOX_MODE=true` or `SENDGRID_TEST_RECIPIENT_EMAIL`; both require `APP_ENV=development`, and sandbox takes priority.
+- **Resend development:** Use `RESEND_TEST_MODE=true` or `RESEND_TEST_RECIPIENT_EMAIL`; both require `APP_ENV=development`, and test mode skips external calls.
 - **Workstation path note:** If `node` is missing from a restricted agent PATH, check existing Node >=24 installations (e.g., `/home/albertusko/.nvm/versions/node/v24.22.2/bin/node`) rather than installing a second runtime.
 
 ## Pending & unverified items
 
-- **Production & external services:** No remote D1 migration/deployment, real secrets (`SENDGRID_API_KEY`, `DRAW_CIPHER_KEY_HEX`, `DRAW_INDEX_KEY_HEX`, optional `DRAW_PREVIOUS_CIPHER_KEYS_JSON`), real email deliverability testing, or production Argon2id CPU profiling has been performed yet.
+- **Production & external services:** No remote D1 migration/deployment, real secrets (`RESEND_API_KEY`, `DRAW_CIPHER_KEY_HEX`, `DRAW_INDEX_KEY_HEX`, optional `DRAW_PREVIOUS_CIPHER_KEYS_JSON`), real email deliverability testing, or production Argon2id CPU profiling has been performed yet.
 - **Timing & product scope:** The <=60s post-due closure target is not certified by a 1-minute Cron or local tests alone. Phone verification, voluntary group exit, ownership transfer, account/recipient deletion policies, and any v1.2 extensions require explicit specification and approval before implementation. Browser QA in `docs/qa/browser-validation/README.md` verified core flows in local Chromium (including fix and revalidation of the post-verification navigation lock), with mobile/cross-browser and production TLS/cookie checks still pending.

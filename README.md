@@ -165,7 +165,7 @@ iniciar una mutación, para no restaurar un listado anterior después del cambio
 La API limita el envío a cinco solicitudes por grupo/correo y treinta por propietario
 cada quince minutos. La interfaz bloquea envíos simultáneos y muestra los errores
 de límite, permisos, código y red, sin reintentar operaciones automáticamente.
-Una respuesta 202 significa aceptación por SendGrid, no entrega al buzón. Ante
+Una respuesta 200/201/202 significa aceptación por Resend, no entrega al buzón. Ante
 resultado incierto, actualizar las invitaciones/grupos antes de repetir una acción;
 reenviar puede invalidar un código anterior. No se han probado buzones reales.
 
@@ -310,7 +310,7 @@ usan datos sintéticos. Las pruebas de dominio y SQLite no requieren paquetes;
 la integración local necesita las dependencias de desarrollo, sin cuenta Cloudflare.
 
 El frontend usa Vue y Bootstrap. La API está implementada en
-TypeScript como Worker, con D1 para persistencia y SendGrid HTTPS para el
+TypeScript como Worker, con D1 para persistencia y Resend HTTPS para el
 correo. El acceso a la URL publicada será público y la aplicación autenticará
 por su cuenta antes de conceder acceso a cuentas y datos de grupos o eventos.
 
@@ -578,7 +578,7 @@ Flujo de API:
 2. Enviar `POST /api/email-verification/request` con JSON `{}`, la cookie de
    sesión, el `Origin` configurado y `X-CSRF-Token`. El destinatario se obtiene
    de la cuenta autenticada; los campos `email` o `accountId` del cuerpo no
-   permiten cambiarlo. Devuelve 202 cuando SendGrid acepta la petición, o 204
+   permiten cambiarlo.    Devuelve 202 cuando Resend acepta la petición, o 204
    sin enviar otro correo si la cuenta ya estaba verificada.
 3. El correo de texto contiene un código aleatorio de 64 caracteres hexadecimales.
    Enviar `POST /api/email-verification/confirm` con JSON `{ "token": "<código>" }`
@@ -608,35 +608,30 @@ exigen JSON y aplican el límite de cuerpo de 16 KiB existente; las respuestas
 llevan `Cache-Control: no-store`. Los métodos incorrectos devuelven 405,
 una solicitud sin sesión válida 401 y los fallos de origen/CSRF 403.
 
-### Configurar SendGrid
+### Configurar Resend
 
-El adaptador usa la [API Mail Send](https://www.twilio.com/docs/sendgrid/api-reference/mail-send/mail-send)
+El adaptador usa la [API Emails](https://resend.com/docs/api-reference/emails/send-email)
 por HTTPS. Antes de probar envíos reales se necesitan:
 
-- `SENDGRID_API_KEY`: secreto con permiso Mail Send; no guardarlo en la configuración versionada.
-- `SENDGRID_FROM_EMAIL`: remitente autorizado en la cuenta de SendGrid.
+- `RESEND_API_KEY`: secreto de Resend; no guardarlo en la configuración versionada.
+- `RESEND_FROM_EMAIL`: remitente autorizado o dominio verificado en Resend.
 - `APP_ORIGIN`: origen HTTPS exacto de la aplicación.
 - `EMAIL_VERIFICATION_TTL_SECONDS`: entero positivo de duración del código.
 
-En local se pueden proporcionar los valores de SendGrid en `.dev.vars`, que
-está excluido de Git. No copiar secretos a documentación, pruebas ni logs. La
-configuración versionada solo incluye la duración y los valores locales existentes.
-
-Para pruebas locales de correo, `.dev.vars` puede incluir:
+En local se pueden proporcionar los valores en `.dev.vars`, excluido de Git:
 
 ```dotenv
 APP_ENV=development
-SENDGRID_API_KEY=clave-local
-SENDGRID_FROM_EMAIL=remitente-verificado@example.test
-SENDGRID_SANDBOX_MODE=true
-SENDGRID_TEST_RECIPIENT_EMAIL=desarrollo@example.test
+RESEND_API_KEY=re_...
+RESEND_FROM_EMAIL=onboarding@resend.dev
+RESEND_TEST_MODE=true
+RESEND_TEST_RECIPIENT_EMAIL=
 ```
 
-`SENDGRID_SANDBOX_MODE=true` tiene prioridad: SendGrid valida y acepta la
-solicitud, pero no entrega correos. `SENDGRID_TEST_RECIPIENT_EMAIL` sustituye
-el destinatario real únicamente cuando sandbox está desactivado y
-`APP_ENV=development`. Fuera de desarrollo, ambas opciones fallan cerrado y no
-realizan llamadas al proveedor. Los secretos reales no deben versionarse.
+`RESEND_TEST_MODE=true` evita toda llamada externa y sirve para componer/prueba
+local sin entregar correos reales. `RESEND_TEST_RECIPIENT_EMAIL` redirige el
+destinatario a un buzón de desarrollo sólo si test mode está desactivado y
+`APP_ENV=development`. Fuera de desarrollo, ambas opciones fallan cerrado.
 
 ### Configurar Google
 
@@ -656,7 +651,7 @@ El adaptador aplica un timeout de 10 segundos, desactiva el seguimiento de
 aperturas/clics y acepta únicamente una respuesta 202. Usa redirecciones en
 modo manual y rechaza los 3xx para no reenviar credenciales a otro destino.
 Workers [no admite `redirect: "error"`](https://developers.cloudflare.com/workers/runtime-apis/request/).
-Una respuesta 202 indica aceptación por SendGrid, no entrega en el buzón ni
+Una respuesta 200/201/202 indica aceptación por Resend, no entrega en el buzón ni
 verificación de la cuenta. Los errores del proveedor o de configuración producen
 un 503 genérico, sin devolver detalles sensibles; se invalida condicionalmente
 el código de ese intento sin borrar otro emitido después.
@@ -683,7 +678,7 @@ aprovisionadas internamente que todavía no tengan credenciales.
 2. Para solicitudes válidas y no limitadas, la API responde siempre
    `202 { "status": "recovery_requested" }`, exista o no la cuenta. La consulta
    y el envío se ejecutan mediante `waitUntil`, fuera de la respuesta pública.
-   Ese 202 no garantiza aceptación por SendGrid ni entrega. Los fallos generan
+   Ese 202 no garantiza aceptación por Resend ni entrega. Los fallos generan
    solo un mensaje de registro genérico y eliminan condicionalmente el desafío
    fallido sin borrar uno más reciente. No hay cola duradera ni reintento automático.
 3. Introducir el código recibido con `POST /api/password-recovery/confirm`, JSON
@@ -709,7 +704,7 @@ La solicitud permite 5 intentos por identificador normalizado y 30 por IP cada
 15 minutos. Correo y teléfono tienen contadores de identificador distintos.
 La confirmación permite 30 intentos por IP en ese periodo. Se conserva el límite
 de JSON de 16 KiB, `Cache-Control: no-store` y 429 con `Retry-After: 900`.
-Se reutiliza el transporte HTTPS de SendGrid, con un correo específico de
+Se reutiliza el transporte HTTPS de Resend, con un correo específico de
 recuperación y el seguimiento desactivado. La interfaz, los envíos reales y la
 validación remota siguen pendientes; las pruebas interceptan todo correo.
 
@@ -874,7 +869,7 @@ estado de verificación, no cambia contraseñas ni inicia una nueva sesión.
   una cuenta con esa dirección ni se expone esa información. Se envía el código
   al correo solicitado y se toma el nombre del grupo desde D1. Los campos del
   cuerpo de identidad, grupo o destinatario alternativo no permiten sobrescribir
-  esos datos. Devuelve 202 cuando SendGrid acepta el envío, sin devolver el código;
+  esos datos. Devuelve 202 cuando Resend acepta el envío, sin devolver el código;
   esto no garantiza entrega en el buzón.
 - `POST /api/invitations/accept`, JSON `{ "token": "<código>" }`:
   requiere sesión, Origin y CSRF. La cuenta se obtiene de la sesión y su correo
@@ -908,9 +903,9 @@ comprueba en el SQL de emisión. Las respuestas limitadas devuelven 429 con
 Se reutilizan los límites JSON de 16 KiB y las respuestas no-store. Sin sesión
 válida se devuelve 401; los fallos de Origin/CSRF, 403; tipo de contenido
 incorrecto, 415; cuerpo excesivo, 413; métodos no admitidos, 405. Una configuración
-de origen inválida impide operar con 503. Los fallos de SendGrid devuelven 503
+de origen inválida impide operar con 503. Los fallos de Resend devuelven 503
 genérico e invalidan únicamente el código de ese intento, sin borrar un reenvío
-posterior. Se usa el remitente y secreto de SendGrid existentes, sin seguimiento
+posterior. Se usa el remitente y secreto de Resend existentes, sin seguimiento
 de aperturas/clics. No hay cola duradera, reintentos automáticos, garantía de orden
 de entrega ni envío de correo probado en un buzón real.
 
@@ -1224,10 +1219,10 @@ Una retirada cancela atómicamente los avisos pendientes y reservados de esa cue
 en el grupo. Reincorporarse no los reactiva. Los ya aceptados no se reenvían.
 Si la retirada ocurre cuando el envío ya está en curso, no puede retirarse ese correo.
 
-Se reutilizan `SENDGRID_API_KEY` y `SENDGRID_FROM_EMAIL`, el transporte HTTPS con
+Se reutilizan `RESEND_API_KEY` y `RESEND_FROM_EMAIL`, el transporte HTTPS con
 timeout de diez segundos, sin redirecciones ni seguimiento. Los estados son
 `pending`, `sending`, `accepted`, `failed` y `cancelled`. `accepted` significa que
-SendGrid respondió 202; no prueba entrega en el buzón. Los errores conocidos
+Resend respondió 200/201/202; no prueba entrega en el buzón. Los errores conocidos
 reintentan tras 1, 2, 4, 8 y 16 minutos y paran después del sexto fallo. Las fechas
 marcan el primer instante elegible: la cadencia de Cron y el trabajo acumulado
 pueden retrasar la ejecución. Los fallos de configuración también cuentan.
@@ -1249,4 +1244,4 @@ del destinatario. Este alcance no convierte invitaciones, verificación o recupe
 en envíos duraderos, ni añade interfaz de administración, reenvío manual, webhooks
 de entrega o limpieza por antigüedad. Las credenciales y recursos reales siguen
 pendientes de configuración autorizada. Las pruebas usan D1 efímera/workerd y
-SendGrid simulado; no se han aplicado migraciones persistentes ni enviado correo real.
+Resend simulado; no se han aplicado migraciones persistentes ni enviado correo real.

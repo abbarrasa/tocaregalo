@@ -46,7 +46,7 @@ async function send() {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address) || address.length > 254) {
     formError.value = 'Introduce un correo electrónico válido.'; await nextTick(); errorElement.value?.focus(); return;
   }
-  await mutate(() => props.client.send(props.groupId, address), 'SendGrid ha aceptado la solicitud de envío. Esto no confirma la entrega en el buzón.');
+  await mutate(() => props.client.send(props.groupId, address), 'Resend ha aceptado la solicitud de envío. Esto no confirma la entrega en el buzón.');
 }
 async function revoke() {
   const address = selected.value; if (!address) return;

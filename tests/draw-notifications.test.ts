@@ -1,18 +1,17 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DrawNotificationService, type DrawNotificationStore } from '../src/application/draw-notification-service.ts';
-import { SendgridDrawNotificationSender } from '../src/infrastructure/sendgrid-draw-notification-sender.ts';
+import { ResendDrawNotificationSender } from '../src/infrastructure/resend-draw-notification-sender.ts';
 import { authObject } from '../src/domain/authentication.ts';
 
 test('notification adapter sends only a generic closed-event notice through the existing protected transport', async () => {
-  const sender = new SendgridDrawNotificationSender({ apiKey: 'synthetic-key', fromEmail: 'sender@example.test' }, async (url, options) => {
-    assert.equal(url, 'https://api.sendgrid.com/v3/mail/send'); assert.equal(options?.redirect, 'manual');
+  const sender = new ResendDrawNotificationSender({ apiKey: 'synthetic-key', fromEmail: 'sender@example.test' }, async (url, options) => {
+    assert.equal(url, 'https://api.resend.com/emails'); assert.equal(options?.redirect, 'manual');
     const body = authObject(JSON.parse(String(options?.body)));
-    assert.deepEqual(body.personalizations, [{ to: [{ email: 'participant@example.test' }] }]);
+    assert.deepEqual(body.to, ['participant@example.test']);
     assert.equal(body.subject, 'Sorteo disponible en TocaRegalo');
-    assert.ok(Array.isArray(body.content)); const text = authObject(body.content[0]).value;
+    assert.ok(typeof body.text === 'string'); const text = body.text;
     assert.ok(typeof text === 'string'); assert.match(text, /evento-1/); assert.match(text, /Inicia sesión/);
-    assert.deepEqual(body.tracking_settings, { click_tracking: { enable: false, enable_text: false }, open_tracking: { enable: false } });
     return new Response(null, { status: 202 });
   });
   await sender.send({ eventId: 'evento-1', email: 'participant@example.test' });

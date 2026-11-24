@@ -13,7 +13,7 @@ import { EmailVerificationService, VerificationDeliveryError } from '../src/appl
 import { createEmailVerificationToken, hashEmailVerificationToken } from '../src/domain/email-verification.ts';
 import { authObject } from '../src/domain/authentication.ts';
 
-test('email verification uses the bundled Worker, atomic D1 consumption and simulated SendGrid only', async t => {
+test('email verification uses the bundled Worker, atomic D1 consumption and simulated Resend only', async t => {
   const output = await mkdtemp(join(tmpdir(), 'tocaregalo-email-'));
   t.after(() => rm(output, { recursive: true, force: true }));
   execFileSync(process.execPath, ['node_modules/wrangler/bin/wrangler.js', 'deploy', '--dry-run', '--outdir', output], {
@@ -26,19 +26,16 @@ test('email verification uses the bundled Worker, atomic D1 consumption and simu
     name: 'verification-test', modules: true, script: await readFile(join(output, 'worker.js'), 'utf8'),
     compatibilityDate: '2026-11-19', d1Databases: ['DB'],
     bindings: { APP_ORIGIN: origin, SESSION_TTL_SECONDS: '86400', EMAIL_VERIFICATION_TTL_SECONDS: '86400',
-      SENDGRID_API_KEY: 'synthetic-test-key', SENDGRID_FROM_EMAIL: 'sender@example.test' },
+      RESEND_API_KEY: 'synthetic-test-key', RESEND_FROM_EMAIL: 'sender@example.test', APP_ENV: 'development', RESEND_TEST_MODE: 'false' },
     outboundService: async request => {
-      // Never forward requests to the network: capture only the expected SendGrid operation.
-      assert.equal(request.url, 'https://api.sendgrid.com/v3/mail/send');
+      // Never forward requests to the network: capture only the expected Resend operation.
+      assert.equal(request.url, 'https://api.resend.com/emails');
       assert.equal(request.headers.get('Authorization'), 'Bearer synthetic-test-key');
       const body = authObject(await request.json());
-      assert.ok(Array.isArray(body.personalizations));
-      const personalization = authObject(body.personalizations[0]);
-      assert.ok(Array.isArray(personalization.to));
-      const email = authObject(personalization.to[0]).email;
+      assert.ok(Array.isArray(body.to));
+      const email = body.to[0];
       assert.ok(typeof email === 'string');
-      assert.ok(Array.isArray(body.content));
-      const text = authObject(body.content[0]).value;
+      const text = body.text;
       assert.ok(typeof text === 'string');
       const token = text.match(/\b[a-f0-9]{64}\b/)?.[0];
       assert.ok(token);

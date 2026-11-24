@@ -30,15 +30,13 @@ test('group invitations run through the bundled Worker and atomic D1 acceptance'
   const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{
     name: 'invitations-test', modules: true, script: await readFile(join(output, 'worker.js'), 'utf8'),
     compatibilityDate: '2026-11-19', d1Databases: ['DB'],
-    bindings: { APP_ORIGIN: origin, SESSION_TTL_SECONDS: '86400', SENDGRID_API_KEY: 'synthetic-key', SENDGRID_FROM_EMAIL: 'sender@example.test' },
+    bindings: { APP_ORIGIN: origin, SESSION_TTL_SECONDS: '86400', RESEND_API_KEY: 'synthetic-key', RESEND_FROM_EMAIL: 'sender@example.test', APP_ENV: 'development', RESEND_TEST_MODE: 'false' },
     outboundService: async request => {
-      assert.equal(request.url, 'https://api.sendgrid.com/v3/mail/send');
+      assert.equal(request.url, 'https://api.resend.com/emails');
       const body = authObject(await request.json());
-      assert.ok(Array.isArray(body.personalizations));
-      const to = authObject(body.personalizations[0]).to; assert.ok(Array.isArray(to));
-      const email = authObject(to[0]).email; assert.ok(typeof email === 'string');
-      assert.ok(Array.isArray(body.content));
-      const text = authObject(body.content[0]).value; assert.ok(typeof text === 'string');
+      assert.ok(Array.isArray(body.to));
+      const email = body.to[0]; assert.ok(typeof email === 'string');
+      const text = body.text; assert.ok(typeof text === 'string');
       const token = text.match(/\b[a-f0-9]{64}\b/)?.[0]; assert.ok(token);
       messages.push({ email, token });
       return new MiniflareResponse(null, { status: providerStatus });
