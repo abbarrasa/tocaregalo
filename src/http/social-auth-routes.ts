@@ -4,6 +4,7 @@ import { SocialAuthService } from '../application/social-auth-service.ts';
 import { OAuthStatesRepository } from '../persistence/oauth-states-repository.ts';
 import { applicationOrigin } from './application-origin.ts';
 import { sessionCookie } from './session-cookie.ts';
+import { SocialAccountAdoptionError } from '../application/social-auth-service.ts';
 
 interface SocialAuthDependencies {
   google: GoogleSocialAuth;
@@ -111,7 +112,7 @@ export async function handleSocialAuthRequest(request: Request, dependencies: So
         identity.provider, identity.subject, identity.email, identity.displayName, seconds * 1000,
       );
     } catch (error) {
-      if (error instanceof UnverifiedAccountAdoptionError) return new Response(null, {
+      if (error instanceof SocialAccountAdoptionError) return new Response(null, {
         status: 302,
         headers: {
           Location: origin + '/#recover-social',

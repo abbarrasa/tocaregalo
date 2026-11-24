@@ -1,6 +1,13 @@
 import type { SessionService } from './session-service.ts';
 import type { RegisteredAccount } from './authentication-service.ts';
 
+export class SocialAccountAdoptionError extends Error {
+  constructor() {
+    super('Account ownership must be recovered before linking.');
+    this.name = 'SocialAccountAdoptionError';
+  }
+}
+
 export interface SocialIdentityStore {
   resolve(input: {
     provider: 'google';

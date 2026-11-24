@@ -1,24 +1,8 @@
 import type { RegisteredAccount } from '../application/authentication-service.ts';
-import type { SocialIdentityStore } from '../application/social-auth-service.ts';
+import { SocialAccountAdoptionError, type SocialIdentityStore } from '../application/social-auth-service.ts';
 import { normalizeEmail, AuthInputError } from '../domain/authentication.ts';
 import { normalizedName } from '../domain/validation.ts';
 import type { PersistenceDatabase } from './d1.ts';
-
-export class SocialAccountAdoptionError extends Error {
-  constructor() {
-    super('Account ownership must be recovered before linking.');
-    this.name = 'SocialAccountAdoptionError';
-  }
-}
-
-// Backward-compatible alias: historically this error name implied only "unverified",
-// but adoption can be rejected for multiple reasons. Prefer SocialAccountAdoptionError.
-export class UnverifiedAccountAdoptionError extends SocialAccountAdoptionError {
-  constructor() {
-    super();
-    this.name = 'UnverifiedAccountAdoptionError';
-  }
-}
 
 export class SocialAccountsRepository implements SocialIdentityStore {
   private readonly db: PersistenceDatabase;
@@ -60,7 +44,7 @@ export class SocialAccountsRepository implements SocialIdentityStore {
       .bind(email).first<RegisteredAccount & { emailVerifiedAtMs: number | null }>();
     if (linked) {
       if (linked.emailVerifiedAtMs === null
-        || !Number.isSafeInteger(linked.emailVerifiedAtMs)) throw new UnverifiedAccountAdoptionError();
+        || !Number.isSafeInteger(linked.emailVerifiedAtMs)) throw new SocialAccountAdoptionError();
       const result = await this.db.batch([
         this.db.prepare(`INSERT INTO social_accounts
           (provider, subject, account_id, email, linked_at_ms)
@@ -79,7 +63,7 @@ export class SocialAccountsRepository implements SocialIdentityStore {
             input.provider, input.subject, linked.id),
       ]);
       if (result[0].results.length !== 1 || result[1].results.length !== 1) {
-        throw new UnverifiedAccountAdoptionError();
+        throw new SocialAccountAdoptionError();
       }
       return linked;
     }

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { SocialAccountsRepository, UnverifiedAccountAdoptionError } from '../src/persistence/social-accounts-repository.ts';
+import { SocialAccountsRepository } from '../src/persistence/social-accounts-repository.ts';
+import { SocialAccountAdoptionError } from '../src/application/social-auth-service.ts';
 import { GoogleSocialAuth } from '../src/infrastructure/google-social-auth.ts';
 import { SocialAuthError } from '../src/domain/social-auth.ts';
 import type { PersistenceDatabase } from '../src/persistence/d1.ts';
@@ -131,7 +132,7 @@ test('verified account adoption rejects an account whose email changes between l
   await assert.rejects(repository.resolve({
     provider: 'google', subject: 'google-race', email: 'old@example.test',
     displayName: 'Old', linkedAtMs: 200,
-  }), UnverifiedAccountAdoptionError);
+  }), SocialAccountAdoptionError);
   assert.equal(db.prepare('SELECT count(*) AS count FROM social_accounts').get()?.count, 0);
   assert.equal(db.prepare('SELECT email FROM accounts WHERE id=?').get('existing')?.email, 'new@example.test');
   db.close();
@@ -161,7 +162,7 @@ test('verified account adoption rejects verification being cleared between looku
     await assert.rejects(repository.resolve({
       provider: 'google', subject: 'google-race', email: 'verified@example.test',
       displayName: 'Verified', linkedAtMs: 200,
-    }), UnverifiedAccountAdoptionError);
+    }), SocialAccountAdoptionError);
     assert.equal(db.prepare('SELECT count(*) AS count FROM social_accounts').get()?.count, 0);
     assert.equal(db.prepare('SELECT email_verified_at_ms AS value FROM accounts WHERE id=?').get('existing')?.value, null);
     db.close();
@@ -200,7 +201,7 @@ test('verified account adoption rechecks account ID and provider email atomicall
     email: 'old@example.test',
     displayName: 'Old',
     linkedAtMs: 200,
-  }), UnverifiedAccountAdoptionError);
+  }), SocialAccountAdoptionError);
 });
 
 test('unverified existing accounts cannot be adopted by Google social login', async () => {
@@ -229,7 +230,7 @@ test('unverified existing accounts cannot be adopted by Google social login', as
     email: 'victim@example.test',
     displayName: 'Victim',
     linkedAtMs: 200,
-  }), UnverifiedAccountAdoptionError);
+  }), SocialAccountAdoptionError);
 });
 
 test('OAuth callback rejects a state cookie mismatch and clears the browser binding', async () => {
