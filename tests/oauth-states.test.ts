@@ -13,12 +13,15 @@ class Statement implements D1Statement {
     this.sql = sql;
   }
   bind(...values: D1Value[]) { this.values = values; return this; }
-  execute(): void { this.db.prepare(this.sql).run(...this.values); }
+  private parameters(): (string | number | null | Uint8Array)[] {
+    return this.values.map(value => value instanceof ArrayBuffer ? new Uint8Array(value) : value);
+  }
+  execute(): void { this.db.prepare(this.sql).run(...this.parameters()); }
   async first<T>(): Promise<T | null> {
-    return (this.db.prepare(this.sql).get(...this.values) as T | undefined) ?? null;
+    return (this.db.prepare(this.sql).get(...this.parameters()) as T | undefined) ?? null;
   }
   async all<T>(): Promise<{ results: T[] }> {
-    return { results: this.db.prepare(this.sql).all(...this.values) as T[] };
+    return { results: this.db.prepare(this.sql).all(...this.parameters()) as T[] };
   }
 }
 
