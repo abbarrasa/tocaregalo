@@ -3,7 +3,7 @@ import { computed, nextTick, reactive, ref } from 'vue';
 import { ApiError, errorMessage, type AuthClient } from './api.ts';
 import { fieldError } from './form-errors.ts';
 
-export type EntryPage = 'login' | 'register' | 'recover' | 'reset';
+export type EntryPage = 'login' | 'register' | 'recover' | 'recover-social' | 'reset';
 const props = defineProps<{ page: EntryPage; client: AuthClient }>();
 const emit = defineEmits<{ authenticated: []; registered: []; reset: []; busy: [value: boolean] }>();
 const values = reactive<Record<string, string>>({ identifier: '', name: '', lastName: '', email: '', phone: '', password: '', confirm: '', token: '' });
@@ -11,7 +11,7 @@ const busy = ref(false); const error = ref(''); const sent = ref(false); const e
 const socialProviders = [{ id: 'google', label: 'Continuar con Google' }] as const;
 const fieldErrors = ref<Record<string, string>>({});
 class FormInputError extends Error {}
-const titles = { login: 'Iniciar sesión', register: 'Crea tu cuenta', recover: 'Recuperar contraseña', reset: 'Nueva contraseña' };
+const titles = { login: 'Iniciar sesión', register: 'Crea tu cuenta', recover: 'Recuperar contraseña', 'recover-social': 'Recupera la propiedad de tu cuenta', reset: 'Nueva contraseña' };
 type Field = { id: string; label: string; type?: string; autocomplete?: string; required?: boolean; hint?: string };
 const fields = computed<Field[]>(() => {
   const password: Field = { id: 'password', label: props.page === 'reset' ? 'Nueva contraseña' : 'Contraseña', type: 'password', required: true,
@@ -21,7 +21,7 @@ const fields = computed<Field[]>(() => {
     id: 'identifier', label: 'Correo o teléfono', required: true, autocomplete: 'username',
     hint: 'Para teléfonos españoles puedes escribir 612345678 o +34612345678.',
   }, password];
-  if (props.page === 'recover') return [{ id: 'identifier', label: 'Correo o teléfono de tu cuenta', required: true, autocomplete: 'username', hint: 'Enviaremos las instrucciones al correo guardado en la cuenta, si corresponde.' }];
+  if (props.page === 'recover' || props.page === 'recover-social') return [{ id: 'identifier', label: 'Correo o teléfono de tu cuenta', required: true, autocomplete: 'username', hint: 'Enviaremos las instrucciones al correo guardado en la cuenta, si corresponde.' }];
   if (props.page === 'reset') return [{ id: 'token', label: 'Código de recuperación', required: true, autocomplete: 'off', hint: 'Copia el código recibido por correo.' }, password, confirmation];
   return [
     { id: 'name', label: 'Nombre', required: true, autocomplete: 'given-name' },
@@ -44,7 +44,7 @@ async function submit() {
         ...(values.lastName ? { lastName: values.lastName } : {}), ...(values.phone ? { phone: values.phone } : {}) });
       emit('registered');
     }
-    if (props.page === 'recover') { await props.client.recover(values.identifier); sent.value = true; }
+    if (props.page === 'recover' || props.page === 'recover-social') { await props.client.recover(values.identifier); sent.value = true; }
     if (props.page === 'reset') { await props.client.reset(values.token.trim(), values.password); emit('reset'); }
     values.password = ''; values.confirm = ''; values.token = '';
   } catch (failure) {
@@ -82,6 +82,7 @@ function startSocialLogin(provider: 'google') {
       </div>
     </div>
     <p class="text-muted mt-3" v-if="page === 'login'">Entra y sigue preparando tu próxima sorpresa.</p>
+    <p class="text-muted mt-3" v-else-if="page === 'recover-social'">Google encontró una cuenta existente con ese correo, pero todavía no estaba verificada. Recupera primero el acceso por contraseña o teléfono, verifica el correo y después vuelve a iniciar sesión con Google.</p>
     <p class="text-muted mt-3" v-else-if="page === 'register'">Tu próximo intercambio empieza aquí.</p>
     <p class="text-muted mt-3" v-else-if="page === 'reset'">Introduce el código de tu correo y elige una contraseña nueva.</p>
     <div v-if="sent" class="alert alert-success mt-4" role="status">
@@ -101,7 +102,7 @@ function startSocialLogin(provider: 'google') {
           <div v-if="fieldError(fieldErrors, field.id)" :id="`${field.id}-error`" class="invalid-feedback d-block">{{ fieldError(fieldErrors, field.id) }}</div>
         </div>
         <p v-if="error" ref="errorElement" class="alert alert-danger" role="alert" tabindex="-1">{{ error }}</p>
-        <button type="submit" class="btn btn-primary w-100">{{ busy ? 'Un momento…' : ({ login: 'Entrar', register: 'Crear cuenta', recover: 'Solicitar instrucciones', reset: 'Guardar contraseña' })[page] }}</button>
+        <button type="submit" class="btn btn-primary w-100">{{ busy ? 'Un momento…' : ({ login: 'Entrar', register: 'Crear cuenta', recover: 'Solicitar instrucciones', 'recover-social': 'Solicitar instrucciones', reset: 'Guardar contraseña' })[page] }}</button>
       </fieldset>
     </form>
     <nav class="entry-links" aria-label="Opciones de acceso">

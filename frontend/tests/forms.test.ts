@@ -41,6 +41,13 @@ beforeEach(() => { history.replaceState(null, '', '/#login'); localStorage.clear
 afterEach(() => { app?.unmount(); app = undefined; document.body.replaceChildren(); });
 
 describe('authentication screens', () => {
+  it('shows an actionable Spanish ownership recovery screen after Google callback', async () => {
+    const client = clientStub(); await mount(client);
+    await page('#recover-social');
+    expect(document.body.textContent).toContain('Recupera la propiedad de tu cuenta');
+    expect(document.body.textContent).toContain('verifica el correo');
+    expect(document.querySelector('#identifier')).not.toBeNull();
+  });
   it('explains that Spanish phones can omit the country prefix', async () => {
     const client = clientStub(); await mount(client);
     expect(document.body.textContent).toContain('612345678');

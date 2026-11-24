@@ -112,10 +112,14 @@ export async function handleSocialAuthRequest(request: Request, dependencies: So
         identity.provider, identity.subject, identity.email, identity.displayName, seconds * 1000,
       );
     } catch (error) {
-      if (error instanceof UnverifiedAccountAdoptionError) return json({
-        error: 'Account ownership recovery required',
-        code: 'ownership_recovery_required',
-      }, 409, { 'Set-Cookie': expiredOAuthStateCookie() });
+      if (error instanceof UnverifiedAccountAdoptionError) return new Response(null, {
+        status: 302,
+        headers: {
+          Location: origin + '/#recover-social',
+          'Set-Cookie': expiredOAuthStateCookie(),
+          'Cache-Control': 'no-store',
+        },
+      });
       throw error;
     }
     if (!issued) return json({ error: 'Authentication unavailable' }, 503,
