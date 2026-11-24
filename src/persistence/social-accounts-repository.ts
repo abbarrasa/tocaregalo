@@ -33,7 +33,7 @@ export class SocialAccountsRepository implements SocialIdentityStore {
       .first<RegisteredAccount>();
     if (existing) {
       await this.db.batch([this.db.prepare(`UPDATE accounts SET email_verified_at_ms = COALESCE(email_verified_at_ms, ?)
-        WHERE id = ?`).bind(input.linkedAtMs, existing.id)]);
+        WHERE id = ? AND email = ?`).bind(input.linkedAtMs, existing.id, email)]);
       return existing;
     }
 
