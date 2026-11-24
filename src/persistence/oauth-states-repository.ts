@@ -5,9 +5,18 @@ export class OAuthStatesRepository {
   constructor(db: PersistenceDatabase) { this.db = db; }
 
   async insert(stateHash: string, provider: 'google', nowMs: number, ttlMs: number): Promise<void> {
-    await this.db.batch([this.db.prepare(`INSERT INTO oauth_states
-      (state_hash, provider, created_at_ms, expires_at_ms) VALUES (?, ?, ?, ?)`)
-      .bind(stateHash, provider, nowMs, nowMs + ttlMs)]);
+    await this.db.batch([
+      this.db.prepare(`DELETE FROM oauth_states
+        WHERE state_hash IN (
+          SELECT state_hash FROM oauth_states
+          WHERE expires_at_ms <= ?
+          ORDER BY expires_at_ms, state_hash
+          LIMIT 100
+        )`).bind(nowMs),
+      this.db.prepare(`INSERT INTO oauth_states
+        (state_hash, provider, created_at_ms, expires_at_ms) VALUES (?, ?, ?, ?)`)
+        .bind(stateHash, provider, nowMs, nowMs + ttlMs),
+    ]);
   }
 
   async consume(stateHash: string, provider: 'google', nowMs: number): Promise<string | null> {
