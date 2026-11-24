@@ -111,7 +111,7 @@ function startSocialLogin(provider: 'google') {
         <p class="mt-4">¿Es tu primera vez? <a href="#register" :aria-disabled="busy">Crea tu cuenta</a></p>
       </template>
       <template v-else>
-        <a v-if="page === 'recover'" href="#reset" :aria-disabled="busy">Ya tengo un código de recuperación</a>
+        <a v-if="page === 'recover' || page === 'recover-social'" href="#reset" :aria-disabled="busy">Ya tengo un código de recuperación</a>
         <a href="#login" :aria-disabled="busy">Volver al acceso</a>
       </template>
     </nav>

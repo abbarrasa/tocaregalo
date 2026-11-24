@@ -48,6 +48,15 @@ describe('authentication screens', () => {
     expect(document.body.textContent).toContain('verifica el correo');
     expect(document.querySelector('#identifier')).not.toBeNull();
   });
+  it('offers the recovery-code route after submitting recover-social', async () => {
+    const client = clientStub(); await mount(client);
+    await page('#recover-social');
+    await input('identifier', 'victim@example.test');
+    await submit();
+    await vi.waitFor(() => expect(document.body.textContent).toContain('recibirás instrucciones'));
+    const resetLink = [...document.querySelectorAll('a')].find(item => item.textContent?.includes('código de recuperación'));
+    expect(resetLink?.getAttribute('href')).toBe('#reset');
+  });
   it('explains that Spanish phones can omit the country prefix', async () => {
     const client = clientStub(); await mount(client);
     expect(document.body.textContent).toContain('612345678');
