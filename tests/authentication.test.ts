@@ -62,13 +62,13 @@ test('registration requires email, name and password; optional fields normalize 
   }
 });
 
-test('national phone login accepts the Spanish prefix optionally and preserves explicit international prefixes', () => {
+test('national phone login respects the configured prefix and requires + for cross-country identifiers', () => {
   assert.equal(normalizeNationalOrInternationalPhone('612345678'), '+34612345678');
-  assert.equal(normalizeNationalOrInternationalPhone('34 612345678'), '+34612345678');
   assert.equal(normalizeNationalOrInternationalPhone('+34612345678'), '+34612345678');
   assert.equal(normalizeNationalOrInternationalPhone('+1 (202) 555-0100'), '+12025550100');
+  assert.equal(normalizeNationalOrInternationalPhone('34991234567', '+55'), '+5534991234567');
+  assert.equal(normalizeNationalOrInternationalPhone('+34991234567', '+55'), '+34991234567');
   assert.equal(loginInput({ identifier: '612345678', password: 'abcdef' }).identifier, '+34612345678');
-  assert.equal(loginInput({ identifier: '34 612345678', password: 'abcdef' }).identifier, '+34612345678');
   assert.equal(loginInput({ identifier: '+34 612345678', password: 'abcdef' }).identifier, '+34612345678');
   assert.equal(loginInput({ identifier: '+1 2025550100', password: 'abcdef' }).identifier, '+12025550100');
   assert.throws(() => normalizeNationalOrInternationalPhone('12abc345'), AuthInputError);

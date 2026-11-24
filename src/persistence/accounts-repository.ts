@@ -70,6 +70,33 @@ export class AccountsRepository implements ProfileStore {
       );
     }
 
+    let challengeDeleteCount = 0;
+    if (input.email !== previousEmail) {
+      challengeDeleteCount = 2;
+      statements.push(
+        this.db.prepare(`DELETE FROM email_verifications
+          WHERE account_id = ? AND email = ?
+            AND EXISTS (
+              SELECT 1 FROM accounts a
+              WHERE a.id = email_verifications.account_id AND a.email = ?${passwordHash !== null && credential !== null
+                ? ' AND EXISTS (SELECT 1 FROM password_credentials pc WHERE pc.account_id = a.id AND pc.password_hash = ? AND pc.revision = ?)'
+                : ''}
+            )`).bind(...(passwordHash !== null && credential !== null
+              ? [accountId, previousEmail, previousEmail, passwordHash, credential.revision + 1]
+              : [accountId, previousEmail, previousEmail])),
+        this.db.prepare(`DELETE FROM password_recoveries
+          WHERE account_id = ? AND email = ?
+            AND EXISTS (
+              SELECT 1 FROM accounts a
+              WHERE a.id = password_recoveries.account_id AND a.email = ?${passwordHash !== null && credential !== null
+                ? ' AND EXISTS (SELECT 1 FROM password_credentials pc WHERE pc.account_id = a.id AND pc.password_hash = ? AND pc.revision = ?)'
+                : ''}
+            )`).bind(...(passwordHash !== null && credential !== null
+              ? [accountId, previousEmail, previousEmail, passwordHash, credential.revision + 1]
+              : [accountId, previousEmail, previousEmail])),
+      );
+    }
+
     const currencyGuard = passwordHash !== null && credential !== null
       ? ` AND EXISTS (SELECT 1 FROM password_credentials pc
           WHERE pc.account_id = accounts.id
@@ -111,31 +138,21 @@ export class AccountsRepository implements ProfileStore {
           SELECT 1 FROM accounts a
           WHERE a.id = social_accounts.account_id AND a.email = ?${credentialSuffix}
         )`).bind(input.email, accountId, previousEmail, input.email, ...credentialArgs),
-      this.db.prepare(`DELETE FROM email_verifications
-        WHERE account_id = ? AND EXISTS (
-          SELECT 1 FROM accounts a
-          WHERE a.id = email_verifications.account_id AND a.email = ? AND ? <> ?
-        )${credentialSuffix}`).bind(accountId, input.email, input.email, previousEmail, ...credentialArgs),
-      this.db.prepare(`DELETE FROM password_recoveries
-        WHERE account_id = ? AND EXISTS (
-          SELECT 1 FROM accounts a
-          WHERE a.id = password_recoveries.account_id AND a.email = ? AND ? <> ?
-        )${credentialSuffix}`).bind(accountId, input.email, input.email, previousEmail, ...credentialArgs),
     );
     try {
       const result = await this.db.batch(statements);
-      const accountResultIndex = credentialUpdateIndex >= 0 ? credentialUpdateIndex + 1 : 0;
-      if (result[accountResultIndex]?.results.length !== 1) {
-        throw new ProfileConflictError({
-          email: 'Los datos de la cuenta cambiaron mientras se procesaba la solicitud.',
-        });
-      }
+      const accountResultIndex = (credentialUpdateIndex >= 0 ? credentialUpdateIndex + 1 : 0) + challengeDeleteCount;
       if (passwordHash !== null && credential !== null) {
         if (credentialUpdateIndex < 0 || result[credentialUpdateIndex].results.length !== 1) {
           throw new ProfileConflictError({
             currentPassword: 'La contraseña cambió mientras se procesaba la solicitud. Repite el cambio con la contraseña actual.',
           });
         }
+      }
+      if (result[accountResultIndex]?.results.length !== 1) {
+        throw new ProfileConflictError({
+          email: 'Los datos de la cuenta cambiaron mientras se procesaba la solicitud.',
+        });
       }
     } catch (error) {
       if (error instanceof Error && /UNIQUE constraint failed: accounts\.(email|phone)\b/.test(error.message)) {

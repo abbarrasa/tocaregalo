@@ -32,8 +32,6 @@ export function normalizeNationalOrInternationalPhone(value: string, defaultPref
   const prefix = /^\+[1-9][0-9]{0,14}$/.test(defaultPrefix) ? defaultPrefix : '+34';
   if (compact.startsWith('+')) return normalizePhone(compact);
   if (!/^\d+$/.test(compact)) throw new AuthInputError();
-  if (compact.startsWith('34') && compact.length === 11) return normalizePhone('+' + compact);
-  if (compact.startsWith(prefix.slice(1)) && compact.length > 4) return normalizePhone('+' + compact);
   if (compact.length >= 6 && compact.length <= 15) return normalizePhone(prefix + compact);
   throw new AuthInputError();
 }

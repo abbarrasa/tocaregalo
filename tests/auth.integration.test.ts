@@ -113,7 +113,7 @@ test('bundled Worker registration and login run real Argon2id against D1', async
     assert.equal(loggedIn.status, 200);
     const national = await post('/api/login', { identifier: '612345678', password: '123456' });
     assert.equal(national.status, 200);
-    const countryPrefix = await post('/api/login', { identifier: '34 612345678', password: '123456' });
+    const countryPrefix = await post('/api/login', { identifier: '+34 612345678', password: '123456' });
     assert.equal(countryPrefix.status, 200);
     assert.equal((await post('/api/login', { identifier: '612345678abc', password: '123456' })).status, 400);
     const bobCookie = loggedIn.headers.get('Set-Cookie')?.split(';')[0];
@@ -165,6 +165,17 @@ test('bundled Worker registration and login run real Argon2id against D1', async
     await repository.create({ id: 'race-email', email: 'race-email-a@example.test', displayName: 'Race', createdAtMs: 0 });
     await db.prepare('UPDATE accounts SET email = ?, email_verified_at_ms = ? WHERE id = ?')
       .bind('race-email-b@example.test', 1234, 'race-email').run();
+    await db.prepare(`INSERT INTO email_verifications
+      (account_id,email,token_hash,created_at_ms,expires_at_ms,consumed_at_ms,consumption_id)
+      VALUES (?,?,?,?,?,NULL,NULL)`)
+      .bind('race-email', 'race-email-b@example.test', 'b'.repeat(64), 1000, 2000).run();
+    const raceHash = await (new Argon2PasswordHasher()).hash('race-password');
+    await db.prepare('INSERT INTO password_credentials (account_id,password_hash,created_at_ms,revision) VALUES (?,?,?,0)')
+      .bind('race-email', raceHash, 0).run();
+    await db.prepare(`INSERT INTO password_recoveries
+      (account_id,email,credential_revision,token_hash,created_at_ms,expires_at_ms,consumption_id)
+      VALUES (?,?,?,?,?,?,NULL)`)
+      .bind('race-email', 'race-email-b@example.test', 0, 'c'.repeat(64), 1000, 2000).run();
     await assert.rejects(repository.update('race-email', {
       name: 'Race Restored',
       email: 'race-email-a@example.test',
@@ -177,6 +188,8 @@ test('bundled Worker registration and login run real Argon2id against D1', async
     assert.equal(account?.email, 'race-email-b@example.test');
     assert.equal(account?.displayName, 'Race');
     assert.equal(account?.emailVerifiedAtMs, 1234);
+    assert.equal(await db.prepare('SELECT count(*) AS n FROM email_verifications WHERE account_id=?').bind('race-email').first('n'), 1);
+    assert.equal(await db.prepare('SELECT count(*) AS n FROM password_recoveries WHERE account_id=?').bind('race-email').first('n'), 1);
   });
 
   await t.test('a stale credential snapshot rejects an entire profile password update', async () => {
@@ -198,7 +211,10 @@ test('bundled Worker registration and login run real Argon2id against D1', async
       phone: null,
       currentPassword: 'old-password',
       newPassword: 'new-password',
-    }, await passwords.hash('new-password'), snapshot, 'race-profile@example.test', 100), ProfileConflictError);
+    }, await passwords.hash('new-password'), snapshot, 'race-profile@example.test', 100),
+    (error: unknown) => error instanceof ProfileConflictError
+      && error.fields.currentPassword !== undefined
+      && error.fields.email === undefined);
     const account = await repository.findSelf('race-profile');
     assert.equal(account?.displayName, 'Race');
     assert.equal(account?.email, 'race-profile@example.test');
