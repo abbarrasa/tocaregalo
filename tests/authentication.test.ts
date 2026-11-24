@@ -64,6 +64,7 @@ test('registration requires email, name and password; optional fields normalize 
 
 test('national phone login respects the configured prefix and requires + for cross-country identifiers', () => {
   assert.equal(normalizeNationalOrInternationalPhone('612345678'), '+34612345678');
+  assert.equal(normalizeNationalOrInternationalPhone('34 612345678'), '+34612345678');
   assert.equal(normalizeNationalOrInternationalPhone('+34612345678'), '+34612345678');
   assert.equal(normalizeNationalOrInternationalPhone('+1 (202) 555-0100'), '+12025550100');
   assert.equal(normalizeNationalOrInternationalPhone('34991234567', '+55'), '+5534991234567');

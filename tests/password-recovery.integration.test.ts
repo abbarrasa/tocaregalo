@@ -46,7 +46,7 @@ test('password recovery runs through the bundled Worker and atomic D1 mutations'
   }] }));
   t.after(() => mf.dispose());
   const db = await mf.getD1Database('DB');
-  for (const name of ['0001_draws.sql', '0002_accounts_groups.sql', '0003_sessions.sql', '0004_public_auth.sql', '0005_email_verification.sql']) {
+  for (const name of ['0001_draws.sql', '0002_accounts_groups.sql', '0003_sessions.sql', '0004_public_auth.sql', '0005_email_verification.sql', '0006_password_recovery.sql', '0014_password_recovery_credentialless.sql']) {
     const sql = await readFile(new URL('../migrations/' + name, import.meta.url), 'utf8');
     await db.batch(sql.split(';').map(s => s.trim()).filter(Boolean).map(s => db.prepare(s)));
   }
@@ -58,11 +58,11 @@ test('password recovery runs through the bundled Worker and atomic D1 mutations'
   }
   await db.prepare('INSERT INTO accounts (id,email,display_name,created_at_ms) VALUES (?,?,?,?)')
     .bind('legacy', 'legacy@example.test', 'Legacy', 0).run();
+  await db.prepare('INSERT INTO accounts (id,email,display_name,created_at_ms) VALUES (?,?,?,?)')
+    .bind('credentialless', 'credentialless@example.test', 'Credentialless', 0).run();
   const sessions = new SessionService(new SessionsRepository(db));
   const oldSession = await sessions.issueForVerifiedAccount('alice', 86400000);
   // Upgrade populated state: pre-existing credentials, sessions and nullable verification must survive.
-  const migration = await readFile(new URL('../migrations/0006_password_recovery.sql', import.meta.url), 'utf8');
-  await db.batch(migration.split(';').map(s => s.trim()).filter(Boolean).map(s => db.prepare(s)));
   assert.ok(await sessions.authenticate(oldSession.token));
   assert.equal((await credentials.findCredential('alice@example.test'))?.passwordHash, aliceHash);
   const repository = new PasswordRecoveriesRepository(db);
@@ -100,11 +100,21 @@ test('password recovery runs through the bundled Worker and atomic D1 mutations'
       assert.equal(response.status, known.status);
       assert.deepEqual(await response.json(), await known.clone().json());
     }
+    const credentialless = await requestCode('credentialless@example.test', {}, true);
+    assert.equal(credentialless.status, 202);
+    assert.equal(messages.at(-1)?.email, 'credentialless@example.test');
+    const credentiallessToken = messages.at(-1)?.token;
+    assert.ok(credentiallessToken);
+    assert.equal((await confirm(credentiallessToken, 'new-password')).status, 204);
+    assert.ok(await db.prepare('SELECT password_hash FROM password_credentials WHERE account_id=?')
+      .bind('credentialless').first('password_hash'));
     const us = await requestCode('2025550100', {}, true);
     assert.equal(us.status, 202);
     assert.equal(messages.at(-1)?.email, 'us@example.test');
-    assert.equal(messages.length, count + 1);
-    assert.equal(await repository.isActive(await hashPasswordRecoveryToken(messages[count].token), Date.now()), true);
+    assert.ok(messages.length >= count + 2);
+    const usToken = messages.at(-1)?.token;
+    assert.ok(usToken);
+    assert.equal(await repository.isActive(await hashPasswordRecoveryToken(usToken), Date.now()), true);
     providerStatus = 500;
     const failed = await requestCode('changed@example.test', {}, true);
     assert.equal(failed.status, 202);

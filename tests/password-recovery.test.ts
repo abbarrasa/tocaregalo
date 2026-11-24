@@ -21,6 +21,7 @@ test('recovery tokens are random and cannot cross session or email-verification 
 test('recovery normalizes national phones with the configured local prefix', () => {
   assert.equal(normalizeLoginIdentifier('2025550100', '+1'), '+12025550100');
   assert.equal(normalizeLoginIdentifier('+34 612345678', '+1'), '+34612345678');
+  assert.equal(normalizeLoginIdentifier('34 612345678', '+34'), '+34612345678');
   assert.equal(normalizeLoginIdentifier('34991234567', '+55'), '+5534991234567');
   assert.throws(() => normalizeLoginIdentifier('phone123', '+1'), AuthInputError);
 });
