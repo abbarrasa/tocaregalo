@@ -46,7 +46,7 @@ test('password recovery runs through the bundled Worker and atomic D1 mutations'
   }] }));
   t.after(() => mf.dispose());
   const db = await mf.getD1Database('DB');
-  for (const name of ['0001_draws.sql', '0002_accounts_groups.sql', '0003_sessions.sql', '0004_public_auth.sql', '0005_email_verification.sql', '0006_password_recovery.sql', '0014_password_recovery_credentialless.sql']) {
+  for (const name of ['0001_draws.sql', '0002_accounts_groups.sql', '0003_sessions.sql', '0004_public_auth.sql', '0005_email_verification.sql', '0006_password_recovery.sql']) {
     const sql = await readFile(new URL('../migrations/' + name, import.meta.url), 'utf8');
     await db.batch(sql.split(';').map(s => s.trim()).filter(Boolean).map(s => db.prepare(s)));
   }
@@ -60,6 +60,13 @@ test('password recovery runs through the bundled Worker and atomic D1 mutations'
     .bind('legacy', 'legacy@example.test', 'Legacy', 0).run();
   await db.prepare('INSERT INTO accounts (id,email,display_name,created_at_ms) VALUES (?,?,?,?)')
     .bind('credentialless', 'credentialless@example.test', 'Credentialless', 0).run();
+  await db.prepare(`INSERT INTO password_recoveries
+    (account_id,email,credential_revision,token_hash,created_at_ms,expires_at_ms,consumption_id)
+    VALUES (?,?,?,?,?,?,NULL)`)
+    .bind('alice', 'alice@example.test', 99, 'd'.repeat(64), 1000, 2000).run();
+  const migration14 = await readFile(new URL('../migrations/0014_password_recovery_credentialless.sql', import.meta.url), 'utf8');
+  await db.batch(migration14.split(';').map(s => s.trim()).filter(Boolean).map(s => db.prepare(s)));
+  assert.equal(await db.prepare('SELECT count(*) AS n FROM password_recovery_migration_quarantine').first('n'), 1);
   const sessions = new SessionService(new SessionsRepository(db));
   const oldSession = await sessions.issueForVerifiedAccount('alice', 86400000);
   // Upgrade populated state: pre-existing credentials, sessions and nullable verification must survive.
@@ -102,8 +109,9 @@ test('password recovery runs through the bundled Worker and atomic D1 mutations'
     }
     const credentialless = await requestCode('credentialless@example.test', {}, true);
     assert.equal(credentialless.status, 202);
-    assert.equal(messages.at(-1)?.email, 'credentialless@example.test');
-    const credentiallessToken = messages.at(-1)?.token;
+    const credentiallessMessage = messages.find(message => message.email === 'credentialless@example.test');
+    assert.ok(credentiallessMessage);
+    const credentiallessToken = credentiallessMessage.token;
     assert.ok(credentiallessToken);
     assert.equal((await confirm(credentiallessToken, 'new-password')).status, 204);
     assert.ok(await db.prepare('SELECT password_hash FROM password_credentials WHERE account_id=?')
