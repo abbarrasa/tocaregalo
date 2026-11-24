@@ -1,10 +1,10 @@
 import type { InvitationMessage, InvitationSender } from '../application/invitation-service.ts';
-import { SendgridTransport, type SendgridConfiguration } from './sendgrid-transport.ts';
+import { ResendTransport, type ResendConfiguration } from './resend-transport.ts';
 
-export class SendgridInvitationSender implements InvitationSender {
-  private readonly transport: SendgridTransport;
-  constructor(configuration: SendgridConfiguration, sendRequest: typeof fetch = fetch.bind(globalThis)) {
-    this.transport = new SendgridTransport(configuration, sendRequest);
+export class ResendInvitationSender implements InvitationSender {
+  private readonly transport: ResendTransport;
+  constructor(configuration: ResendConfiguration, sendRequest: typeof fetch = fetch.bind(globalThis)) {
+    this.transport = new ResendTransport(configuration, sendRequest);
   }
 
   async send(message: InvitationMessage): Promise<void> {

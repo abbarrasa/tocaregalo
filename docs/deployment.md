@@ -9,7 +9,7 @@ real hosting, account/database/domain bindings, secrets and delivery remain pend
 ## Inputs and configuration
 
 Record the approved release commit, Cloudflare account, Worker name, D1 name/ID,
-HTTPS hostname/route, intended plan and SendGrid verified sender. Use a dedicated
+HTTPS hostname/route, intended plan and Resend verified sender. Use a dedicated
 staging database and test recipients before production. Never paste secrets in
 issues, chat, command arguments or source control.
 
@@ -73,7 +73,7 @@ material. Retain historical AES keys securely; optional
 Loss of historical keys makes retained assignments unreadable. Never put actual
 keys in this document, D1 or logs.
 
-Email requires `SENDGRID_API_KEY` and `SENDGRID_FROM_EMAIL` (an authorized sender).
+Email requires `RESEND_API_KEY` and `RESEND_FROM_EMAIL` (an authorized sender).
 Use a key restricted to the required mail capability. Missing configuration can
 consume the six known failures of pending closure notices. Set up and validate
 mail before enabling production Cron or creating real closures.
@@ -129,7 +129,7 @@ member loses access. Never print assignments, cookies, codes or envelope content
 in the verification report.
 
 Real mail validation must use authorized test inboxes. Check verification,
-recovery, invitation and generic closure mail separately. SendGrid 202 means
+recovery, invitation and generic closure mail separately. Resend success means
 accepted by the provider, not delivered to the inbox. Closure notices have
 durable retries; other flows retain their documented policies. Do not intentionally
 exhaust production retries or manually reset rows to resend ambiguous outcomes.

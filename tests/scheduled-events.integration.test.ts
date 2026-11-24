@@ -26,9 +26,9 @@ test('scheduled Worker processing recovers D1 work in bounded, concurrent-safe b
   const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{ name: 'scheduled-test', modules: true,
     script: await readFile(join(output, 'worker.js'), 'utf8'), compatibilityDate: '2026-11-19', d1Databases: ['DB'],
     bindings: { APP_ORIGIN: 'https://app.example.test', ...keys,
-      SENDGRID_API_KEY: 'synthetic-only', SENDGRID_FROM_EMAIL: 'sender@example.test' },
+      RESEND_API_KEY: 'synthetic-only', RESEND_FROM_EMAIL: 'sender@example.test', APP_ENV: 'development', RESEND_TEST_MODE: 'false' },
     outboundService: async request => {
-      assert.equal(new URL(request.url).hostname, 'api.sendgrid.com');
+      assert.equal(new URL(request.url).hostname, 'api.resend.com');
       return new Response(null, { status: 202 });
     },
   }] }));

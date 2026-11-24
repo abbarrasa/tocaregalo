@@ -1,10 +1,10 @@
 import type { RecoverySender } from '../application/password-recovery-service.ts';
-import { SendgridTransport, type SendgridConfiguration } from './sendgrid-transport.ts';
+import { ResendTransport, type ResendConfiguration } from './resend-transport.ts';
 
-export class SendgridRecoverySender implements RecoverySender {
-  private readonly transport: SendgridTransport;
-  constructor(configuration: SendgridConfiguration, sendRequest: typeof fetch = fetch.bind(globalThis)) {
-    this.transport = new SendgridTransport(configuration, sendRequest);
+export class ResendRecoverySender implements RecoverySender {
+  private readonly transport: ResendTransport;
+  constructor(configuration: ResendConfiguration, sendRequest: typeof fetch = fetch.bind(globalThis)) {
+    this.transport = new ResendTransport(configuration, sendRequest);
   }
 
   async send(message: { email: string; token: string; expiresAtMs: number }): Promise<void> {

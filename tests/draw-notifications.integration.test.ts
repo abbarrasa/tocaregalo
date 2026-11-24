@@ -27,13 +27,13 @@ test('durable closure notifications enqueue atomically and recover fenced leases
   const keys = { DRAW_KEY_ID: 'synthetic', DRAW_CIPHER_KEY_HEX: '01'.repeat(32), DRAW_INDEX_KEY_HEX: '02'.repeat(32) };
   const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{ name: 'notification-test', modules: true,
     script: await readFile(join(output, 'worker.js'), 'utf8'), compatibilityDate: '2026-11-19', d1Databases: ['DB'],
-    bindings: { APP_ORIGIN: origin, ...keys, SENDGRID_API_KEY: 'synthetic-only', SENDGRID_FROM_EMAIL: 'sender@example.test' },
+    bindings: { APP_ORIGIN: origin, ...keys, RESEND_API_KEY: 'synthetic-only', RESEND_FROM_EMAIL: 'sender@example.test', APP_ENV: 'development', RESEND_TEST_MODE: 'false' },
     outboundService: async request => {
-      assert.equal(request.url, 'https://api.sendgrid.com/v3/mail/send');
+      assert.equal(request.url, 'https://api.resend.com/emails');
       const payload = authObject(await request.json()); assert.equal(payload.subject, 'Sorteo disponible en TocaRegalo');
-      assert.ok(Array.isArray(payload.content)); const text = authObject(payload.content[0]).value;
+      const text = payload.text;
       assert.ok(typeof text === 'string'); assert.match(text, /Inicia sesión/);
-      assert.deepEqual(Object.keys(payload).sort(), ['content', 'from', 'personalizations', 'subject', 'tracking_settings']);
+      assert.deepEqual(Object.keys(payload).sort(), ['from', 'subject', 'text', 'to']);
       outbound++; return new Response(null, { status: 202 });
     },
   }] }));

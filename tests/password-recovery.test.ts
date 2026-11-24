@@ -5,8 +5,8 @@ import { hashEmailVerificationToken } from '../src/domain/email-verification.ts'
 import { hashSessionToken } from '../src/domain/session.ts';
 import { PasswordRecoveryService, type PasswordRecoveryStore } from '../src/application/password-recovery-service.ts';
 import { AuthInputError } from '../src/domain/authentication.ts';
-import { SendgridRecoverySender } from '../src/infrastructure/sendgrid-recovery-sender.ts';
-import { MailDeliveryError } from '../src/infrastructure/sendgrid-transport.ts';
+import { ResendRecoverySender } from '../src/infrastructure/resend-recovery-sender.ts';
+import { MailDeliveryError } from '../src/infrastructure/resend-transport.ts';
 
 test('recovery tokens are random and cannot cross session or email-verification purposes', async () => {
   const token = createPasswordRecoveryToken();
@@ -45,7 +45,7 @@ test('recovery rechecks expiry after hashing and cleans up only the failed deliv
 
 test('recovery sender uses distinct content and never follows redirects or leaks provider errors', async () => {
   const message = { email: 'stored@example.test', token: createPasswordRecoveryToken(), expiresAtMs: 1800000 };
-  const sender = new SendgridRecoverySender({ apiKey: 'synthetic-key', fromEmail: 'sender@example.test' }, async (_url, init) => {
+  const sender = new ResendRecoverySender({ apiKey: 'synthetic-key', fromEmail: 'sender@example.test' }, async (_url, init) => {
     assert.equal(init?.redirect, 'manual');
     assert.ok(typeof init?.body === 'string');
     assert.ok(init.body.includes('Recupera tu contraseña'));
@@ -54,7 +54,7 @@ test('recovery sender uses distinct content and never follows redirects or leaks
     return new Response(null, { status: 202 });
   });
   await sender.send(message);
-  const failed = new SendgridRecoverySender({ apiKey: 'synthetic-key', fromEmail: 'sender@example.test' },
+  const failed = new ResendRecoverySender({ apiKey: 'synthetic-key', fromEmail: 'sender@example.test' },
     async () => new Response('sensitive', { status: 302 }));
   await assert.rejects(failed.send(message), error => error instanceof MailDeliveryError && !error.message.includes('sensitive'));
 });

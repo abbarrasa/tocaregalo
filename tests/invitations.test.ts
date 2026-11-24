@@ -5,7 +5,7 @@ import { hashSessionToken } from '../src/domain/session.ts';
 import { hashEmailVerificationToken } from '../src/domain/email-verification.ts';
 import { hashPasswordRecoveryToken } from '../src/domain/password-recovery.ts';
 import { AuthInputError } from '../src/domain/authentication.ts';
-import { SendgridInvitationSender } from '../src/infrastructure/sendgrid-invitation-sender.ts';
+import { ResendInvitationSender } from '../src/infrastructure/resend-invitation-sender.ts';
 import { InvitationService, InvitationDeliveryError, type InvitationStore } from '../src/application/invitation-service.ts';
 import { InvitationManagementService, type InvitationManagementStore } from '../src/application/invitation-management-service.ts';
 
@@ -51,8 +51,8 @@ test('invitation use case authorizes before quotas and invalidates only the fail
 
 test('invitation sender uses distinct text, stored group context and tracking-free transport', async () => {
   const token = createInvitationToken();
-  const sender = new SendgridInvitationSender({ apiKey: 'synthetic-key', fromEmail: 'sender@example.test' }, async (url, init) => {
-    assert.equal(url, 'https://api.sendgrid.com/v3/mail/send');
+  const sender = new ResendInvitationSender({ apiKey: 'synthetic-key', fromEmail: 'sender@example.test' }, async (url, init) => {
+    assert.equal(url, 'https://api.resend.com/emails');
     assert.equal(init?.redirect, 'manual');
     assert.ok(typeof init?.body === 'string');
     assert.ok(init.body.includes('Friends'));

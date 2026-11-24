@@ -1,10 +1,10 @@
 import { VerificationDeliveryError, type VerificationMessage, type VerificationSender } from '../application/email-verification-service.ts';
-import { SendgridTransport, type SendgridConfiguration } from './sendgrid-transport.ts';
+import { ResendTransport, type ResendConfiguration } from './resend-transport.ts';
 
-export class SendgridVerificationSender implements VerificationSender {
-  private readonly transport: SendgridTransport;
-  constructor(configuration: SendgridConfiguration, sendRequest: typeof fetch = fetch.bind(globalThis)) {
-    this.transport = new SendgridTransport(configuration, sendRequest);
+export class ResendVerificationSender implements VerificationSender {
+  private readonly transport: ResendTransport;
+  constructor(configuration: ResendConfiguration, sendRequest: typeof fetch = fetch.bind(globalThis)) {
+    this.transport = new ResendTransport(configuration, sendRequest);
   }
 
   async send(message: VerificationMessage): Promise<void> {

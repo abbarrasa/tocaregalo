@@ -17,7 +17,7 @@
     "PASSWORD_RECOVERY_TTL_SECONDS": "1800",
     "LOCAL_COUNTRY_PHONE_PREFIX": "+34",
     "APP_ENV": "development",
-    "SENDGRID_SANDBOX_MODE": "true"
+    "RESEND_TEST_MODE": "true"
   },
   "d1_databases": [
     {

@@ -1,11 +1,11 @@
 import type { DrawNotificationSender } from '../application/draw-notification-service.ts';
 import type { DrawNotificationMessage } from '../domain/draw-notifications.ts';
-import { SendgridTransport, type SendgridConfiguration } from './sendgrid-transport.ts';
+import { ResendTransport, type ResendConfiguration } from './resend-transport.ts';
 
-export class SendgridDrawNotificationSender implements DrawNotificationSender {
-  private readonly transport: SendgridTransport;
-  constructor(configuration: SendgridConfiguration, sendRequest: typeof fetch = fetch.bind(globalThis)) {
-    this.transport = new SendgridTransport(configuration, sendRequest);
+export class ResendDrawNotificationSender implements DrawNotificationSender {
+  private readonly transport: ResendTransport;
+  constructor(configuration: ResendConfiguration, sendRequest: typeof fetch = fetch.bind(globalThis)) {
+    this.transport = new ResendTransport(configuration, sendRequest);
   }
 
   async send(message: DrawNotificationMessage): Promise<void> {
