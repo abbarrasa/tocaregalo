@@ -32,6 +32,7 @@ Last updated: 2026-11-23. Dated handoff — verify current `git status` and file
 - **Profile updates:** `PATCH /api/me/profile` is session/CSRF-scoped; email changes invalidate verification/recovery, and password changes require the current password and revoke all sessions.
 - **Field errors:** Registration/profile APIs return `{ code, fields }`; the frontend maps these entries to accessible control-level Spanish messages.
 - **Phone login:** National phone identifiers are normalized with `LOCAL_COUNTRY_PHONE_PREFIX`, default `+34`; explicit international prefixes remain unchanged.
+- **SendGrid development:** Use `SENDGRID_SANDBOX_MODE=true` or `SENDGRID_TEST_RECIPIENT_EMAIL`; both require `APP_ENV=development`, and sandbox takes priority.
 - **Workstation path note:** If `node` is missing from a restricted agent PATH, check existing Node >=24 installations (e.g., `/home/albertusko/.nvm/versions/node/v24.22.2/bin/node`) rather than installing a second runtime.
 
 ## Pending & unverified items

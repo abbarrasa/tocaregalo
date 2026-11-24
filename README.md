@@ -622,6 +622,22 @@ En local se pueden proporcionar los valores de SendGrid en `.dev.vars`, que
 está excluido de Git. No copiar secretos a documentación, pruebas ni logs. La
 configuración versionada solo incluye la duración y los valores locales existentes.
 
+Para pruebas locales de correo, `.dev.vars` puede incluir:
+
+```dotenv
+APP_ENV=development
+SENDGRID_API_KEY=clave-local
+SENDGRID_FROM_EMAIL=remitente-verificado@example.test
+SENDGRID_SANDBOX_MODE=true
+SENDGRID_TEST_RECIPIENT_EMAIL=desarrollo@example.test
+```
+
+`SENDGRID_SANDBOX_MODE=true` tiene prioridad: SendGrid valida y acepta la
+solicitud, pero no entrega correos. `SENDGRID_TEST_RECIPIENT_EMAIL` sustituye
+el destinatario real únicamente cuando sandbox está desactivado y
+`APP_ENV=development`. Fuera de desarrollo, ambas opciones fallan cerrado y no
+realizan llamadas al proveedor. Los secretos reales no deben versionarse.
+
 ### Configurar Google
 
 El login social usa OAuth 2.0 Authorization Code con Google. Antes de habilitarlo

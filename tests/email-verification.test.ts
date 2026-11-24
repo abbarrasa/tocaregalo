@@ -39,6 +39,53 @@ test('SendGrid adapter sends plain text to a fixed HTTPS endpoint with tracking 
   assert.equal(calls, 1);
 });
 
+test('SendGrid development sandbox has priority and test-recipient redirection stays opt-in', async () => {
+  const sandbox = new SendgridVerificationSender({
+    apiKey: 'synthetic-test-key',
+    fromEmail: 'sender@example.test',
+    appEnvironment: 'development',
+    sandboxMode: true,
+    testRecipientEmail: 'developer@example.test',
+  }, async (_url, init) => {
+    const body = authObject(JSON.parse(String(init?.body)));
+    const personalizations = body.personalizations;
+    assert.ok(Array.isArray(personalizations));
+    const personalization = authObject(personalizations[0]);
+    const recipients = personalization.to;
+    assert.ok(Array.isArray(recipients));
+    assert.equal(authObject(recipients[0]).email, 'member@example.test');
+    const mailSettings = authObject(body.mail_settings);
+    const sandbox = authObject(mailSettings.sandbox_mode);
+    assert.equal(sandbox.enable, true);
+    return new Response(null, { status: 202 });
+  });
+  await sandbox.send({ email: 'member@example.test', token: 'a'.repeat(64), expiresAtMs: 50_000 });
+
+  const redirected = new SendgridVerificationSender({
+    apiKey: 'synthetic-test-key',
+    fromEmail: 'sender@example.test',
+    appEnvironment: 'development',
+    sandboxMode: false,
+    testRecipientEmail: 'developer@example.test',
+  }, async (_url, init) => {
+    const body = authObject(JSON.parse(String(init?.body)));
+    assert.deepEqual(body.personalizations, [{ to: [{ email: 'developer@example.test' }] }]);
+    assert.equal(body.mail_settings, undefined);
+    return new Response(null, { status: 202 });
+  });
+  await redirected.send({ email: 'member@example.test', token: 'a'.repeat(64), expiresAtMs: 50_000 });
+
+  for (const configuration of [
+    { apiKey: 'synthetic-test-key', fromEmail: 'sender@example.test', appEnvironment: 'production', sandboxMode: true },
+    { apiKey: 'synthetic-test-key', fromEmail: 'sender@example.test', appEnvironment: 'production', testRecipientEmail: 'developer@example.test' },
+  ]) {
+    const unsafe = new SendgridVerificationSender(configuration, async () => {
+      assert.fail('Development routing must not call SendGrid outside development.');
+    });
+    await assert.rejects(unsafe.send({ email: 'member@example.test', token: 'a'.repeat(64), expiresAtMs: 50_000 }), VerificationDeliveryError);
+  }
+});
+
 test('provider failures and bad configuration produce generic errors without leaking provider details', async () => {
   const message = { email: 'member@example.test', token: 'a'.repeat(64), expiresAtMs: 50_000 };
   for (const status of [200, 302, 401, 429, 500]) {
