@@ -10,6 +10,9 @@ import { RegistrationConflictError } from '../src/application/authentication-ser
 import { AuthCountersRepository } from '../src/persistence/auth-counters-repository.ts';
 import { AuthRateLimiter, authWindowMs } from '../src/application/auth-rate-limiter.ts';
 import { authObject } from '../src/domain/authentication.ts';
+import { AccountsRepository } from '../src/persistence/accounts-repository.ts';
+import { Argon2PasswordHasher } from '../src/infrastructure/argon2-password-hasher.ts';
+import { ProfileConflictError } from '../src/application/profile-service.ts';
 
 async function accountFrom(response: { json(): Promise<unknown> }): Promise<Record<string, unknown>> {
   return authObject(authObject(await response.json()).account);
@@ -155,6 +158,50 @@ test('bundled Worker registration and login run real Argon2id against D1', async
     assert.equal((await post('/api/login', {
       identifier: 'alice-updated@example.test', password: 'new-password',
     })).status, 200);
+  });
+
+  await t.test('a stale email snapshot rejects the entire profile update', async () => {
+    const repository = new AccountsRepository(db);
+    await repository.create({ id: 'race-email', email: 'race-email-a@example.test', displayName: 'Race', createdAtMs: 0 });
+    await db.prepare('UPDATE accounts SET email = ?, email_verified_at_ms = ? WHERE id = ?')
+      .bind('race-email-b@example.test', 1234, 'race-email').run();
+    await assert.rejects(repository.update('race-email', {
+      name: 'Race Restored',
+      email: 'race-email-a@example.test',
+      lastName: null,
+      phone: null,
+      currentPassword: null,
+      newPassword: null,
+    }, null, null, 'race-email-a@example.test', 100), ProfileConflictError);
+    const account = await repository.findSelf('race-email');
+    assert.equal(account?.email, 'race-email-b@example.test');
+    assert.equal(account?.displayName, 'Race');
+    assert.equal(account?.emailVerifiedAtMs, 1234);
+  });
+
+  await t.test('a stale credential snapshot rejects an entire profile password update', async () => {
+    const repository = new AccountsRepository(db);
+    await repository.create({ id: 'race-profile', email: 'race-profile@example.test', displayName: 'Race', createdAtMs: 0 });
+    const passwords = new Argon2PasswordHasher();
+    const oldHash = await passwords.hash('old-password');
+    await db.prepare('INSERT INTO password_credentials (account_id, password_hash, created_at_ms, revision) VALUES (?, ?, ?, 0)')
+      .bind('race-profile', oldHash, 0).run();
+    const snapshot = await repository.findCredential('race-profile');
+    assert.ok(snapshot);
+    const newHash = await passwords.hash('changed-elsewhere');
+    await db.prepare('UPDATE password_credentials SET password_hash = ?, revision = revision + 1 WHERE account_id = ?')
+      .bind(newHash, 'race-profile').run();
+    await assert.rejects(repository.update('race-profile', {
+      name: 'Race Updated',
+      email: 'race-profile-updated@example.test',
+      lastName: null,
+      phone: null,
+      currentPassword: 'old-password',
+      newPassword: 'new-password',
+    }, await passwords.hash('new-password'), snapshot, 'race-profile@example.test', 100), ProfileConflictError);
+    const account = await repository.findSelf('race-profile');
+    assert.equal(account?.displayName, 'Race');
+    assert.equal(account?.email, 'race-profile@example.test');
   });
 
   await t.test('minimum six and no password-specific maximum are honored by HTTP', async () => {

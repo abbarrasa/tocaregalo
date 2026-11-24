@@ -10,6 +10,7 @@ interface RecoveryDependencies {
   limiter: AuthRateLimiter;
   applicationOrigin: string;
   tokenTtlSeconds: string;
+  localCountryPhonePrefix?: string;
   schedule: (work: Promise<void>) => void;
 }
 
@@ -30,7 +31,7 @@ export async function handlePasswordRecoveryRequest(request: Request, dependenci
     let identifier: string | undefined;
     if (isRequest) {
       if (typeof body.identifier !== 'string') throw new AuthInputError();
-      identifier = normalizeLoginIdentifier(body.identifier);
+      identifier = normalizeLoginIdentifier(body.identifier, dependencies.localCountryPhonePrefix);
     }
     if (!await dependencies.limiter.allow(isRequest ? 'recovery-request' : 'recovery-confirm',
       request.headers.get('CF-Connecting-IP') ?? 'unknown', identifier)) {

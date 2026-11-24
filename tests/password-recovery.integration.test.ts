@@ -29,7 +29,8 @@ test('password recovery runs through the bundled Worker and atomic D1 mutations'
     name: 'recovery-test', modules: true, script: await readFile(join(output, 'worker.js'), 'utf8'),
     compatibilityDate: '2026-11-19', d1Databases: ['DB'],
     bindings: { APP_ORIGIN: origin, SESSION_TTL_SECONDS: '86400', PASSWORD_RECOVERY_TTL_SECONDS: '1800',
-      RESEND_API_KEY: 'synthetic-key', RESEND_FROM_EMAIL: 'sender@example.test', APP_ENV: 'development', RESEND_TEST_MODE: 'false' },
+      RESEND_API_KEY: 'synthetic-key', RESEND_FROM_EMAIL: 'sender@example.test', APP_ENV: 'development', RESEND_TEST_MODE: 'false',
+      LOCAL_COUNTRY_PHONE_PREFIX: '+1' },
     outboundService: async request => {
       assert.equal(request.url, 'https://api.resend.com/emails');
       const body = authObject(await request.json());
@@ -51,9 +52,9 @@ test('password recovery runs through the bundled Worker and atomic D1 mutations'
   }
   const credentials = new CredentialsRepository(db);
   const aliceHash = await new Argon2PasswordHasher().hash('abcdef');
-  for (const id of ['alice', 'expiry', 'rollback', 'race', 'send-race', 'changed']) {
+  for (const id of ['alice', 'expiry', 'rollback', 'race', 'send-race', 'changed', 'us']) {
     await credentials.create({ id, email: id + '@example.test', displayName: id, lastName: null,
-      phone: id === 'alice' ? '+34612345678' : null, createdAtMs: 0 }, id === 'alice' ? aliceHash : 'old-hash');
+      phone: id === 'alice' ? '+34612345678' : id === 'us' ? '+12025550100' : null, createdAtMs: 0 }, id === 'alice' ? aliceHash : 'old-hash');
   }
   await db.prepare('INSERT INTO accounts (id,email,display_name,created_at_ms) VALUES (?,?,?,?)')
     .bind('legacy', 'legacy@example.test', 'Legacy', 0).run();
@@ -99,8 +100,11 @@ test('password recovery runs through the bundled Worker and atomic D1 mutations'
       assert.equal(response.status, known.status);
       assert.deepEqual(await response.json(), await known.clone().json());
     }
-    assert.equal(messages.length, count);
-    assert.equal(await repository.isActive(await hashPasswordRecoveryToken(messages[count - 1].token), Date.now()), true);
+    const us = await requestCode('2025550100', {}, true);
+    assert.equal(us.status, 202);
+    assert.equal(messages.at(-1)?.email, 'us@example.test');
+    assert.equal(messages.length, count + 1);
+    assert.equal(await repository.isActive(await hashPasswordRecoveryToken(messages[count].token), Date.now()), true);
     providerStatus = 500;
     const failed = await requestCode('changed@example.test', {}, true);
     assert.equal(failed.status, 202);

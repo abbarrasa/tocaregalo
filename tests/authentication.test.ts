@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { AuthInputError, loginInput, normalizeNationalOrInternationalPhone, passwordInput, profileUpdateInput, registrationInput } from '../src/domain/authentication.ts';
 import { Argon2PasswordHasher } from '../src/infrastructure/argon2-password-hasher.ts';
+import { ProfileService, ProfileConflictError, type ProfileStore } from '../src/application/profile-service.ts';
 
 test('password policy is only a minimum of six characters, without trimming or a specific maximum', () => {
   for (const password of ['123456', 'abcdef', '      ', '😀😀😀😀😀😀', 'a'.repeat(1024)]) {
@@ -12,6 +13,36 @@ test('password policy is only a minimum of six characters, without trimming or a
   }
   const raw = '  aBcD  ';
   assert.equal(passwordInput(raw), raw);
+});
+
+test('profile password update passes the verified credential snapshot to atomic persistence', async () => {
+  const passwordHasher = new Argon2PasswordHasher();
+  const oldHash = await passwordHasher.hash('old-password');
+  let receivedCredential: { passwordHash: string; revision: number } | null = null;
+  let receivedPasswordHash: string | null = null;
+  const store: ProfileStore = {
+    async findCredential() { return { passwordHash: oldHash, revision: 7 }; },
+    async findProfile() { return { id: 'a', email: 'a@example.test', displayName: 'A', lastName: null, phone: null,
+      createdAtMs: 0, emailVerifiedAtMs: null }; },
+    async update(_accountId, _input, passwordHash, credential, _previousEmail) {
+      receivedPasswordHash = passwordHash;
+      receivedCredential = credential;
+      if (credential?.revision !== 7 || credential.passwordHash !== oldHash) {
+        throw new ProfileConflictError({ currentPassword: 'La contraseña cambió.' });
+      }
+      return { id: 'a', email: 'a@example.test', displayName: 'A', lastName: null, phone: null,
+        createdAtMs: 0, emailVerifiedAtMs: null };
+    },
+  };
+  const service = new ProfileService(store, passwordHasher, () => 100);
+  const result = await service.update('a', {
+    name: 'A', email: 'a@example.test', lastName: null, phone: null,
+    currentPassword: 'old-password', newPassword: 'new-password',
+  });
+  assert.equal(result.passwordChanged, true);
+  assert.deepEqual(receivedCredential, { passwordHash: oldHash, revision: 7 });
+  assert.ok(typeof receivedPasswordHash === 'string');
+  assert.notEqual(receivedPasswordHash, oldHash);
 });
 
 test('registration requires email, name and password; optional fields normalize without default country guesses', () => {
