@@ -62,6 +62,9 @@ export interface Env extends RecipientKeySettings {
   GOOGLE_CLIENT_SECRET?: string;
   GOOGLE_REDIRECT_URI?: string;
   LOCAL_COUNTRY_PHONE_PREFIX?: string;
+  APP_ENV?: string;
+  SENDGRID_SANDBOX_MODE?: string | boolean;
+  SENDGRID_TEST_RECIPIENT_EMAIL?: string;
 }
 
 export default {
@@ -71,7 +74,12 @@ export default {
     // Aggregate counts only: never log recipients, tokens, keys or raw database errors.
     console.info('Scheduled event processing', JSON.stringify(report));
     const notifications = await new DrawNotificationService(new DrawNotificationsRepository(env.DB),
-      new SendgridDrawNotificationSender({ apiKey: env.SENDGRID_API_KEY, fromEmail: env.SENDGRID_FROM_EMAIL })).run();
+      new SendgridDrawNotificationSender({
+        apiKey: env.SENDGRID_API_KEY, fromEmail: env.SENDGRID_FROM_EMAIL,
+        appEnvironment: env.APP_ENV,
+        sandboxMode: env.SENDGRID_SANDBOX_MODE,
+        testRecipientEmail: env.SENDGRID_TEST_RECIPIENT_EMAIL,
+      })).run();
     console.info('Draw notification processing', JSON.stringify(notifications));
   },
   async fetch(request, env, context) {
@@ -100,7 +108,12 @@ export default {
           sessions, applicationOrigin: env.APP_ORIGIN,
           management: new InvitationManagementService(new InvitationsRepository(env.DB)),
           invitations: new InvitationService(new InvitationsRepository(env.DB),
-            new SendgridInvitationSender({ apiKey: env.SENDGRID_API_KEY, fromEmail: env.SENDGRID_FROM_EMAIL }),
+            new SendgridInvitationSender({
+              apiKey: env.SENDGRID_API_KEY, fromEmail: env.SENDGRID_FROM_EMAIL,
+              appEnvironment: env.APP_ENV,
+              sandboxMode: env.SENDGRID_SANDBOX_MODE,
+              testRecipientEmail: env.SENDGRID_TEST_RECIPIENT_EMAIL,
+            }),
             new AuthRateLimiter(new AuthCountersRepository(env.DB))),
         });
       }
@@ -132,7 +145,12 @@ export default {
       if (url.pathname === '/api/password-recovery/request' || url.pathname === '/api/password-recovery/confirm') {
         return await handlePasswordRecoveryRequest(request, {
           recovery: new PasswordRecoveryService(new PasswordRecoveriesRepository(env.DB), new Argon2PasswordHasher(),
-            new SendgridRecoverySender({ apiKey: env.SENDGRID_API_KEY, fromEmail: env.SENDGRID_FROM_EMAIL })),
+            new SendgridRecoverySender({
+              apiKey: env.SENDGRID_API_KEY, fromEmail: env.SENDGRID_FROM_EMAIL,
+              appEnvironment: env.APP_ENV,
+              sandboxMode: env.SENDGRID_SANDBOX_MODE,
+              testRecipientEmail: env.SENDGRID_TEST_RECIPIENT_EMAIL,
+            })),
           limiter: new AuthRateLimiter(new AuthCountersRepository(env.DB)),
           applicationOrigin: env.APP_ORIGIN, tokenTtlSeconds: env.PASSWORD_RECOVERY_TTL_SECONDS,
           schedule: work => context.waitUntil(work),
@@ -142,7 +160,12 @@ export default {
         return await handleEmailVerificationRequest(request, {
           sessions,
           verification: new EmailVerificationService(new EmailVerificationsRepository(env.DB),
-            new SendgridVerificationSender({ apiKey: env.SENDGRID_API_KEY, fromEmail: env.SENDGRID_FROM_EMAIL })),
+            new SendgridVerificationSender({
+              apiKey: env.SENDGRID_API_KEY, fromEmail: env.SENDGRID_FROM_EMAIL,
+              appEnvironment: env.APP_ENV,
+              sandboxMode: env.SENDGRID_SANDBOX_MODE,
+              testRecipientEmail: env.SENDGRID_TEST_RECIPIENT_EMAIL,
+            })),
           limiter: new AuthRateLimiter(new AuthCountersRepository(env.DB)),
           applicationOrigin: env.APP_ORIGIN,
           tokenTtlSeconds: env.EMAIL_VERIFICATION_TTL_SECONDS,
