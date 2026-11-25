@@ -1,5 +1,5 @@
 import type { RegisteredAccount } from '../application/authentication-service.ts';
-import type { SocialIdentityStore } from '../application/social-auth-service.ts';
+import { SocialAccountAdoptionError, type SocialIdentityStore } from '../application/social-auth-service.ts';
 import { normalizeEmail, AuthInputError } from '../domain/authentication.ts';
 import { normalizedName } from '../domain/validation.ts';
 import type { PersistenceDatabase } from './d1.ts';
@@ -38,17 +38,33 @@ export class SocialAccountsRepository implements SocialIdentityStore {
     }
 
     const linked = await this.db.prepare(`SELECT a.id, a.email, a.display_name AS displayName,
-      a.last_name AS lastName, a.phone, a.created_at_ms AS createdAtMs
+      a.last_name AS lastName, a.phone, a.created_at_ms AS createdAtMs,
+      a.email_verified_at_ms AS emailVerifiedAtMs
       FROM accounts a WHERE a.email = ?`)
-      .bind(email).first<RegisteredAccount>();
+      .bind(email).first<RegisteredAccount & { emailVerifiedAtMs: number | null }>();
     if (linked) {
-      await this.db.batch([
+      if (linked.emailVerifiedAtMs === null
+        || !Number.isSafeInteger(linked.emailVerifiedAtMs)) throw new SocialAccountAdoptionError();
+      const result = await this.db.batch([
         this.db.prepare(`INSERT INTO social_accounts
-          (provider, subject, account_id, email, linked_at_ms) VALUES (?, ?, ?, ?, ?)`)
-          .bind(input.provider, input.subject, linked.id, email, input.linkedAtMs),
+          (provider, subject, account_id, email, linked_at_ms)
+          SELECT ?, ?, a.id, a.email, ?
+          FROM accounts a
+          WHERE a.id = ? AND a.email = ? AND a.email_verified_at_ms IS NOT NULL
+          RETURNING account_id`)
+          .bind(input.provider, input.subject, input.linkedAtMs, linked.id, email),
         this.db.prepare(`UPDATE accounts SET email_verified_at_ms = COALESCE(email_verified_at_ms, ?)
-          WHERE id = ?`).bind(input.linkedAtMs, linked.id),
+          WHERE id = ? AND email = ? AND email_verified_at_ms IS NOT NULL
+            AND EXISTS (
+              SELECT 1 FROM social_accounts s
+              WHERE s.provider = ? AND s.subject = ? AND s.account_id = ?
+            )
+          RETURNING id`).bind(input.linkedAtMs, linked.id, email,
+            input.provider, input.subject, linked.id),
       ]);
+      if (result[0].results.length !== 1 || result[1].results.length !== 1) {
+        throw new SocialAccountAdoptionError();
+      }
       return linked;
     }
 

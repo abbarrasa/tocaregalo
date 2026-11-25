@@ -153,6 +153,7 @@ export default {
             })),
           limiter: new AuthRateLimiter(new AuthCountersRepository(env.DB)),
           applicationOrigin: env.APP_ORIGIN, tokenTtlSeconds: env.PASSWORD_RECOVERY_TTL_SECONDS,
+          localCountryPhonePrefix: env.LOCAL_COUNTRY_PHONE_PREFIX,
           schedule: work => context.waitUntil(work),
         });
       }

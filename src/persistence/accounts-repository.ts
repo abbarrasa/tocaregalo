@@ -35,45 +35,127 @@ export class AccountsRepository implements ProfileStore {
       FROM accounts WHERE id = ?`).bind(accountId).first<Account>();
   }
 
-  async findCredential(accountId: string): Promise<{ passwordHash: string } | null> {
-    return this.db.prepare(`SELECT password_hash AS passwordHash
-      FROM password_credentials WHERE account_id = ?`).bind(accountId)
-      .first<{ passwordHash: string }>();
+  async findProfile(accountId: string): Promise<{
+    id: string; email: string; displayName: string; lastName: string | null; phone: string | null;
+    createdAtMs: number; emailVerifiedAtMs: number | null;
+  } | null> {
+    return this.findSelf(accountId);
   }
 
-  async update(accountId: string, input: ProfileUpdate, passwordHash: string | null, nowMs: number): Promise<{
+  async findCredential(accountId: string): Promise<{ passwordHash: string; revision: number } | null> {
+    return this.db.prepare(`SELECT password_hash AS passwordHash, revision
+      FROM password_credentials WHERE account_id = ?`).bind(accountId)
+      .first<{ passwordHash: string; revision: number }>();
+  }
+
+  async update(accountId: string, input: ProfileUpdate, passwordHash: string | null,
+    credential: { passwordHash: string; revision: number } | null,
+    previousEmail: string, nowMs: number): Promise<{
     id: string; email: string; displayName: string; lastName: string | null; phone: string | null;
     createdAtMs: number; emailVerifiedAtMs: number | null;
   }> {
-    const current = await this.findSelf(accountId);
-    if (!current) throw new RangeError('Account not found.');
-    const emailChanged = current.email !== input.email;
-    const statements = [
-      this.db.prepare(`UPDATE accounts SET email = ?, display_name = ?, last_name = ?, phone = ?,
-        email_verified_at_ms = CASE WHEN ? THEN NULL ELSE email_verified_at_ms END
-        WHERE id = ?`)
-        .bind(input.email, input.name, input.lastName, input.phone, emailChanged ? 1 : 0, accountId),
-    ];
-    if (passwordHash !== null) {
+    if (passwordHash !== null && credential === null) throw new RangeError('Credential snapshot required.');
+
+    const statements = [];
+    let credentialUpdateIndex = -1;
+    if (passwordHash !== null && credential !== null) {
+      credentialUpdateIndex = statements.length;
       statements.push(
-        this.db.prepare(`INSERT INTO password_credentials
-          (account_id, password_hash, created_at_ms, revision) VALUES (?, ?, ?, 1)
-          ON CONFLICT(account_id) DO UPDATE SET
-            password_hash = excluded.password_hash,
-            revision = password_credentials.revision + 1`)
-          .bind(accountId, passwordHash, nowMs),
-        this.db.prepare('DELETE FROM sessions WHERE account_id = ?').bind(accountId),
+        this.db.prepare(`UPDATE password_credentials
+          SET password_hash = ?, revision = revision + 1
+          WHERE account_id = ? AND password_hash = ? AND revision = ?
+            AND EXISTS (SELECT 1 FROM accounts a WHERE a.id = password_credentials.account_id AND a.email = ?)
+          RETURNING account_id`)
+          .bind(passwordHash, accountId, credential.passwordHash, credential.revision, previousEmail),
       );
     }
-    if (emailChanged) {
+
+    let challengeDeleteCount = 0;
+    if (input.email !== previousEmail) {
+      challengeDeleteCount = 2;
       statements.push(
-        this.db.prepare('UPDATE social_accounts SET email = ? WHERE account_id = ?').bind(input.email, accountId),
-        this.db.prepare('DELETE FROM email_verifications WHERE account_id = ?').bind(accountId),
-        this.db.prepare('DELETE FROM password_recoveries WHERE account_id = ?').bind(accountId),
+        this.db.prepare(`DELETE FROM email_verifications
+          WHERE account_id = ? AND email = ?
+            AND EXISTS (
+              SELECT 1 FROM accounts a
+              WHERE a.id = email_verifications.account_id AND a.email = ?${passwordHash !== null && credential !== null
+                ? ' AND EXISTS (SELECT 1 FROM password_credentials pc WHERE pc.account_id = a.id AND pc.password_hash = ? AND pc.revision = ?)'
+                : ''}
+            )`).bind(...(passwordHash !== null && credential !== null
+              ? [accountId, previousEmail, previousEmail, passwordHash, credential.revision + 1]
+              : [accountId, previousEmail, previousEmail])),
+        this.db.prepare(`DELETE FROM password_recoveries
+          WHERE account_id = ? AND email = ?
+            AND EXISTS (
+              SELECT 1 FROM accounts a
+              WHERE a.id = password_recoveries.account_id AND a.email = ?${passwordHash !== null && credential !== null
+                ? ' AND EXISTS (SELECT 1 FROM password_credentials pc WHERE pc.account_id = a.id AND pc.password_hash = ? AND pc.revision = ?)'
+                : ''}
+            )`).bind(...(passwordHash !== null && credential !== null
+              ? [accountId, previousEmail, previousEmail, passwordHash, credential.revision + 1]
+              : [accountId, previousEmail, previousEmail])),
+      );
+    }
+
+    const currencyGuard = passwordHash !== null && credential !== null
+      ? ` AND EXISTS (SELECT 1 FROM password_credentials pc
+          WHERE pc.account_id = accounts.id
+            AND pc.password_hash = ?
+            AND pc.revision = ?)`
+      : '';
+
+    const accountBinds: (string | number | null)[] = [
+      input.email, input.name, input.lastName, input.phone, input.email, accountId, previousEmail,
+    ];
+    if (passwordHash !== null && credential !== null) {
+      accountBinds.push(passwordHash, credential.revision + 1);
+    }
+    statements.push(
+      this.db.prepare(`UPDATE accounts SET email = ?, display_name = ?, last_name = ?, phone = ?,
+        email_verified_at_ms = CASE WHEN email <> ? THEN NULL ELSE email_verified_at_ms END
+        WHERE id = ? AND email = ?${currencyGuard}
+        RETURNING id`)
+        .bind(...accountBinds),
+    );
+
+    if (passwordHash !== null && credential !== null) {
+      statements.push(
+        this.db.prepare(`DELETE FROM sessions WHERE account_id = ?
+          AND EXISTS (SELECT 1 FROM password_credentials pc
+            WHERE pc.account_id = ? AND pc.password_hash = ? AND pc.revision = ?)`)
+          .bind(accountId, accountId, passwordHash, credential.revision + 1),
+      );
+    }
+    const credentialSuffix = passwordHash !== null && credential !== null
+      ? ' AND EXISTS (SELECT 1 FROM password_credentials pc WHERE pc.account_id = ? AND pc.password_hash = ? AND pc.revision = ?)'
+      : '';
+    const credentialArgs: (string | number)[] = passwordHash !== null && credential !== null
+      ? [accountId, passwordHash, credential.revision + 1]
+      : [];
+    if (input.email !== previousEmail) {
+      statements.push(
+        this.db.prepare(`UPDATE social_accounts SET email = ?
+          WHERE account_id = ? AND email = ? AND EXISTS (
+            SELECT 1 FROM accounts a
+            WHERE a.id = social_accounts.account_id AND a.email = ?${credentialSuffix}
+          )`).bind(input.email, accountId, previousEmail, input.email, ...credentialArgs),
       );
     }
     try {
-      await this.db.batch(statements);
+      const result = await this.db.batch(statements);
+      const accountResultIndex = (credentialUpdateIndex >= 0 ? credentialUpdateIndex + 1 : 0) + challengeDeleteCount;
+      if (passwordHash !== null && credential !== null) {
+        if (credentialUpdateIndex < 0 || result[credentialUpdateIndex].results.length !== 1) {
+          throw new ProfileConflictError({
+            currentPassword: 'La contraseña cambió mientras se procesaba la solicitud. Repite el cambio con la contraseña actual.',
+          });
+        }
+      }
+      if (result[accountResultIndex]?.results.length !== 1) {
+        throw new ProfileConflictError({
+          email: 'Los datos de la cuenta cambiaron mientras se procesaba la solicitud.',
+        });
+      }
     } catch (error) {
       if (error instanceof Error && /UNIQUE constraint failed: accounts\.(email|phone)\b/.test(error.message)) {
         const fields: Record<string, string> = {};

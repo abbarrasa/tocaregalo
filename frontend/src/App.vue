@@ -28,7 +28,7 @@ const account = ref<Account | null>(null); const loading = ref(true); const busy
 const notice = ref(''); const error = ref(''); const heading = ref<HTMLElement>();
 function readPage(): EntryPage {
   const hash = location.hash.slice(1);
-  return hash === 'register' || hash === 'recover' || hash === 'reset' ? hash : 'login';
+  return hash === 'register' || hash === 'recover' || hash === 'recover-social' || hash === 'reset' ? hash : 'login';
 }
 const page = ref<EntryPage>(readPage());
 const privateRoute = ref(privatePage(location.hash));

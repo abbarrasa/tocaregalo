@@ -4,7 +4,7 @@ import { createPasswordRecoveryToken, hashPasswordRecoveryToken } from '../src/d
 import { hashEmailVerificationToken } from '../src/domain/email-verification.ts';
 import { hashSessionToken } from '../src/domain/session.ts';
 import { PasswordRecoveryService, type PasswordRecoveryStore } from '../src/application/password-recovery-service.ts';
-import { AuthInputError } from '../src/domain/authentication.ts';
+import { AuthInputError, normalizeLoginIdentifier } from '../src/domain/authentication.ts';
 import { ResendRecoverySender } from '../src/infrastructure/resend-recovery-sender.ts';
 import { MailDeliveryError } from '../src/infrastructure/resend-transport.ts';
 
@@ -16,6 +16,14 @@ test('recovery tokens are random and cannot cross session or email-verification 
   assert.notEqual(hash, await hashEmailVerificationToken(token));
   assert.notEqual(hash, await hashSessionToken(token));
   await assert.rejects(hashPasswordRecoveryToken('invalid'), RangeError);
+});
+
+test('recovery normalizes national phones with the configured local prefix', () => {
+  assert.equal(normalizeLoginIdentifier('2025550100', '+1'), '+12025550100');
+  assert.equal(normalizeLoginIdentifier('+34 612345678', '+1'), '+34612345678');
+  assert.equal(normalizeLoginIdentifier('34 612345678', '+34'), '+34612345678');
+  assert.equal(normalizeLoginIdentifier('34991234567', '+55'), '+5534991234567');
+  assert.throws(() => normalizeLoginIdentifier('phone123', '+1'), AuthInputError);
 });
 
 test('recovery rechecks expiry after hashing and cleans up only the failed delivery token', async () => {

@@ -29,7 +29,8 @@ test('password recovery runs through the bundled Worker and atomic D1 mutations'
     name: 'recovery-test', modules: true, script: await readFile(join(output, 'worker.js'), 'utf8'),
     compatibilityDate: '2026-11-19', d1Databases: ['DB'],
     bindings: { APP_ORIGIN: origin, SESSION_TTL_SECONDS: '86400', PASSWORD_RECOVERY_TTL_SECONDS: '1800',
-      RESEND_API_KEY: 'synthetic-key', RESEND_FROM_EMAIL: 'sender@example.test', APP_ENV: 'development', RESEND_TEST_MODE: 'false' },
+      RESEND_API_KEY: 'synthetic-key', RESEND_FROM_EMAIL: 'sender@example.test', APP_ENV: 'development', RESEND_TEST_MODE: 'false',
+      LOCAL_COUNTRY_PHONE_PREFIX: '+1' },
     outboundService: async request => {
       assert.equal(request.url, 'https://api.resend.com/emails');
       const body = authObject(await request.json());
@@ -45,23 +46,31 @@ test('password recovery runs through the bundled Worker and atomic D1 mutations'
   }] }));
   t.after(() => mf.dispose());
   const db = await mf.getD1Database('DB');
-  for (const name of ['0001_draws.sql', '0002_accounts_groups.sql', '0003_sessions.sql', '0004_public_auth.sql', '0005_email_verification.sql']) {
+  for (const name of ['0001_draws.sql', '0002_accounts_groups.sql', '0003_sessions.sql', '0004_public_auth.sql', '0005_email_verification.sql', '0006_password_recovery.sql']) {
     const sql = await readFile(new URL('../migrations/' + name, import.meta.url), 'utf8');
     await db.batch(sql.split(';').map(s => s.trim()).filter(Boolean).map(s => db.prepare(s)));
   }
   const credentials = new CredentialsRepository(db);
   const aliceHash = await new Argon2PasswordHasher().hash('abcdef');
-  for (const id of ['alice', 'expiry', 'rollback', 'race', 'send-race', 'changed']) {
+  for (const id of ['alice', 'expiry', 'rollback', 'race', 'send-race', 'changed', 'us']) {
     await credentials.create({ id, email: id + '@example.test', displayName: id, lastName: null,
-      phone: id === 'alice' ? '+34612345678' : null, createdAtMs: 0 }, id === 'alice' ? aliceHash : 'old-hash');
+      phone: id === 'alice' ? '+34612345678' : id === 'us' ? '+12025550100' : null, createdAtMs: 0 }, id === 'alice' ? aliceHash : 'old-hash');
   }
   await db.prepare('INSERT INTO accounts (id,email,display_name,created_at_ms) VALUES (?,?,?,?)')
     .bind('legacy', 'legacy@example.test', 'Legacy', 0).run();
+  await db.prepare('INSERT INTO accounts (id,email,display_name,created_at_ms) VALUES (?,?,?,?)')
+    .bind('credentialless', 'credentialless@example.test', 'Credentialless', 0).run();
+  await db.prepare(`INSERT INTO password_recoveries
+    (account_id,email,credential_revision,token_hash,created_at_ms,expires_at_ms,consumption_id)
+    VALUES (?,?,?,?,?,?,NULL)`)
+    .bind('alice', 'alice@example.test', 99, 'd'.repeat(64), 1000, 2000).run();
+  const migration14 = await readFile(new URL('../migrations/0014_password_recovery_credentialless.sql', import.meta.url), 'utf8');
+  await db.batch(migration14.split(';').map(s => s.trim()).filter(Boolean).map(s => db.prepare(s)));
+  assert.equal(await db.prepare('SELECT count(*) AS n FROM password_recovery_migration_quarantine').first('n'), 1);
+  assert.equal(await db.prepare('SELECT count(*) AS n FROM password_recoveries WHERE token_hash=?').bind('d'.repeat(64)).first('n'), 0);
   const sessions = new SessionService(new SessionsRepository(db));
   const oldSession = await sessions.issueForVerifiedAccount('alice', 86400000);
   // Upgrade populated state: pre-existing credentials, sessions and nullable verification must survive.
-  const migration = await readFile(new URL('../migrations/0006_password_recovery.sql', import.meta.url), 'utf8');
-  await db.batch(migration.split(';').map(s => s.trim()).filter(Boolean).map(s => db.prepare(s)));
   assert.ok(await sessions.authenticate(oldSession.token));
   assert.equal((await credentials.findCredential('alice@example.test'))?.passwordHash, aliceHash);
   const repository = new PasswordRecoveriesRepository(db);
@@ -99,8 +108,22 @@ test('password recovery runs through the bundled Worker and atomic D1 mutations'
       assert.equal(response.status, known.status);
       assert.deepEqual(await response.json(), await known.clone().json());
     }
-    assert.equal(messages.length, count);
-    assert.equal(await repository.isActive(await hashPasswordRecoveryToken(messages[count - 1].token), Date.now()), true);
+    const credentialless = await requestCode('credentialless@example.test', {}, true);
+    assert.equal(credentialless.status, 202);
+    const credentiallessMessage = messages.find(message => message.email === 'credentialless@example.test');
+    assert.ok(credentiallessMessage);
+    const credentiallessToken = credentiallessMessage.token;
+    assert.ok(credentiallessToken);
+    assert.equal((await confirm(credentiallessToken, 'new-password')).status, 204);
+    assert.ok(await db.prepare('SELECT password_hash FROM password_credentials WHERE account_id=?')
+      .bind('credentialless').first('password_hash'));
+    const us = await requestCode('2025550100', {}, true);
+    assert.equal(us.status, 202);
+    assert.equal(messages.at(-1)?.email, 'us@example.test');
+    assert.ok(messages.length >= count + 2);
+    const usToken = messages.at(-1)?.token;
+    assert.ok(usToken);
+    assert.equal(await repository.isActive(await hashPasswordRecoveryToken(usToken), Date.now()), true);
     providerStatus = 500;
     const failed = await requestCode('changed@example.test', {}, true);
     assert.equal(failed.status, 202);
