@@ -15,7 +15,7 @@ INSERT INTO password_recoveries
 SELECT p.account_id, p.email, p.credential_revision, p.token_hash, p.created_at_ms, p.expires_at_ms, p.consumption_id
 FROM password_recoveries_legacy p
 JOIN accounts a ON a.id = p.account_id
-JOIN password_credentials c ON c.account_id = p.account_id AND c.revision = p.credential_revision
+JOIN password_credentials c ON c.account_id = p.account_id AND c.revision = p.credential_revision;
 
 CREATE TABLE password_recovery_migration_quarantine (
   account_id TEXT NOT NULL,
