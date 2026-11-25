@@ -67,6 +67,7 @@ test('password recovery runs through the bundled Worker and atomic D1 mutations'
   const migration14 = await readFile(new URL('../migrations/0014_password_recovery_credentialless.sql', import.meta.url), 'utf8');
   await db.batch(migration14.split(';').map(s => s.trim()).filter(Boolean).map(s => db.prepare(s)));
   assert.equal(await db.prepare('SELECT count(*) AS n FROM password_recovery_migration_quarantine').first('n'), 1);
+  assert.equal(await db.prepare('SELECT count(*) AS n FROM password_recoveries WHERE token_hash=?').bind('d'.repeat(64)).first('n'), 0);
   const sessions = new SessionService(new SessionsRepository(db));
   const oldSession = await sessions.issueForVerifiedAccount('alice', 86400000);
   // Upgrade populated state: pre-existing credentials, sessions and nullable verification must survive.
