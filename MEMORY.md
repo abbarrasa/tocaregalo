@@ -1,6 +1,6 @@
 # TocaRegalo project memory
 
-Last updated: 2026-11-23. Dated handoff — verify current `git status` and files before editing. Supersedes earlier historical assumptions where newer migrations/features exist.
+Last updated: 2026-11-25. Dated handoff — verify current `git status` and files before editing. Supersedes earlier historical assumptions where newer migrations/features exist.
 
 ## Product & architectural baseline
 
@@ -39,3 +39,13 @@ Last updated: 2026-11-23. Dated handoff — verify current `git status` and file
 
 - **Production & external services:** No remote D1 migration/deployment, real secrets (`RESEND_API_KEY`, `DRAW_CIPHER_KEY_HEX`, `DRAW_INDEX_KEY_HEX`, optional `DRAW_PREVIOUS_CIPHER_KEYS_JSON`), real email deliverability testing, or production Argon2id CPU profiling has been performed yet.
 - **Timing & product scope:** The <=60s post-due closure target is not certified by a 1-minute Cron or local tests alone. Phone verification, voluntary group exit, ownership transfer, account/recipient deletion policies, and any v1.2 extensions require explicit specification and approval before implementation. Browser QA in `docs/qa/browser-validation/README.md` verified core flows in local Chromium (including fix and revalidation of the post-verification navigation lock), with mobile/cross-browser and production TLS/cookie checks still pending.
+
+## ChatGPT Sites hosting artifact
+
+- `npm run build:chatgpt-sites` generates the self-contained Worker at
+  `dist/server/index.js` with embedded public frontend assets and the existing
+  Sites manifest at `dist/.openai/hosting.json`. The API and scheduled handler
+  are preserved. `npm run validate:chatgpt-sites` checks the actual artifact in
+  ephemeral workerd; the native `build:site` command remains available.
+- Hosted migration packaging, actual D1 provisioning, secrets, scheduling and
+  production runtime validation remain pending. Neither command publishes.

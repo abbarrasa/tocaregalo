@@ -179,3 +179,30 @@ Rolling Worker code back does not roll D1 or external email back. Check schema
 compatibility before choosing an older version; prefer a tested forward fix when
 required. No down migrations, automatic rollback, retention deletion, resend
 administration or key rotation operation is supplied by this runbook.
+
+## ChatGPT Sites packaging (step 1)
+
+The existing TocaRegalo Site uses `.openai/hosting.json` with its project ID and
+logical D1 binding `DB`. Use Node 24 and the root lockfile:
+
+```sh
+npm ci
+npm run build:chatgpt-sites
+npm run validate:chatgpt-sites
+```
+
+The new command builds Vue and bundles the existing API with the compiled public
+HTML, JS, CSS and SVG embedded in a single ES module at `dist/server/index.js`.
+This avoids assuming that Sites provisions Wrangler's native asset router. The
+wrapper forwards `/api`, `/api/*` and `/health` to the existing handler; other
+known static paths support GET/HEAD only. Unknown paths return 404. The scheduled
+handler is preserved, but packaging does not register a Cron Trigger on Sites.
+Generated output from the previous build is replaced; rerun `npm run build:site`
+when the native Cloudflare artifact is required. The manifest is copied to
+`dist/.openai/hosting.json`. No local environment file or runtime secret is copied.
+
+The validation script uses Miniflare with an ephemeral binding to exercise the
+actual single-module artifact, public assets, routing and unauthenticated API.
+The D1 migration format, production secret provisioning, background scheduling,
+CPU profiling and hosted publication remain separate deployment steps. Do not
+publish this initial artifact as a complete operational release.

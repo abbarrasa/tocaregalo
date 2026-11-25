@@ -41,3 +41,6 @@ jobs:
 
       - name: Package same-origin site without deployment
         run: npm run build:site
+
+      - name: Package and validate ChatGPT Sites artifact without deployment
+        run: npm run build:chatgpt-sites && npm run validate:chatgpt-sites
