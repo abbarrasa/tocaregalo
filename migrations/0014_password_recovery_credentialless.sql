@@ -1,6 +1,7 @@
 -- A recovery challenge may belong to a verified or credentialless account.
 -- Credential creation is atomic with challenge consumption and revokes all sessions.
 ALTER TABLE password_recoveries RENAME TO password_recoveries_legacy;
+DROP INDEX password_recoveries_by_expiry;
 CREATE TABLE password_recoveries (
   account_id TEXT PRIMARY KEY NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
