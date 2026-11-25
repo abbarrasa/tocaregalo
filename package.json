@@ -17,7 +17,9 @@
     "dev:frontend": "vite",
     "dev:api": "wrangler dev --local --ip 127.0.0.1 --port 8787 --var APP_ORIGIN:https://localhost:5173",
     "dev": "wrangler dev --local",
-    "db:migrate:local": "wrangler d1 migrations apply tocaregalo-local --local"
+    "db:migrate:local": "wrangler d1 migrations apply tocaregalo-local --local",
+    "build:chatgpt-sites": "node scripts/build-sites.mjs",
+    "validate:chatgpt-sites": "node scripts/validate-sites.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261119.1",

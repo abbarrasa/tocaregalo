@@ -296,6 +296,12 @@ certifica el runner remoto.
 
 ## Preparación del despliegue
 
+Para ChatGPT Sites, `npm run build:chatgpt-sites` genera el Worker con los assets
+Vue integrados; `npm run validate:chatgpt-sites` valida el artefacto localmente.
+Ambos comandos son locales. La integración de migraciones y la publicación siguen
+pendientes. Consulta la guía de despliegue para el procedimiento.
+
+
 La [guía de operación y despliegue](docs/deployment.md) detalla los datos pendientes,
 la configuración HTTPS/D1/secretos, la secuencia de migración y publicación,
 las comprobaciones en staging y los límites de recuperación. Incluye consultas
