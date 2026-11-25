@@ -1,0 +1,39 @@
+{
+  "name": "tocaregalo-sites",
+  "private": true,
+  "type": "module",
+  "workspaces": ["frontend"],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.ts && npm run test:frontend",
+    "test:unit": "node --test tests/domain.test.ts tests/recipient-protection.test.ts tests/recipients.test.ts tests/persistence.test.ts tests/session.test.ts tests/authentication.test.ts tests/email-verification.test.ts tests/password-recovery.test.ts tests/groups.test.ts tests/events.test.ts tests/event-lifecycle.test.ts tests/scheduled-events.test.ts tests/draw-notifications.test.ts tests/invitations.test.ts tests/members.test.ts",
+    "test:integration": "node --test tests/*.integration.test.ts",
+    "test:frontend": "vitest run",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.worker.json && npm run typecheck --workspace frontend",
+    "build:frontend": "vite build",
+    "build:site": "npm run build:frontend && wrangler deploy --config wrangler.site.jsonc --dry-run --outdir dist/worker",
+    "dev:frontend": "vite",
+    "dev:api": "wrangler dev --local --ip 127.0.0.1 --port 8787 --var APP_ORIGIN:https://localhost:5173",
+    "dev": "wrangler dev --local",
+    "db:migrate:local": "wrangler d1 migrations apply tocaregalo-local --local"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261119.1",
+    "@types/node": "^24.19.2",
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
+    "@vitejs/plugin-vue": "^6.0.11",
+    "jsdom": "^31.0.1",
+    "miniflare": "5.20261118.0-beta",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1",
+    "wrangler": "^4.165.0"
+  },
+  "dependencies": {
+    "@noble/hashes": "2.4.0",
+    "bootstrap": "^5.3.9",
+    "vue": "^3.5.46"
+  }
+}
