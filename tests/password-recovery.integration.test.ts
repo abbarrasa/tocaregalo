@@ -84,10 +84,10 @@ test('password recovery runs through the bundled Worker and atomic D1 mutations'
     }
     assert.fail('Background recovery did not complete within the test deadline');
   };
-  const requestCode = async (identifier: string, extra: Record<string, string> = {}, expectMail = false) => {
+  const requestCode = async (identifier: string, extra: Record<string, string> = {}, expectedEmail?: string) => {
     const before = messages.length;
     const response = await post('/api/password-recovery/request', { identifier, ...extra });
-    if (expectMail) await eventually(() => messages.length === before + 1);
+    if (expectedEmail) await eventually(() => messages.slice(before).some(message => message.email === expectedEmail));
     return response;
   };
   const confirm = (token: string, newPassword = '😀😀😀😀😀😀') => post('/api/password-recovery/confirm', { token, newPassword });
@@ -98,17 +98,17 @@ test('password recovery runs through the bundled Worker and atomic D1 mutations'
   };
 
   await t.test('public responses do not disclose existence, legacy credentials or provider failure', async () => {
-    const known = await requestCode(' ALICE@example.test ', { email: 'attacker@example.test', accountId: 'legacy' }, true);
+    const known = await requestCode(' ALICE@example.test ', { email: 'attacker@example.test', accountId: 'legacy' }, 'alice@example.test');
     assert.equal(known.status, 202);
     assert.equal(known.headers.get('Cache-Control'), 'no-store');
     assert.equal(messages.at(-1)?.email, 'alice@example.test');
     const count = messages.length;
     for (const identifier of ['absent@example.test', 'legacy@example.test']) {
-      const response = await requestCode(identifier);
+      const response = await requestCode(identifier, {}, identifier === 'legacy@example.test' ? identifier : undefined);
       assert.equal(response.status, known.status);
       assert.deepEqual(await response.json(), await known.clone().json());
     }
-    const credentialless = await requestCode('credentialless@example.test', {}, true);
+    const credentialless = await requestCode('credentialless@example.test', {}, 'credentialless@example.test');
     assert.equal(credentialless.status, 202);
     const credentiallessMessage = messages.find(message => message.email === 'credentialless@example.test');
     assert.ok(credentiallessMessage);
@@ -117,7 +117,7 @@ test('password recovery runs through the bundled Worker and atomic D1 mutations'
     assert.equal((await confirm(credentiallessToken, 'new-password')).status, 204);
     assert.ok(await db.prepare('SELECT password_hash FROM password_credentials WHERE account_id=?')
       .bind('credentialless').first('password_hash'));
-    const us = await requestCode('2025550100', {}, true);
+    const us = await requestCode('2025550100', {}, 'us@example.test');
     assert.equal(us.status, 202);
     assert.equal(messages.at(-1)?.email, 'us@example.test');
     assert.ok(messages.length >= count + 2);
@@ -125,7 +125,7 @@ test('password recovery runs through the bundled Worker and atomic D1 mutations'
     assert.ok(usToken);
     assert.equal(await repository.isActive(await hashPasswordRecoveryToken(usToken), Date.now()), true);
     providerStatus = 500;
-    const failed = await requestCode('changed@example.test', {}, true);
+    const failed = await requestCode('changed@example.test', {}, 'changed@example.test');
     assert.equal(failed.status, 202);
     assert.deepEqual(await failed.json(), await known.json());
     await eventually(async () => await db.prepare('SELECT count(*) AS n FROM password_recoveries WHERE account_id = ?').bind('changed').first('n') === 0);
@@ -135,7 +135,7 @@ test('password recovery runs through the bundled Worker and atomic D1 mutations'
   await t.test('phone request uses stored email, resend replaces code, and reset revokes every session', async () => {
     const oldToken = messages[0].token;
     const secondSession = await sessions.issueForVerifiedAccount('alice', 86400000);
-    assert.equal((await requestCode('+34 (612) 345-678', {}, true)).status, 202);
+    assert.equal((await requestCode('+34 (612) 345-678', {}, 'alice@example.test')).status, 202);
     const message = messages.at(-1); assert.ok(message);
     assert.equal(message.email, 'alice@example.test');
     assert.equal((await confirm(oldToken)).status, 400);
