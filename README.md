@@ -1,10 +1,9 @@
-# TocaRegalo para Sites
+# TocaRegalo
 
 Aplicación web para organizar grupos y eventos de regalos, sortear destinatarios de forma justa y permitir que cada participante consulte su asignación de manera privada.
 
-Código inicial de la implementación independiente. El repositorio previsto es
-`abbarrasa/tocaregalo-sites`. La especificación funcional de TocaRegalo v1.2
-y el prototipo visual aprobado son las referencias de producto.
+Implementación independiente de TocaRegalo. La especificación funcional de
+TocaRegalo v1.2 y el prototipo visual aprobado son las referencias de producto.
 
 ## Ejecutar las pruebas
 

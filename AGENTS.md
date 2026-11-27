@@ -1,6 +1,6 @@
 # Instructions for AI agents
 
-Applies to `abbarrasa/tocaregalo-sites`. Read [MEMORY.md](./MEMORY.md) and [README.md](./README.md) for current invariants and commands, and verify the working tree before editing. Current user instructions take precedence.
+Applies to the TocaRegalo repository. Read [MEMORY.md](./MEMORY.md) and [README.md](./README.md) for current invariants and commands, and verify the working tree before editing. Current user instructions take precedence.
 
 ## Fast feature workflow
 

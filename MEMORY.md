@@ -4,7 +4,7 @@ Last updated: 2026-11-25. Dated handoff — verify current `git status` and file
 
 ## Product & architectural baseline
 
-- **Repository & scope:** `abbarrasa/tocaregalo-sites` (independent TypeScript + Vue 3 + Bootstrap 5 + Cloudflare Workers + D1 + Resend HTTPS implementation; Symfony lives in a separate repo). The v1.2 spec is not yet present; `/home/albertusko/Proyectos/TocaRegalo.html` (read 2026-11-20) is a visual reference only, not a replacement for backend/privacy rules.
+- **Repository & scope:** TocaRegalo (independent TypeScript + Vue 3 + Bootstrap 5 + Cloudflare Workers + D1 + Resend HTTPS implementation; Symfony lives in a separate repo). The v1.2 spec is not yet present; `/home/albertusko/Proyectos/TocaRegalo.html` (read 2026-11-20) is a visual reference only, not a replacement for backend/privacy rules.
 - **Same-origin routing:** API (`/api`, `/api/*`, `/health`) runs on the Worker; static assets (`dist/frontend`) use hash routing (`#groups`, `#account`, `#invitations`, `#groups/<id>/events`, `#events/<id>`) with `not_found_handling=none` in `wrangler.site.jsonc` and `Cache-Control: no-store` on API responses.
 
 ## Key modules & migrations
